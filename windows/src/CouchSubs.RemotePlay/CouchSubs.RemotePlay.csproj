@@ -6,8 +6,20 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CouchSubs.RemotePlay.Tests" />
+  </ItemGroup>
+
+  <!-- Yerel kütüphane CI'da (windows.yml, native işi) derlenip buraya konur; varsa çıktıya ve
+       yayın klasörüne kopyalanır (bu projeye başvuran uygulama ve testler de alır). -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\..\native\bin\couchsubs_native.dll')">
+    <None Include="$(MSBuildThisFileDirectory)..\..\native\bin\couchsubs_native.dll" Link="couchsubs_native.dll"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
 
 </Project>
