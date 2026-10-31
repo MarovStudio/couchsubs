@@ -67,9 +67,12 @@ public static class ScreenRenderer
 
     private static void Render(FrameworkElement view, int width, int height, string path)
     {
+        // Görüntüye pencere zemini de girsin (içerik saydam zemin üzerinde çizilir).
+        var root = new System.Windows.Controls.Border { Child = view };
+        root.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "backgroundBrush");
         var window = new Window
         {
-            Content = view, Width = width, Height = height, WindowStyle = WindowStyle.None, ShowInTaskbar = false,
+            Content = root, Width = width, Height = height, WindowStyle = WindowStyle.None, ShowInTaskbar = false,
             Left = -10000, Top = -10000, ShowActivated = false,
         };
         window.SetResourceReference(Window.BackgroundProperty, "backgroundBrush");
