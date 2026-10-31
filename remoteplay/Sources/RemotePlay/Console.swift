@@ -8,6 +8,12 @@ public struct ConsoleInfo: Codable, Hashable, Sendable {
     public let host: String
     public let name: String
     public let isAwake: Bool
+
+    public init(host: String, name: String, isAwake: Bool) {
+        self.host = host
+        self.name = name
+        self.isAwake = isAwake
+    }
 }
 
 /// Yerel ağdaki PS5'leri bulur ve uyutulmuş olanı uyandırır.
