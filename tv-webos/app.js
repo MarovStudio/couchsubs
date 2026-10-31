@@ -97,9 +97,12 @@
         var devices;
         try { devices = JSON.parse(msg).devices || []; } catch (e) { return finish(null); }
         var hdmi = devices.filter(function (d) { return /^HDMI_/.test(d.id); });
-        var pick = hdmi.filter(function (d) {
-          return d.activate && (d.spdSourceDeviceInfo === 'GAME' || /playstation|ps5/i.test((d.label || '') + ' ' + (d.spdProductDescription || '')));
-        })[0] || hdmi.filter(function (d) { return d.activate; })[0];
+        // Konsol dinlenme modundayken giriş etkin görünmez ama etiketi kalır; etkin olan tercih edilir.
+        var consoles = hdmi.filter(function (d) {
+          return d.spdSourceDeviceInfo === 'GAME' || /playstation|ps5/i.test((d.label || '') + ' ' + (d.spdProductDescription || ''));
+        });
+        var pick = consoles.filter(function (d) { return d.activate; })[0] || consoles[0] ||
+          hdmi.filter(function (d) { return d.activate; })[0];
         finish(pick ? pick.port : null, pick ? pick.label : null);
       };
       bridge.call('luna://com.webos.service.eim/getAllInputStatus', '{}');
