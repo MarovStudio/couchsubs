@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>PS5 Altyazı</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="video-host"></div>
+
+  <div id="subtitle" class="hidden"><span id="subtitle-text"></span></div>
+
+  <div id="panel">
+    <div class="title">PS5 Altyazı — test</div>
+    <div><b>HDMI:</b> <span id="st-hdmi">-</span> <span id="st-video" class="muted"></span></div>
+    <div><b>Sunucu:</b> <span id="st-server">-</span></div>
+    <div><b>Bağlantı:</b> <span id="st-conn">-</span></div>
+    <div class="keys">
+      1–4: HDMI girişi · 0: konsolu otomatik bul · Kırmızı: yerel test altyazısı · Yeşil: bu panel · Sarı: yazı boyutu
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

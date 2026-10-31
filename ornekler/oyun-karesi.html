@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Oyun karesi</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:linear-gradient(160deg,#2b3a4a 0%,#5b4a3a 45%,#1d2a1d 100%);font-family:Helvetica,Arial,sans-serif}
+  .hud{position:absolute;top:24px;left:28px;color:#e8e2c8;font-size:22px;opacity:.85}
+  .hp{position:absolute;bottom:30px;left:28px;width:220px;height:14px;background:#600;border:2px solid #ddd}
+  .hp i{display:block;width:70%;height:100%;background:#c33}
+  .ammo{position:absolute;bottom:26px;right:30px;color:#fff;font-size:30px;font-weight:bold}
+  .sub{position:absolute;left:0;right:0;bottom:11%;text-align:center;color:#fff;font-size:30px;line-height:1.35;text-shadow:0 0 4px #000,0 2px 3px #000}
+  .sub b{color:#f3d36b}
+  .tree{position:absolute;bottom:0;width:90px;height:300px;background:#142014;border-radius:45px 45px 0 0}
+</style></head>
+<body>
+  <div class="hud">Objective: Reach the old monastery</div>
+  <div class="tree" style="left:12%"></div><div class="tree" style="left:70%;height:380px"></div>
+  <div class="sub"><b>Kratos:</b> We do not have time for this, boy.<br>The gate will not hold much longer.</div>
+  <div class="hp"><i></i></div>
+  <div class="ammo">24 / 120</div>
+</body></html>
