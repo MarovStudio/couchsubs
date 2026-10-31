@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>CouchSubs</AssemblyName>
+    <RootNamespace>CouchSubs.App</RootNamespace>
+    <ApplicationIcon>Assets\CouchSubs.ico</ApplicationIcon>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CouchSubs.Core\CouchSubs.Core.csproj" />
+    <ProjectReference Include="..\CouchSubs.Translation\CouchSubs.Translation.csproj" />
+    <ProjectReference Include="..\CouchSubs.RemotePlay\CouchSubs.RemotePlay.csproj" />
+  </ItemGroup>
+
+</Project>
