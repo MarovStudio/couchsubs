@@ -11,6 +11,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "CouchSubsCore", swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "tv-smoke", dependencies: ["CouchSubsCore"], swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "CouchSubsCoreTests", dependencies: ["CouchSubsCore"], swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
 )
