@@ -57,7 +57,8 @@ add_library(couchsubs_native SHARED couchsubs_native.c couchsubs_native.h)
 target_link_libraries(couchsubs_native PRIVATE couchsubs_deps)
 set_target_properties(couchsubs_native PROPERTIES PREFIX "" C_VISIBILITY_PRESET hidden)
 if(WIN32)
-	target_link_options(couchsubs_native PRIVATE -Wl,--no-undefined)
+	# Hata ayıklama sembolleri atılır (DLL ~10 MB'tan küçülür).
+	target_link_options(couchsubs_native PRIVATE -Wl,--no-undefined -s)
 endif()
 
 if(COUCHSUBS_NATIVE_TESTS)
