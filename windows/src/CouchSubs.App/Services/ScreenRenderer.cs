@@ -22,6 +22,13 @@ public static class ScreenRenderer
     public static void Run(Application app, string folder)
     {
         Directory.CreateDirectory(folder);
+        var log = Path.Combine(folder, "errors.txt");
+        // Bir ekranın hatası diğerlerini durdurmasın; hatalar dosyaya yazılır.
+        app.DispatcherUnhandledException += (_, e) =>
+        {
+            File.AppendAllText(log, $"[dispatcher] {e.Exception}\n\n");
+            e.Handled = true;
+        };
         foreach (var dark in new[] { false, true })
         {
             ThemeManager.Apply(app.Resources, dark);
@@ -29,9 +36,9 @@ public static class ScreenRenderer
             foreach (var step in Enum.GetValues<OnboardingStep>().Where(s => s != OnboardingStep.Done))
             {
                 var controller = Demo(step);
-                Save(new OnboardingView(controller), 640, 720, Path.Combine(folder, $"adim-{(int)step + 1}-{step}-{suffix}.png"));
+                Save(() => new OnboardingView(controller), 640, 720, Path.Combine(folder, $"adim-{(int)step + 1}-{step}-{suffix}.png"));
             }
-            Save(new MainView(Demo(OnboardingStep.Done)), 640, 720, Path.Combine(folder, $"ana-{suffix}.png"));
+            Save(() => new MainView(Demo(OnboardingStep.Done)), 640, 720, Path.Combine(folder, $"ana-{suffix}.png"));
         }
         app.Shutdown();
     }
@@ -44,7 +51,19 @@ public static class ScreenRenderer
         return controller;
     }
 
-    private static void Save(FrameworkElement view, int width, int height, string path)
+    private static void Save(Func<FrameworkElement> make, int width, int height, string path)
+    {
+        try
+        {
+            Render(make(), width, height, path);
+        }
+        catch (Exception error)
+        {
+            File.AppendAllText(Path.Combine(Path.GetDirectoryName(path)!, "errors.txt"), $"[{Path.GetFileName(path)}] {error}\n\n");
+        }
+    }
+
+    private static void Render(FrameworkElement view, int width, int height, string path)
     {
         var window = new Window
         {

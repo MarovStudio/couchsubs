@@ -92,10 +92,11 @@ public sealed class TranslationIntegrationTests(LoadedTranslator loaded, ITestOu
     [ModelFact]
     public async Task CachedLineReturnsImmediately()
     {
-        await Translator.TranslateAsync("The gate will not hold much longer!");
-        var watch = Stopwatch.StartNew();
-        await Translator.TranslateAsync("The gate will not hold much longer!");
-        Assert.True(watch.Elapsed.TotalMilliseconds < 5, $"cached call took {watch.Elapsed.TotalMilliseconds} ms");
+        var first = await Translator.TranslateAsync("The gate will not hold much longer!");
+        // Önbellekteki satır modele hiç gitmez, sonuç çağrı döndüğünde hazırdır (süre ölçümü yoğun makinede yanıltıyordu).
+        var cached = Translator.TranslateAsync("The gate will not hold much longer!");
+        Assert.True(cached.IsCompletedSuccessfully);
+        Assert.Equal(first, await cached);
     }
 
     [ModelFact]
