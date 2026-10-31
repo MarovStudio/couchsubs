@@ -5,7 +5,7 @@
              xmlns:c="clr-namespace:CouchSubs.App.Controls"
              xmlns:t="clr-namespace:CouchSubs.App.Theme">
     <c:StepLayout Glyph="{x:Static c:Glyphs.Download}" Title="{t:T 'Download the translation model'}"
-                  Message="{t:T 'CouchSubs translates on this computer, without the internet. The English–Turkish model (about 360 MB) is downloaded once and kept on this computer.'}">
+                  Message="{t:T 'CouchSubs translates on this computer, without the internet. The English–Turkish model (about 530 MB) is downloaded once and kept on this computer.'}">
         <StackPanel>
             <StackPanel Visibility="{Binding ModelDownloading, Converter={StaticResource VisibleIf}}">
                 <TextBlock Text="{t:T 'Downloading…'}" Style="{StaticResource HintText}" Margin="0,0,0,8" />
