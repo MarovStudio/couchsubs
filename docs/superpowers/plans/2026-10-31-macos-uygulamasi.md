@@ -15,7 +15,7 @@
 - macOS 26.0 ve üstü (arayüzsüz `TranslationSession(installedSource:target:)` için). Apple Silicon öncelikli.
 - Okuma ve çeviri tamamen cihaz üstü; ağ trafiği yalnız yerel ağ (PS5, TV) ve PSN giriş/token uçları.
 - Arayüz Türkçe ve İngilizce (String Catalog `Localizable.xcstrings`); TV uygulaması da iki dilli.
-- Uygulama adında "PlayStation" / "PS5" geçmez. Ad `CouchSubs` (kullanıcı onayladı); macOS paket kimliği `com.enmera.couchsubs`, TV `com.enmera.couchsubs.tv`; GitHub `enmerasoftware/couchsubs`; ad tek bir yerde tanımlanır (`AppIdentity.swift`, `tv-webos/appinfo.json`).
+- Uygulama adında "PlayStation" / "PS5" geçmez. Ad `CouchSubs` (kullanıcı onayladı); macOS paket kimliği `com.couchsubs.mac`, TV `com.couchsubs.tv`; GitHub `yorulmazsinan/couchsubs`; ad tek bir yerde tanımlanır (`AppIdentity.swift`, `tv-webos/appinfo.json`).
 - Lisans AGPL-3.0; her yeni kaynak dosyada SPDX başlığı `// SPDX-License-Identifier: AGPL-3.0-only`. chiaki-ng'nin `COPYING` ve telif bildirimleri korunur; "Hakkında" ekranında atıf.
 - Kod tanımlayıcıları İngilizce, kullanıcıya görünen metinler TR/EN katalogda (açık kaynak katkıcılar için; kararım).
 - Remote Play oturumu: ses kapalı (`CHIAKI_AUDIO_DISABLED`), kol girdisi gönderilmez, H.264 1080p 30 fps.
@@ -184,12 +184,12 @@ public final class SubtitleServer {
 
 **Interfaces:**
 - Consumes: Task 3 olayları.
-- Produces: TV uygulama kimliği `com.enmera.couchsubs.tv` (`appinfo.json` `id`, `title: "CouchSubs"`); başlatma parametresi şeması `{"server":"http://<ip>:<port>","hdmi":<1-4, opsiyonel>}`.
+- Produces: TV uygulama kimliği `com.couchsubs.tv` (`appinfo.json` `id`, `title: "CouchSubs"`); başlatma parametresi şeması `{"server":"http://<ip>:<port>","hdmi":<1-4, opsiyonel>}`.
 
 - [ ] **Step 1:** Sunucu adresi önceliği: `PalmSystem.launchParams` (JSON) → `webOSRelaunch` olayının `detail`'i (yeniden başlatmada sunucuyu değiştirip yeniden bağlanır) → `config.js` (geliştirme). Adres yoksa ekranda i18n'li "Bilgisayardaki/telefondaki uygulamayı açın" mesajı.
 - [ ] **Step 2:** `style` olayı → `#subtitle-text` yazı boyutu ve `#subtitle` alt boşluğu.
 - [ ] **Step 3:** Geliştirme panelindeki tüm metinler `i18n.js`'den.
-- [ ] **Step 4: Doğrulama (TV'de):** `ares-package` + `ares-install` + `ares-launch -d tv com.enmera.couchsubs.tv --params '{"server":"http://<mac-ip>:8787"}'`; prototip sunucusu (`prototip/sunucu/server.mjs`) ile altyazı gönder → TV'de görünür; `prototip/araclar/tv-eval.mjs "PalmSystem.launchParams"` parametreyi gösterir. Parametresiz başlatmada mesaj görünür.
+- [ ] **Step 4: Doğrulama (TV'de):** `ares-package` + `ares-install` + `ares-launch -d tv com.couchsubs.tv --params '{"server":"http://<mac-ip>:8787"}'`; prototip sunucusu (`prototip/sunucu/server.mjs`) ile altyazı gönder → TV'de görünür; `prototip/araclar/tv-eval.mjs "PalmSystem.launchParams"` parametreyi gösterir. Parametresiz başlatmada mesaj görünür.
 - [ ] **Step 5:** Commit: `feat(tv): başlatma parametresiyle sunucu, stil olayı, TR/EN`
 
 ### Task 5: LG eşleme ve öne getirme (SSDP + SSAP)
@@ -217,11 +217,11 @@ enum SSAPMessages {
 }
 ```
 
-- [ ] **Step 1: Failing tests** — `SSAPMessagesTests`: `register(clientKey: nil)` JSON'unda `type == "register"`, `payload.pairingType == "PROMPT"`, izinler `LAUNCH` ve `READ_RUNNING_APPS` içerir; `clientKey` verilince `payload["client-key"]` dolu; `request(..., uri: "ssap://system.launcher/launch", payload: ["id": "com.enmera.couchsubs.tv", "params": ["server": "http://1.2.3.4:8787"]])` doğru alanları içerir. `SSAPClientTests`: yerel bir `NWListener` WebSocket sahte TV'si `registered` + `client-key` yanıtı verir → `connect()` anahtarı döner; `launch` sahte TV'ye beklenen URI'yi yollar.
+- [ ] **Step 1: Failing tests** — `SSAPMessagesTests`: `register(clientKey: nil)` JSON'unda `type == "register"`, `payload.pairingType == "PROMPT"`, izinler `LAUNCH` ve `READ_RUNNING_APPS` içerir; `clientKey` verilince `payload["client-key"]` dolu; `request(..., uri: "ssap://system.launcher/launch", payload: ["id": "com.couchsubs.tv", "params": ["server": "http://1.2.3.4:8787"]])` doğru alanları içerir. `SSAPClientTests`: yerel bir `NWListener` WebSocket sahte TV'si `registered` + `client-key` yanıtı verir → `connect()` anahtarı döner; `launch` sahte TV'ye beklenen URI'yi yollar.
 - [ ] **Step 2:** → FAIL. **Step 3:** Uygula (`URLSessionWebSocketTask`; 3001'de sertifika doğrulaması yalnız bu bağlantı için atlanır).
 - [ ] **Step 4:** → PASS.
-- [ ] **Step 5: Öne getirme (Review Focus 3)** — `public final class TVKeeper { init(client: SSAPClient, appId: String, params: [String: Any]); func start(interval: Duration = .seconds(5)); func stop() }`: önplandaki uygulama `appId` değilse `launch` eder. Test: sahte TV önce `com.webos.app.hdmi2` sonra `com.enmera.couchsubs.tv` döndürür → tam bir `launch` çağrısı yapılır.
-- [ ] **Step 6: Doğrulama (TV'de):** küçük bir test hedefiyle LG 55UK7550'yi bul, eşle (TV'de onay), `com.enmera.couchsubs.tv`'yi parametreyle başlat; TV'yi kumandayla HDMI 2'ye geçir → ≤ 5 sn içinde uygulama yeniden öne gelir.
+- [ ] **Step 5: Öne getirme (Review Focus 3)** — `public final class TVKeeper { init(client: SSAPClient, appId: String, params: [String: Any]); func start(interval: Duration = .seconds(5)); func stop() }`: önplandaki uygulama `appId` değilse `launch` eder. Test: sahte TV önce `com.webos.app.hdmi2` sonra `com.couchsubs.tv` döndürür → tam bir `launch` çağrısı yapılır.
+- [ ] **Step 6: Doğrulama (TV'de):** küçük bir test hedefiyle LG 55UK7550'yi bul, eşle (TV'de onay), `com.couchsubs.tv`'yi parametreyle başlat; TV'yi kumandayla HDMI 2'ye geçir → ≤ 5 sn içinde uygulama yeniden öne gelir.
 - [ ] **Step 7:** Commit: `feat(core): LG TV bulma, eşleme, başlatma, öne getirme`
 
 ### Task 6: libchiaki'yi macOS için derleme
@@ -308,7 +308,7 @@ final class H264FrameDecoder { func decode(annexB: Data) -> CGImage? }   // Vide
 
 **Files:**
 - Create: `mac/project.yml` (XcodeGen; hedef `CouchSubs`, macOS 26, `CouchSubsCore` ve `RemotePlay` yerel paket bağımlılıkları, Ekran Kaydı gerekmez — görüntü Remote Play'den gelir)
-- Create: `mac/CouchSubs/AppIdentity.swift` (ad, TV app id `com.enmera.couchsubs.tv`, sürüm)
+- Create: `mac/CouchSubs/AppIdentity.swift` (ad, TV app id `com.couchsubs.tv`, sürüm)
 - Create: `mac/CouchSubs/Pipeline/RegionCropper.swift`, `VisionReader.swift`, `Translator.swift`, `SubtitlePipeline.swift`
 - Create: `mac/CouchSubs/Storage/SecureStore.swift` (Anahtarlık: `RegisteredConsole`, accountId, TV client-key)
 - Test: `mac/CouchSubsTests/SubtitlePipelineTests.swift`, `mac/CouchSubsTests/RegionCropperTests.swift`

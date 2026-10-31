@@ -1,8 +1,8 @@
 # Oyun Altyazı Çevirmeni — Tasarım
 
-Tarih: 2026-10-31 · Durum: kullanıcı "işe koyul" dedi · Ad: **CouchSubs** · GitHub: `enmerasoftware/couchsubs` (hesaplar Enmera adına)
+Tarih: 2026-10-31 · Durum: kullanıcı "işe koyul" dedi · Ad: **CouchSubs** · GitHub: `yorulmazsinan/couchsubs` (bireysel hesap; mağaza hesapları sonra)
 
-Ertelenen kararlar: mağaza/geliştirici hesapları Enmera adına; ayrıntılar
+Ertelenen kararlar: mağaza/geliştirici hesaplarının
 kimin adına açılacağı, GitHub'da kimin yayınlayacağı, gizlilik metni. Test cihazları: LG 55UK7550 ve bir
 Samsung TV mevcut (model sonra).
 
