@@ -1,0 +1,64 @@
+name: CouchSubs
+options:
+  bundleIdPrefix: com.couchsubs
+  deploymentTarget:
+    macOS: "26.0"
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_IDENTITY: "-"
+    ENABLE_HARDENED_RUNTIME: YES
+packages:
+  CouchSubsCore:
+    path: ../core
+  RemotePlay:
+    path: ../remoteplay
+targets:
+  CouchSubs:
+    type: application
+    platform: macOS
+    sources:
+      - CouchSubs
+    dependencies:
+      - package: CouchSubsCore
+      - package: RemotePlay
+    info:
+      path: CouchSubs/Info.plist
+      properties:
+        CFBundleDisplayName: CouchSubs
+        LSApplicationCategoryType: public.app-category.utilities
+        NSLocalNetworkUsageDescription: CouchSubs finds your PS5 and TV on the local network to send translated subtitles.
+        NSHumanReadableCopyright: AGPL-3.0. Uses chiaki-ng (AGPL-3.0).
+    entitlements:
+      path: CouchSubs/CouchSubs.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.couchsubs.mac
+  CouchSubsTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - CouchSubsTests
+    dependencies:
+      - target: CouchSubs
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.couchsubs.mac.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CouchSubs.app/Contents/MacOS/CouchSubs"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  CouchSubs:
+    build:
+      targets:
+        CouchSubs: all
+        CouchSubsTests: [test]
+    test:
+      targets:
+        - CouchSubsTests
