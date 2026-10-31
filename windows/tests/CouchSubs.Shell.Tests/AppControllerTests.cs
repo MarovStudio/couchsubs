@@ -1,0 +1,376 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+using CouchSubs.Core;
+using CouchSubs.Core.LgTv;
+using CouchSubs.RemotePlay;
+using CouchSubs.Shell;
+
+namespace CouchSubs.Shell.Tests;
+
+internal sealed class MemoryStore : IAppStore
+{
+    public Dictionary<string, object?> Values { get; } = [];
+    public void Save<T>(string key, T value) => Values[key] = value;
+    public T? Load<T>(string key) => Values.TryGetValue(key, out var value) && value is T typed ? typed : default;
+    public void Remove(string key) => Values.Remove(key);
+}
+
+internal sealed class MemorySettings : ISettingsStore
+{
+    public UserSettings? Saved { get; private set; }
+    public UserSettings Load() => Saved ?? new UserSettings();
+    public void Save(UserSettings settings) => Saved = settings;
+}
+
+internal sealed class FakeSleep : ISleepGuard
+{
+    public bool Active { get; private set; }
+    public void Begin() => Active = true;
+    public void End() => Active = false;
+}
+
+internal sealed class FakeStream : IStreamSession
+{
+    public event Action<Frame>? FrameReceived;
+    public event Action<SessionState>? StateChanged;
+    public bool Started { get; private set; }
+    public void Start() => Started = true;
+    public void Stop() => Started = false;
+    public void ReconnectNow() { }
+    public void Dispose() { }
+    public void Emit(SessionState state) => StateChanged?.Invoke(state);
+    public void Emit(Frame frame) => FrameReceived?.Invoke(frame);
+}
+
+internal sealed class FakeKeeper : IKeeper
+{
+    public bool Running { get; private set; }
+    public void Start(TimeSpan interval) => Running = true;
+    public void Stop() => Running = false;
+    public void Reconnect() { }
+}
+
+internal sealed class FakeTranslation : ITranslationModel
+{
+    public bool Installed { get; set; } = true;
+    public int Downloads { get; private set; }
+    public TaskCompletionSource? DownloadGate { get; set; }
+    public bool IsSupported(string source, string target) => source == "en" && target == "tr";
+    public bool IsInstalled(string source, string target) => Installed;
+    public async Task DownloadAsync(string source, string target, IProgress<double> progress, CancellationToken cancellationToken)
+    {
+        Downloads++;
+        progress.Report(0.5);
+        if (DownloadGate is not null) await DownloadGate.Task;
+        Installed = true;
+        progress.Report(1);
+    }
+    public ITextTranslator Create(string source, string target) => new EchoTranslator();
+
+    private sealed class EchoTranslator : ITextTranslator
+    {
+        public Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default) => Task.FromResult("TR: " + text);
+    }
+}
+
+internal sealed class FakeReader : ITextReader
+{
+    public string Read(Frame image) => "";
+}
+
+internal sealed class FakeServices : IAppServices
+{
+    public List<ConsoleInfo> Consoles { get; } = [new("192.168.1.253", "PS5-789", true)];
+    public List<LgTv> Tvs { get; } = [new("LG TV", "192.168.1.153")];
+    public RegisteredConsole? Registered { get; private set; }
+    public Exception? RegisterError { get; set; }
+    public string? LaunchedServer { get; private set; }
+    public List<FakeStream> Streams { get; } = [];
+    public List<FakeKeeper> Keepers { get; } = [];
+    public List<string> ReaderLanguages { get; } = [];
+    public bool HasOcr { get; set; } = true;
+    public FakeTranslation Translation { get; } = new();
+    ITranslationModel IAppServices.Translation => Translation;
+
+    public Task<IReadOnlyList<ConsoleInfo>> DiscoverConsolesAsync() => Task.FromResult<IReadOnlyList<ConsoleInfo>>(Consoles);
+    public Task<byte[]> AccountIdFromRedirectAsync(Uri redirect) => Task.FromResult(Enumerable.Repeat((byte)1, 8).ToArray());
+    public Task<RegisteredConsole> RegisterAsync(string host, byte[] accountId, uint pin)
+    {
+        if (RegisterError is not null) throw RegisterError;
+        Registered = new RegisteredConsole(host, "PS5-789", Enumerable.Repeat((byte)0x31, 16).ToArray(), Enumerable.Repeat((byte)2, 16).ToArray());
+        return Task.FromResult(Registered);
+    }
+    public Task<IReadOnlyList<LgTv>> DiscoverTvsAsync() => Task.FromResult<IReadOnlyList<LgTv>>(Tvs);
+    public Task<string> PairTvAsync(LgTv tv, string? key, string server)
+    {
+        LaunchedServer = server;
+        return Task.FromResult("tv-key");
+    }
+    public IStreamSession MakeStream(RegisteredConsole console, byte[] accountId)
+    {
+        var stream = new FakeStream();
+        Streams.Add(stream);
+        return stream;
+    }
+    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters)
+    {
+        var keeper = new FakeKeeper();
+        Keepers.Add(keeper);
+        return keeper;
+    }
+    public ITextReader? MakeReader(string language)
+    {
+        ReaderLanguages.Add(language);
+        return HasOcr ? new FakeReader() : null;
+    }
+}
+
+public class AppControllerTests
+{
+    private static readonly RegisteredConsole Console =
+        new("192.168.1.253", "PS5", Enumerable.Repeat((byte)0x31, 16).ToArray(), Enumerable.Repeat((byte)2, 16).ToArray());
+
+    internal static AppController Make(FakeServices? services = null, MemoryStore? store = null, MemorySettings? settings = null, FakeSleep? sleep = null) =>
+        new(services ?? new FakeServices(), store ?? new MemoryStore(), settings ?? new MemorySettings(), sleep ?? new FakeSleep(), Localizer.ForLanguage("en"), action => action());
+
+    [Fact]
+    public void FreshInstallStartsAtWelcome() => Assert.Equal(OnboardingStep.Welcome, Make().Step);
+
+    [Fact]
+    public void CompleteSetupOpensMainScreen()
+    {
+        var store = new MemoryStore();
+        store.Save(StoreKeys.AccountId, Enumerable.Repeat((byte)1, 8).ToArray());
+        store.Save(StoreKeys.Console, Console);
+        store.Save(StoreKeys.Tv, new LgTv("LG TV", "192.168.1.153"));
+        store.Save(StoreKeys.TvKey, "tv-key");
+        Assert.Equal(OnboardingStep.Done, Make(store: store).Step);
+    }
+
+    [Fact]
+    public async Task PsnStepNeedsAccountId()
+    {
+        var controller = Make();
+        controller.Step = OnboardingStep.PsnLogin;
+        Assert.False(controller.CanAdvance);
+        await controller.CompletePsnLoginAsync(new Uri("https://remoteplay.dl.playstation.net/remoteplay/redirect?code=x"));
+        Assert.True(controller.CanAdvance);
+    }
+
+    [Fact]
+    public async Task ConsoleStepNeedsRegistration()
+    {
+        var services = new FakeServices();
+        var controller = Make(services);
+        await controller.CompletePsnLoginAsync(new Uri("https://x/?code=x"));
+        controller.Step = OnboardingStep.Console;
+        Assert.False(controller.CanAdvance);
+        await controller.RegisterAsync("192.168.1.253", "12345678");
+        Assert.True(controller.CanAdvance);
+        Assert.Equal("192.168.1.253", services.Registered?.Host);
+    }
+
+    /// PS5 hesabı tanımazsa kullanıcıya kodu hangi kullanıcıdan alacağı söylenmeli.
+    [Fact]
+    public async Task WrongAccountRegistrationExplainsWhatToDo()
+    {
+        var services = new FakeServices { RegisterError = new RegistrationException(RegistrationFailure.WrongAccount) };
+        var controller = Make(services);
+        await controller.CompletePsnLoginAsync(new Uri("https://x/?code=x"));
+        var error = await Assert.ThrowsAsync<AppException>(() => controller.RegisterAsync("192.168.1.253", "12345678"));
+        Assert.Equal(AppError.WrongAccount, error.Error);
+    }
+
+    [Fact]
+    public async Task OtherRegistrationFailureSuggestsNewCode()
+    {
+        var services = new FakeServices { RegisterError = new RegistrationException(RegistrationFailure.Failed) };
+        var controller = Make(services);
+        await controller.CompletePsnLoginAsync(new Uri("https://x/?code=x"));
+        var error = await Assert.ThrowsAsync<AppException>(() => controller.RegisterAsync("192.168.1.253", "12345678"));
+        Assert.Equal(AppError.RegistrationFailed, error.Error);
+    }
+
+    [Fact]
+    public async Task PinMustBeEightDigits()
+    {
+        var controller = Make();
+        await controller.CompletePsnLoginAsync(new Uri("https://x/?code=x"));
+        var error = await Assert.ThrowsAsync<AppException>(() => controller.RegisterAsync("192.168.1.253", "1234"));
+        Assert.Equal(AppError.InvalidPin, error.Error);
+        Assert.Null(controller.Console);
+    }
+
+    [Fact]
+    public async Task PairingTvPassesServerAddressAndStoresKey()
+    {
+        var services = new FakeServices();
+        var store = new MemoryStore();
+        var controller = Make(services, store);
+        await controller.PairAsync(new LgTv("LG TV", "192.168.1.153"));
+        Assert.StartsWith("http://", services.LaunchedServer);
+        Assert.EndsWith($":{controller.ServerPort}", services.LaunchedServer);
+        Assert.Equal("tv-key", store.Load<string>(StoreKeys.TvKey));
+        controller.Dispose();
+    }
+
+    /// Çeviri modeli (~360 MB) sihirbazın başında arka planda inmeye başlar; model adımına gelindiğinde çoğunlukla hazırdır.
+    [Fact]
+    public void ModelDownloadStartsInBackgroundAfterWelcome()
+    {
+        var services = new FakeServices();
+        services.Translation.Installed = false;
+        services.Translation.DownloadGate = new TaskCompletionSource();
+        var controller = Make(services);
+        Assert.Equal(0, services.Translation.Downloads);
+        controller.Advance();
+        Assert.Equal(1, services.Translation.Downloads);
+        Assert.True(controller.ModelDownloading);
+        services.Translation.DownloadGate.SetResult();
+    }
+
+    [Fact]
+    public async Task ModelStepWaitsForDownload()
+    {
+        var services = new FakeServices();
+        services.Translation.Installed = false;
+        services.Translation.DownloadGate = new TaskCompletionSource();
+        var controller = Make(services);
+        controller.Advance();
+        controller.Step = OnboardingStep.Translation;
+        Assert.False(controller.CanAdvance);
+        services.Translation.DownloadGate.SetResult();
+        await controller.WaitForModelAsync();
+        Assert.True(controller.CanAdvance);
+        Assert.Equal(1.0, controller.ModelProgress);
+    }
+
+    [Fact]
+    public async Task OnboardingWalksAllStepsInOrder()
+    {
+        var controller = Make();
+        Assert.Equal(OnboardingStep.Welcome, controller.Step); controller.Advance();
+        Assert.Equal(OnboardingStep.SecondAccount, controller.Step); controller.Advance();
+        Assert.Equal(OnboardingStep.PsnLogin, controller.Step);
+        await controller.CompletePsnLoginAsync(new Uri("https://remoteplay.dl.playstation.net/remoteplay/redirect?code=x"));
+        controller.Advance();
+        Assert.Equal(OnboardingStep.Console, controller.Step);
+        await controller.RegisterAsync("192.168.1.253", "12345678"); controller.Advance();
+        Assert.Equal(OnboardingStep.Tv, controller.Step);
+        await controller.PairAsync(new LgTv("LG TV", "192.168.1.153")); controller.Advance();
+        Assert.Equal(OnboardingStep.Translation, controller.Step); controller.Advance();
+        Assert.Equal(OnboardingStep.Test, controller.Step); controller.Advance();
+        Assert.Equal(OnboardingStep.Done, controller.Step);
+        controller.Dispose();
+    }
+}
+
+public class AppControllerRunTests
+{
+    private static (AppController Controller, FakeServices Services, FakeSleep Sleep) Ready(FakeServices? services = null)
+    {
+        services ??= new FakeServices();
+        var store = new MemoryStore();
+        store.Save(StoreKeys.AccountId, Enumerable.Repeat((byte)1, 8).ToArray());
+        store.Save(StoreKeys.Console, new RegisteredConsole("192.168.1.253", "PS5", Enumerable.Repeat((byte)0x31, 16).ToArray(), Enumerable.Repeat((byte)2, 16).ToArray()));
+        store.Save(StoreKeys.Tv, new LgTv("LG TV", "127.0.0.1"));
+        store.Save(StoreKeys.TvKey, "tv-key");
+        var sleep = new FakeSleep();
+        return (AppControllerTests.Make(services, store, sleep: sleep), services, sleep);
+    }
+
+    [Fact]
+    public async Task DoubleStartCreatesOneSession()
+    {
+        var (controller, services, _) = Ready();
+        await Task.WhenAll(controller.StartAsync(), controller.StartAsync());
+        Assert.Single(services.Streams);
+        Assert.Single(services.Keepers);
+        Assert.True(controller.IsRunning);
+        controller.Dispose();
+    }
+
+    [Fact]
+    public async Task RunningPreventsIdleSleep()
+    {
+        var (controller, _, sleep) = Ready();
+        await controller.StartAsync();
+        Assert.True(sleep.Active);
+        controller.Stop();
+        Assert.False(sleep.Active);
+        controller.Dispose();
+    }
+
+    [Fact]
+    public async Task DisconnectClearsSubtitleOnTv()
+    {
+        var (controller, services, _) = Ready();
+        await controller.StartAsync();
+        using var http = new HttpClient();
+        using var response = await http.GetAsync($"http://127.0.0.1:{controller.ServerPort}/events", HttpCompletionOption.ResponseHeadersRead);
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
+        await Task.Delay(200);
+        services.Streams[0].Emit(SessionState.Disconnected(DisconnectKind.Network));
+        var sawClear = false;
+        while (await reader.ReadLineAsync() is { } line)
+            if (line == "event: clear") { sawClear = true; break; }
+        Assert.True(sawClear);
+        controller.Dispose();
+    }
+
+    [Fact]
+    public void SettingsArePersistedOutsideTheSecureStore()
+    {
+        var store = new MemoryStore();
+        var settings = new MemorySettings();
+        var controller = AppControllerTests.Make(store: store, settings: settings);
+        controller.Settings = controller.Settings with { Style = new SubtitleStyle(58, 7) };
+        Assert.Empty(store.Values);
+        Assert.Equal(58, AppControllerTests.Make(store: store, settings: settings).Settings.Style.FontSize);
+    }
+
+    [Fact]
+    public async Task ChangingLanguageWhileRunningRebuildsPipeline()
+    {
+        var (controller, services, _) = Ready();
+        await controller.StartAsync();
+        Assert.Equal("en", controller.ActiveSourceLanguage);
+        controller.Settings = controller.Settings with { SourceLanguage = "ja" };
+        Assert.Equal("ja", controller.ActiveSourceLanguage);
+        Assert.Equal(["en", "ja"], services.ReaderLanguages);
+        controller.Dispose();
+    }
+
+    /// Windows'ta oyun dilinin OCR paketi yoksa ana ekran bunu söyler.
+    [Fact]
+    public async Task MissingOcrLanguageIsReported()
+    {
+        var (controller, _, _) = Ready(new FakeServices { HasOcr = false });
+        await controller.StartAsync();
+        Assert.True(controller.OcrMissing);
+        controller.Dispose();
+    }
+
+    [Fact]
+    public void LoginPasscodeIsExplained()
+    {
+        var text = Localizer.ForLanguage("en");
+        Assert.Equal("The second user has a login passcode on the PS5. Turn it off in Settings › Users and Accounts.",
+            AppController.StatusText(SessionState.Disconnected(DisconnectKind.LoginPasscode), true, text));
+    }
+
+    [Fact]
+    public void DisconnectReasonsAreExplained()
+    {
+        var text = Localizer.ForLanguage("en");
+        Assert.Equal("Turn on your PS5", AppController.StatusText(SessionState.Disconnected(DisconnectKind.ConsoleAsleep), true, text));
+        Assert.Equal("Remote Play is in use on another device", AppController.StatusText(SessionState.Disconnected(DisconnectKind.InUse), true, text));
+        Assert.Equal("The PS5 refused the connection. Set up the PS5 again.", AppController.StatusText(SessionState.Disconnected(DisconnectKind.Refused), true, text));
+        Assert.Equal("Reconnecting…", AppController.StatusText(SessionState.Disconnected(DisconnectKind.Network), true, text));
+        Assert.Equal("Not connected", AppController.StatusText(SessionState.Disconnected(DisconnectKind.Stopped), false, text));
+    }
+
+    [Fact]
+    public void TurkishStatusTextComesFromSharedCatalog() =>
+        Assert.Equal("Bağlı", AppController.StatusText(SessionState.Streaming, true, Localizer.ForLanguage("tr")));
+}

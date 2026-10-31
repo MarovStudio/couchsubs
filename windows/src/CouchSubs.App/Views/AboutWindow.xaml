@@ -1,0 +1,23 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<Window x:Class="CouchSubs.App.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:t="clr-namespace:CouchSubs.App.Theme"
+        Title="{t:T 'About CouchSubs'}" Width="460" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource backgroundBrush}">
+    <StackPanel Margin="32">
+        <Image Source="/Assets/logo.png" Width="88" Height="88" RenderOptions.BitmapScalingMode="HighQuality" />
+        <TextBlock Text="CouchSubs" Style="{StaticResource TitleText}" HorizontalAlignment="Center" Margin="0,12,0,0" />
+        <TextBlock x:Name="Version" Style="{StaticResource HintText}" HorizontalAlignment="Center" Margin="0,4,0,12" />
+        <TextBlock Text="{t:T 'Free and open source under the GNU AGPL-3.0 license.'}" TextAlignment="Center" />
+        <TextBlock Text="{t:T 'Remote Play connection by chiaki-ng (AGPL-3.0). Thanks to its developers.'}" Style="{StaticResource SecondaryText}" TextAlignment="Center" Margin="0,12,0,0" />
+        <TextBlock TextAlignment="Center" Margin="0,12,0,0">
+            <Hyperlink NavigateUri="https://github.com/yorulmazsinan/couchsubs" RequestNavigate="OnLink"><Run Text="{t:T 'Source code'}" /></Hyperlink>
+            <Run Text="  ·  " />
+            <Hyperlink NavigateUri="https://github.com/chiaki-ng/chiaki-ng" RequestNavigate="OnLink">chiaki-ng</Hyperlink>
+        </TextBlock>
+        <TextBlock Style="{StaticResource CaptionText}" TextAlignment="Center" Margin="0,16,0,0"
+                   Text="{t:T 'CouchSubs is not affiliated with Sony Interactive Entertainment. PlayStation and PS5 are trademarks of Sony Interactive Entertainment Inc.'}" />
+        <Button Content="{t:T 'Close'}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Center" Margin="0,20,0,0" IsDefault="True" IsCancel="True" Click="OnClose" />
+    </StackPanel>
+</Window>

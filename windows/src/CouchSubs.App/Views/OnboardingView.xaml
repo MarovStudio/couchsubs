@@ -1,0 +1,32 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<UserControl x:Class="CouchSubs.App.Views.OnboardingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:CouchSubs.App.Theme">
+    <DockPanel>
+        <!-- Üst: logo, ad, adım sayacı ve ilerleme -->
+        <StackPanel DockPanel.Dock="Top" Margin="32,24,32,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="/Assets/logo.png" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="CouchSubs" Style="{StaticResource HeadlineText}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="Counter" Style="{StaticResource HintText}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+            <ProgressBar x:Name="Progress" Minimum="0" Maximum="1" Margin="0,16,0,0" />
+        </StackPanel>
+
+        <!-- Alt: Geri / Devam -->
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource surfaceBrush}" BorderBrush="{DynamicResource borderBrush}" BorderThickness="0,1,0,0" Padding="32,16">
+            <Grid>
+                <Button x:Name="BackButton" Content="{t:T 'Back'}" Click="OnBack" />
+                <Button x:Name="ContinueButton" Content="{t:T 'Continue'}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right"
+                        IsDefault="True" IsEnabled="{Binding CanAdvance}" Click="OnContinue" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ContentControl x:Name="StepHost" Margin="32" />
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

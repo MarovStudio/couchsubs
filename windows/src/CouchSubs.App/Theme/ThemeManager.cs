@@ -15,9 +15,9 @@ public static class ThemeManager
 {
     private static readonly DesignTokens Tokens = DesignTokens.Shared;
 
-    public static void Apply(ResourceDictionary resources)
+    public static void Apply(ResourceDictionary resources, bool? forceDark = null)
     {
-        var dark = IsDarkTheme();
+        var dark = forceDark ?? IsDarkTheme();
         foreach (var (name, pair) in Tokens.Color)
         {
             var color = ToColor(pair.For(dark));

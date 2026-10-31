@@ -3,11 +3,13 @@
     <Project Path="src/CouchSubs.App/CouchSubs.App.csproj" />
     <Project Path="src/CouchSubs.Core/CouchSubs.Core.csproj" />
     <Project Path="src/CouchSubs.RemotePlay/CouchSubs.RemotePlay.csproj" />
+    <Project Path="src/CouchSubs.Shell/CouchSubs.Shell.csproj" />
     <Project Path="src/CouchSubs.Translation/CouchSubs.Translation.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CouchSubs.Core.Tests/CouchSubs.Core.Tests.csproj" />
     <Project Path="tests/CouchSubs.RemotePlay.Tests/CouchSubs.RemotePlay.Tests.csproj" />
+    <Project Path="tests/CouchSubs.Shell.Tests/CouchSubs.Shell.Tests.csproj" />
     <Project Path="tests/CouchSubs.Translation.Tests/CouchSubs.Translation.Tests.csproj" />
   </Folder>
 </Solution>
