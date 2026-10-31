@@ -5,7 +5,6 @@ import SwiftUI
 
 struct MainView: View {
     @Environment(AppModel.self) private var model
-    @State private var showSettings = false
 
     private var sourceName: String { Locale.current.localizedString(forLanguageCode: model.settings.sourceLanguage) ?? model.settings.sourceLanguage }
     private var targetName: String { Locale.current.localizedString(forLanguageCode: model.settings.targetLanguage) ?? model.settings.targetLanguage }
@@ -15,12 +14,18 @@ struct MainView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Text("CouchSubs").font(.largeTitle.bold())
+        @Bindable var model = model
+        VStack(alignment: .leading, spacing: Theme.space("xl")) {
+            HStack(spacing: Theme.space("m")) {
+                LogoView(size: 44)
+                Text(verbatim: "CouchSubs").font(.csTitle)
                 Spacer()
-                Button { showSettings = true } label: { Image(systemName: "gearshape") }
-                    .help(Text("Settings"))
+                Button { model.showSettings = true } label: {
+                    Image(systemName: "gearshape").font(.system(size: 18, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.csSecondary)
+                .help(Text("Settings"))
             }
 
             Button {
@@ -28,60 +33,57 @@ struct MainView: View {
             } label: {
                 Label(model.isRunning ? "Stop translating" : "Start translating",
                       systemImage: model.isRunning ? "stop.fill" : "play.fill")
-                    .font(.title3.bold())
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .font(.csHeadline)
+                    .padding(.vertical, Theme.space("xs"))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(model.isRunning ? .red : .accentColor)
-            .controlSize(.large)
+            .buttonStyle(CSButtonStyle(kind: model.isRunning ? .danger : .primary, fullWidth: true))
             .disabled(model.isStarting)
 
-            GroupBox {
-                VStack(spacing: 10) {
-                    StatusRow(title: "PS5", value: ps5Status.0, isGood: ps5Status.1)
-                    StatusRow(title: "TV", value: model.tvClients > 0 ? String(localized: "Connected") : String(localized: "Waiting for the TV app"),
-                              isGood: model.tvClients > 0)
-                }
-                .padding(6)
+            Card {
+                StatusRow(title: "PS5", value: ps5Status.0, isGood: ps5Status.1)
+                Divider().overlay(Color.csBorder)
+                StatusRow(title: "TV", value: model.tvClients > 0 ? String(localized: "Connected") : String(localized: "Waiting for the TV app"),
+                          isGood: model.tvClients > 0)
             }
 
             if model.translatorStatus != .ready {
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if model.translatorStatus == .needsDownload {
-                            Label(String(format: String(localized: "The %@–%@ language pack is not downloaded yet."), sourceName, targetName),
-                                  systemImage: "arrow.down.circle")
-                            Text("Open System Settings › General › Language & Region › Translation Languages and download both languages.")
-                                .font(.callout).foregroundStyle(.secondary)
-                            Button("Open Language & Region") {
-                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension")!)
-                            }
-                        } else {
-                            Label(String(format: String(localized: "Translation from %@ to %@ is not available on this Mac."), sourceName, targetName),
-                                  systemImage: "exclamationmark.triangle")
+                Card {
+                    if model.translatorStatus == .needsDownload {
+                        Label(String(format: String(localized: "The %@–%@ language pack is not downloaded yet."), sourceName, targetName),
+                              systemImage: "arrow.down.circle")
+                            .font(.csBody.weight(.semibold))
+                            .foregroundStyle(Color.csWarning)
+                        HintText(text: "Open System Settings › General › Language & Region › Translation Languages and download both languages.")
+                        Button("Open Language & Region") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension")!)
                         }
+                        .buttonStyle(.secondary)
+                    } else {
+                        Label(String(format: String(localized: "Translation from %@ to %@ is not available on this Mac."), sourceName, targetName),
+                              systemImage: "exclamationmark.triangle")
+                            .font(.csBody.weight(.semibold))
+                            .foregroundStyle(Color.csWarning)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(6)
                 }
             }
 
-            GroupBox("Last subtitle") {
-                VStack(alignment: .leading, spacing: 8) {
-                    if model.lastTranslation.isEmpty {
-                        Text("Subtitles will appear here while you play.").foregroundStyle(.secondary)
-                    } else {
-                        Text(verbatim: model.lastSource).foregroundStyle(.secondary)
-                        Text(verbatim: model.lastTranslation).font(.title3)
-                    }
+            Card(title: "Last subtitle") {
+                if model.lastTranslation.isEmpty {
+                    HintText(text: "Subtitles will appear here while you play.")
+                } else {
+                    Text(verbatim: model.lastTranslation)
+                        .font(.csTitle.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(verbatim: model.lastSource)
+                        .font(.csCallout)
+                        .foregroundStyle(Color.csSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(6)
             }
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding(28)
-        .sheet(isPresented: $showSettings) { SettingsView() }
+        .padding(Theme.space("xxl"))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .sheet(isPresented: $model.showSettings) { SettingsView().appSurface() }
     }
 }

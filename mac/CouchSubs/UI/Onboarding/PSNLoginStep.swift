@@ -13,12 +13,12 @@ struct PSNLoginStep: View {
     var body: some View {
         StepLayout(symbol: "person.crop.circle.badge.checkmark", title: "Sign in with the second account",
                    message: "Sign in to PlayStation Network with the second account you just created. Your password goes directly to Sony; CouchSubs only keeps the account ID.") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Theme.space("m")) {
                 if model.accountId != nil {
-                    Label("Signed in", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    DoneLabel(text: String(localized: "Signed in"))
                 }
                 Button(model.accountId == nil ? "Sign in" : "Sign in again") { showLogin = true }
-                    .controlSize(.large)
+                    .buttonStyle(CSButtonStyle(kind: model.accountId == nil ? .primary : .secondary))
                     .disabled(working)
                 if working { ProgressView().controlSize(.small) }
                 ErrorText(error: error)
@@ -46,11 +46,11 @@ struct PSNLoginSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("PlayStation Network").font(.headline)
+                Text(verbatim: "PlayStation Network").font(.csHeadline)
                 Spacer()
-                Button("Cancel") { dismiss() }
+                Button("Cancel") { dismiss() }.buttonStyle(.secondary)
             }
-            .padding(12)
+            .padding(Theme.space("m"))
             Divider()
             LoginWebView(onRedirect: onRedirect)
         }

@@ -10,12 +10,21 @@ struct CouchSubsApp: App {
         WindowGroup {
             RootView()
                 .environment(model)
-                .frame(minWidth: 560, idealWidth: 600, minHeight: 600, idealHeight: 660)
+                .appSurface()
+                .frame(minWidth: Theme.size("windowWidth"), idealWidth: Theme.size("windowWidth"), maxWidth: Theme.size("windowWidth") * 1.25,
+                       minHeight: Theme.size("windowHeight"), idealHeight: Theme.size("windowHeight"))
+                // Başlık çubuğu da pencere zemininin rengini alır.
+                .containerBackground(Color.csBackground, for: .window)
         }
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About CouchSubs") { model.showAbout = true }
+            }
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings") { model.showSettings = true }
+                    .keyboardShortcut(",")
+                    .disabled(model.step != .done)
             }
         }
     }
@@ -29,6 +38,6 @@ struct RootView: View {
         Group {
             if model.step == .done { MainView() } else { OnboardingView() }
         }
-        .sheet(isPresented: $model.showAbout) { AboutView() }
+        .sheet(isPresented: $model.showAbout) { AboutView().appSurface() }
     }
 }

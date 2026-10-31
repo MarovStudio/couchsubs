@@ -9,23 +9,23 @@ struct TestStep: View {
     var body: some View {
         StepLayout(symbol: "checkmark.seal.fill", title: "Let's test it",
                    message: "CouchSubs will send a sample subtitle to your TV. It should appear at the bottom of the screen, on top of the game.") {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: Theme.space("l")) {
                 Button("Send test subtitle") {
                     model.sendTestSubtitle()
                     sent = true
                 }
-                .controlSize(.large)
+                .buttonStyle(CSButtonStyle(kind: sent ? .secondary : .primary))
                 if sent {
-                    Text("Do you see it on the TV?").font(.headline)
-                    HStack {
-                        Button("Yes, I see it") { model.advance() }
-                            .keyboardShortcut(.defaultAction)
-                            .controlSize(.large)
-                        Button("No") { model.step = .tv }
-                            .controlSize(.large)
+                    Card(title: "Do you see it on the TV?") {
+                        HStack(spacing: Theme.space("m")) {
+                            Button("Yes, I see it") { model.advance() }
+                                .buttonStyle(.primary)
+                                .keyboardShortcut(.defaultAction)
+                            Button("No") { model.step = .tv }
+                                .buttonStyle(.secondary)
+                        }
+                        HintText(text: "If you don't see it, make sure the CouchSubs TV app is open and connect the TV again.")
                     }
-                    Text("If you don't see it, make sure the CouchSubs TV app is open and connect the TV again.")
-                        .font(.callout).foregroundStyle(.secondary)
                 }
             }
         }

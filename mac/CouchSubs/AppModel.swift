@@ -149,6 +149,7 @@ final class AppModel {
     var translatorStatus: TranslatorStatus = .ready
     var lastFrame: CGImage?
     var showAbout = false
+    var showSettings = false
 
     private let services: AppServices
     private let store: AppStore

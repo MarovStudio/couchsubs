@@ -9,37 +9,70 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ProgressView(value: Double(model.step.rawValue + 1), total: Double(total))
-                .padding(.horizontal, 32)
-                .padding(.top, 24)
-
-            Group {
-                switch model.step {
-                case .welcome: WelcomeStep()
-                case .secondAccount: SecondAccountStep()
-                case .psnLogin: PSNLoginStep()
-                case .console: ConsoleStep()
-                case .tv: TVStep()
-                case .test, .done: TestStep()
-                }
+            HStack(spacing: Theme.space("m")) {
+                LogoView(size: 32)
+                Text(verbatim: "CouchSubs").font(.csHeadline)
+                Spacer()
+                Text(String(format: String(localized: "Step %lld of %lld"), min(model.step.rawValue + 1, total), total))
+                    .font(.csCallout.monospacedDigit())
+                    .foregroundStyle(Color.csSecondary)
             }
-            .padding(32)
-            .frame(maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, Theme.space("xxl"))
+            .padding(.top, Theme.space("xl"))
 
-            Divider()
-            HStack {
+            ProgressBar(value: Double(model.step.rawValue + 1) / Double(total))
+                .padding(.horizontal, Theme.space("xxl"))
+                .padding(.top, Theme.space("l"))
+
+            ScrollView {
+                Group {
+                    switch model.step {
+                    case .welcome: WelcomeStep()
+                    case .secondAccount: SecondAccountStep()
+                    case .psnLogin: PSNLoginStep()
+                    case .console: ConsoleStep()
+                    case .tv: TVStep()
+                    case .test, .done: TestStep()
+                    }
+                }
+                .padding(Theme.space("xxl"))
+            }
+
+            Divider().overlay(Color.csBorder)
+            HStack(spacing: Theme.space("m")) {
                 if model.step != .welcome {
-                    Button("Back") { model.back() }
+                    Button("Back") { model.back() }.buttonStyle(.secondary)
                 }
                 Spacer()
                 if model.step != .test {
                     Button("Continue") { model.advance() }
+                        .buttonStyle(.primary)
                         .keyboardShortcut(.defaultAction)
                         .disabled(!model.canAdvance)
                 }
             }
-            .controlSize(.large)
-            .padding(20)
+            .padding(.horizontal, Theme.space("xxl"))
+            .padding(.vertical, Theme.space("l"))
+            .background(Color.csSurface)
         }
+    }
+}
+
+/// İnce, yuvarlak uçlu ilerleme çubuğu.
+struct ProgressBar: View {
+    let value: Double
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.csBorder)
+                Capsule().fill(Color.csAccent)
+                    .frame(width: geometry.size.width * min(max(value, 0), 1))
+                    .animation(.easeOut(duration: 0.25), value: value)
+            }
+        }
+        .frame(height: 6)
+        .accessibilityElement()
+        .accessibilityValue(Text(verbatim: "\(Int(value * 100))%"))
     }
 }

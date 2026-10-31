@@ -18,34 +18,36 @@ struct ConsoleStep: View {
     var body: some View {
         StepLayout(symbol: "gamecontroller.fill", title: "Connect your PS5",
                    message: "Turn on the PS5. As the second user, open Settings › System › Remote Play › Pair Device and enter the 8-digit code shown there.") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Theme.space("l")) {
                 if let console = model.console {
-                    Label(console.name, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    DoneLabel(text: console.name)
                 }
+                Card {
                 HStack {
-                    Text("PS5").font(.headline)
+                    Text(verbatim: "PS5").font(.csHeadline)
                     if searching { ProgressView().controlSize(.small) }
                     Spacer()
-                    Button("Search again") { Task { await search() } }.disabled(searching)
+                    Button("Search again") { Task { await search() } }.buttonStyle(.secondary).disabled(searching)
                 }
                 if consoles.isEmpty && !searching {
-                    Text("No PS5 found. Make sure it is on and on the same network, or enter its IP address.")
-                        .foregroundStyle(.secondary).font(.callout)
-                    TextField("IP address, e.g. 192.168.1.20", text: $manualHost).textFieldStyle(.roundedBorder)
+                    HintText(text: "No PS5 found. Make sure it is on and on the same network, or enter its IP address.")
+                    TextField("IP address, e.g. 192.168.1.20", text: $manualHost).textFieldStyle(.roundedBorder).font(.csBody)
                 } else {
                     Picker("PS5", selection: $selected) {
                         ForEach(consoles, id: \.host) { Text(verbatim: "\($0.name) — \($0.host)").tag(Optional($0.host)) }
                     }
                     .labelsHidden()
                     .pickerStyle(.radioGroup)
+                    .font(.csBody)
+                }
                 }
                 TextField("8-digit code", text: $pin)
                     .textFieldStyle(.roundedBorder)
-                    .font(.title3.monospacedDigit())
-                    .frame(maxWidth: 200)
-                HStack {
+                    .font(.csCode)
+                    .frame(maxWidth: 240)
+                HStack(spacing: Theme.space("m")) {
                     Button("Connect") { Task { await register() } }
-                        .controlSize(.large)
+                        .buttonStyle(.primary)
                         .disabled(working || host.isEmpty || pin.filter(\.isNumber).count != 8)
                     if working { ProgressView().controlSize(.small) }
                 }

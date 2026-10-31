@@ -13,31 +13,32 @@ struct TVStep: View {
     var body: some View {
         StepLayout(symbol: "tv.fill", title: "Connect your TV",
                    message: "Turn on the TV and open the CouchSubs TV app. When you press Connect, the TV asks for permission once — accept it with the remote.") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Theme.space("l")) {
                 if let tv = model.tv {
-                    Label(tv.name, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    DoneLabel(text: tv.name)
                 }
-                HStack {
-                    Text("TV").font(.headline)
-                    if searching { ProgressView().controlSize(.small) }
-                    Spacer()
-                    Button("Search again") { Task { await search() } }.disabled(searching)
-                }
-                if tvs.isEmpty && !searching {
-                    Text("No LG TV found. Make sure the TV is on and on the same network.")
-                        .foregroundStyle(.secondary).font(.callout)
-                }
-                ForEach(tvs, id: \.host) { tv in
+                Card {
                     HStack {
-                        Text(verbatim: "\(tv.name) — \(tv.host)")
+                        Text(verbatim: "TV").font(.csHeadline)
+                        if searching { ProgressView().controlSize(.small) }
                         Spacer()
-                        Button("Connect") { Task { await pair(tv) } }.disabled(working)
+                        Button("Search again") { Task { await search() } }.buttonStyle(.secondary).disabled(searching)
+                    }
+                    if tvs.isEmpty && !searching {
+                        HintText(text: "No LG TV found. Make sure the TV is on and on the same network.")
+                    }
+                    ForEach(tvs, id: \.host) { tv in
+                        HStack {
+                            Text(verbatim: "\(tv.name) — \(tv.host)")
+                            Spacer()
+                            Button("Connect") { Task { await pair(tv) } }.buttonStyle(.primary).disabled(working)
+                        }
                     }
                 }
                 if working {
-                    HStack {
+                    HStack(spacing: Theme.space("s")) {
                         ProgressView().controlSize(.small)
-                        Text("Accept the request on the TV…").foregroundStyle(.secondary)
+                        Text("Accept the request on the TV…").foregroundStyle(Color.csSecondary)
                     }
                 }
                 ErrorText(error: error)
