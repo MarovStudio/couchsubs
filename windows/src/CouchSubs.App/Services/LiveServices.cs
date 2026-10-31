@@ -68,8 +68,15 @@ public sealed class LiveServices : IAppServices
         public Task DownloadAsync(string source, string target, IProgress<double> progress, CancellationToken cancellationToken) =>
             englishTurkish.DownloadAsync(progress, cancellationToken);
 
-        // Model belleğe bir kez yüklenir; dil değişse de aynı çevirmen kullanılır.
-        public ITextTranslator Create(string source, string target) => translator ??= new MarianTranslator(englishTurkish.InstallDirectory);
+        // Model belleğe bir kez yüklenir; dil değişse de aynı çevirmen kullanılır. Yükleme 1–3 sn sürdüğü
+        // için hemen arka planda başlar; ilk altyazı beklemez.
+        public ITextTranslator Create(string source, string target)
+        {
+            if (translator is not null) return translator;
+            translator = new MarianTranslator(englishTurkish.InstallDirectory);
+            _ = translator.WarmUpAsync();
+            return translator;
+        }
     }
 }
 

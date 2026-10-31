@@ -1,7 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\CouchSubs.Core\CouchSubs.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- CPU paketi win-x64, win-arm64, osx-arm64 ve linux yerel kitaplıklarını içerir. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CouchSubs.Translation.Tests" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -353,18 +353,18 @@
         }
       }
     },
-    "CouchSubs translates on this computer, without the internet. The English–Turkish model (about 360 MB) is downloaded once and kept on this computer.": {
+    "CouchSubs translates on this computer, without the internet. The English–Turkish model (about 530 MB) is downloaded once and kept on this computer.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "CouchSubs translates on this computer, without the internet. The English–Turkish model (about 360 MB) is downloaded once and kept on this computer."
+            "value": "CouchSubs translates on this computer, without the internet. The English–Turkish model (about 530 MB) is downloaded once and kept on this computer."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "CouchSubs çeviriyi bu bilgisayarda, internetsiz yapar. İngilizce–Türkçe model (yaklaşık 360 MB) bir kez indirilir ve bu bilgisayarda kalır."
+            "value": "CouchSubs çeviriyi bu bilgisayarda, internetsiz yapar. İngilizce–Türkçe model (yaklaşık 530 MB) bir kez indirilir ve bu bilgisayarda kalır."
           }
         }
       }

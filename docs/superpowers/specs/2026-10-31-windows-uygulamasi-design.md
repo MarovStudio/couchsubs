@@ -46,9 +46,10 @@ windows/
 - **Yazı tanıma: Windows.Media.Ocr.** Önce oyun dili (en-US), yoksa kullanıcının yüklü Latin alfabeli
   OCR dili (ör. tr-TR) kullanılır. Hiçbiri yoksa arayüz İngilizce OCR'nin nasıl ekleneceğini söyler.
   Kısa satırlar için Mac'teki şerit + büyütme yedek okuması aynı.
-- **Çeviri: Helsinki-NLP opus-mt-tc-big-en-tr (CC BY 4.0), ONNX int8.** Kodlayıcı/kod çözücü ONNX
+- **Çeviri: Helsinki-NLP opus-mt-tc-big-en-tr (CC BY 4.0), ONNX int8** (onnx-community dönüşümü, sabit sürüm).
+  Satırlar cümle cümle çevrilir (bütün olarak çevrilince model cümle atlıyordu); büyük harfli konuşmacı adları korunur. Kodlayıcı/kod çözücü ONNX
   Runtime ile, SentencePiece belirteçleme Microsoft.ML.Tokenizers ile, açgözlü kod çözme (KV önbellekli).
-  Model (~360 MB) ilk kurulumda sihirbazdaki "Çeviri modelini indir" adımıyla indirilir ve
+  Model (~534 MB) ilk kurulumda sihirbazdaki "Çeviri modelini indir" adımıyla indirilir ve
   `%LOCALAPPDATA%\CouchSubs\models` altına konur; özet (SHA-256) doğrulanır. Çeviri önbelleği Mac'teki gibi.
   Diğer oyun dilleri (ja/de/fr/es) için aynı aileden modeller sonradan eklenebilir; ilk sürüm en→tr.
 - **PSN girişi: WebView2** (Windows 10/11'de yüklü gelir). Yönlendirme adresi yakalanır, token saklanmaz.
