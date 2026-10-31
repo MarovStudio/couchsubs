@@ -37,9 +37,15 @@ final class FakeLGTV: @unchecked Sendable {
     func stop() { listener.cancel() }
 
     private func receive(on connection: NWConnection) {
-        connection.receiveMessage { [weak self] data, _, _, error in
-            guard let self, error == nil, let data,
-                  let message = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        connection.receiveMessage { [weak self] data, context, _, error in
+            guard let self, error == nil, let data else { return }
+            // Gerçek LG TV ikili çerçeveyi reddeder; yalnız metin çerçevesi kabul edilir.
+            let frame = context?.protocolMetadata(definition: NWProtocolWebSocket.definition) as? NWProtocolWebSocket.Metadata
+            guard frame?.opcode == .text else {
+                self.send(["type": "error", "id": "", "error": "400 binary messages not supported", "payload": [:]], on: connection)
+                return self.receive(on: connection)
+            }
+            guard let message = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
             self.handle(message, on: connection)
             self.receive(on: connection)
         }

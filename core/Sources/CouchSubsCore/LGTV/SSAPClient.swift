@@ -49,7 +49,7 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
             let task = session.webSocketTask(with: url)
             task.resume()
             do {
-                try await task.send(.data(SSAPMessages.register(clientKey: clientKey)))
+                try await task.send(.string(String(decoding: SSAPMessages.register(clientKey: clientKey), as: UTF8.self)))
                 let key = try await waitForRegistration(on: task)
                 socket = task
                 clientKey = key
@@ -118,7 +118,7 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
         guard let socket else { throw SSAPError.cannotConnect }
         let id = "req_\(nextId)"
         nextId += 1
-        try await socket.send(.data(SSAPMessages.request(id: id, uri: uri, payload: payload)))
+        try await socket.send(.string(String(decoding: SSAPMessages.request(id: id, uri: uri, payload: payload), as: UTF8.self)))
         while true {
             let message = try await Self.decode(socket.receive())
             guard message["id"] as? String == id else { continue }
