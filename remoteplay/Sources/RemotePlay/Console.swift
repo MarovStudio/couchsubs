@@ -20,7 +20,12 @@ public struct ConsoleInfo: Codable, Hashable, Sendable {
 public enum Console {
     /// `host` verilirse yalnız o adrese sorulur (genel yayın bazı ağlarda engellenebiliyor).
     public static func discover(timeout: Duration = .seconds(3), host: String? = nil) async -> [ConsoleInfo] {
-        await Task.detached { search(timeout: timeout, host: host) }.value
+        // Arama birkaç saniye uyuyarak bekler; Swift'in iş havuzunu tutmamak için ayrı kuyrukta çalışır.
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: search(timeout: timeout, host: host))
+            }
+        }
     }
 
     /// Kayıtlı PS5'i dinlenme modundan uyandırır.

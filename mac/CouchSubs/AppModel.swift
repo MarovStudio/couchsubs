@@ -124,7 +124,15 @@ final class AppModel {
     var console: RegisteredConsole?
     var tv: LGTV?
     var settings: UserSettings {
-        didSet { store.save(settings, for: StoreKey.settings); server.sendStyle(settings.style) }
+        didSet {
+            // Sıradan tercih; her kaydırıcı hareketinde Anahtarlık'a yazılmasın.
+            if let data = try? JSONEncoder().encode(settings) { defaults.set(data, forKey: StoreKey.settings) }
+            server.sendStyle(settings.style)
+            if isRunning, settings.sourceLanguage != oldValue.sourceLanguage || settings.targetLanguage != oldValue.targetLanguage {
+                Task { await refreshTranslatorStatus() }
+                makePipeline()
+            }
+        }
     }
 
     // Çalışma durumu
@@ -142,6 +150,9 @@ final class AppModel {
 
     private let services: AppServices
     private let store: AppStore
+    private let defaults: UserDefaults
+    /// Çalışan okuma hattının dilleri.
+    private(set) var activeLanguages: (source: String, target: String)?
     private var server = SubtitleServer(port: AppIdentity.serverPort)
     private var serverStarted = false
     /// Sunucunun gerçekten dinlediği port (8787 doluysa rastgele bir port).
@@ -153,9 +164,10 @@ final class AppModel {
     private var processing = false
     private var wakeObserver: NSObjectProtocol?
 
-    init(services: AppServices = LiveServices(), store: AppStore = KeychainStore()) {
+    init(services: AppServices = LiveServices(), store: AppStore = KeychainStore(), defaults: UserDefaults = .standard) {
         self.services = services
         self.store = store
+        self.defaults = defaults
         let accountId = store.load(Data.self, for: StoreKey.accountId)
         let console = store.load(RegisteredConsole.self, for: StoreKey.console)
         let tv = store.load(LGTV.self, for: StoreKey.tv)
@@ -163,7 +175,7 @@ final class AppModel {
         self.accountId = accountId
         self.console = console
         self.tv = tv
-        settings = store.load(UserSettings.self, for: StoreKey.settings) ?? UserSettings()
+        settings = defaults.data(forKey: StoreKey.settings).flatMap { try? JSONDecoder().decode(UserSettings.self, from: $0) } ?? UserSettings()
         step = ready ? .done : .welcome
         server.onClientsChanged = { [weak self] count in self?.tvClients = count }
     }
@@ -244,14 +256,7 @@ final class AppModel {
         try? await startServer()
         server.sendStyle(settings.style)
 
-        let pipeline = SubtitlePipeline(reader: VisionReader(language: settings.sourceLanguage),
-                                        translator: Translator(source: settings.sourceLanguage, target: settings.targetLanguage),
-                                        server: server)
-        pipeline.onPair = { [weak self] source, translation in
-            self?.lastSource = source
-            self?.lastTranslation = translation
-        }
-        self.pipeline = pipeline
+        makePipeline()
 
         let session = services.makeStream(console: console, accountId: accountId)
         session.onState = { [weak self] state in Task { @MainActor in self?.sessionStateChanged(state) } }
@@ -276,6 +281,24 @@ final class AppModel {
         isRunning = true
     }
 
+    /// Okuma hattını güncel dillerle (yeniden) kurar.
+    private func makePipeline() {
+        pipeline?.reset()
+        let pipeline = SubtitlePipeline(reader: VisionReader(language: settings.sourceLanguage),
+                                        translator: Translator(source: settings.sourceLanguage, target: settings.targetLanguage),
+                                        server: server)
+        pipeline.onPair = { [weak self] source, translation in
+            self?.lastSource = source
+            self?.lastTranslation = translation
+        }
+        self.pipeline = pipeline
+        activeLanguages = (settings.sourceLanguage, settings.targetLanguage)
+    }
+
+    private func refreshTranslatorStatus() async {
+        translatorStatus = await Translator.status(source: settings.sourceLanguage, target: settings.targetLanguage)
+    }
+
     func stop() {
         session?.stop()
         session = nil
@@ -283,6 +306,7 @@ final class AppModel {
         keeper = nil
         pipeline?.reset()
         pipeline = nil
+        activeLanguages = nil
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
         wakeObserver = nil
         if let sleepActivity { ProcessInfo.processInfo.endActivity(sleepActivity) }
@@ -300,6 +324,14 @@ final class AppModel {
         }
     }
 
+    static func translatorStatus(after error: TranslatorError?) -> TranslatorStatus {
+        switch error {
+        case nil: .ready
+        case .needsDownload: .needsDownload
+        case .unsupported: .unsupported
+        }
+    }
+
     /// PS5 durumunun kullanıcıya gösterilecek metni.
     static func statusText(_ state: SessionState, running: Bool) -> String {
         switch state {
@@ -311,6 +343,7 @@ final class AppModel {
             case .consoleAsleep: return String(localized: "Turn on your PS5")
             case .inUse: return String(localized: "Remote Play is in use on another device")
             case .refused: return String(localized: "The PS5 refused the connection. Set up the PS5 again.")
+            case .loginPasscode: return String(localized: "The second user has a login passcode on the PS5. Turn it off in Settings › Users and Accounts.")
             default: return String(localized: "Reconnecting…")
             }
         }
@@ -321,8 +354,13 @@ final class AppModel {
         // Önceki kare hâlâ işleniyorsa bu kare atlanır; okuma kareleri biriktirmez.
         guard !processing, let pipeline else { return }
         processing = true
+        let before = pipeline.lastPair?.source
         await pipeline.process(frame, region: settings.region)
-        if pipeline.lastError == .needsDownload { translatorStatus = .needsDownload }
+        if let error = pipeline.lastError {
+            translatorStatus = Self.translatorStatus(after: error)
+        } else if pipeline.lastPair?.source != before {
+            translatorStatus = .ready   // dil paketi bu arada indirilmiş olabilir
+        }
         processing = false
     }
 

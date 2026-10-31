@@ -17,8 +17,10 @@ private final class FakeReader: TextReader, @unchecked Sendable {
 
 private final class FakeTranslator: TextTranslator {
     var error: Error?
+    var failuresLeft = 0
     func translate(_ text: String) async throws -> String {
         if let error { throw error }
+        if failuresLeft > 0 { failuresLeft -= 1; throw URLError(.timedOut) }
         return "TR: " + text
     }
 }
@@ -62,6 +64,15 @@ final class SubtitlePipelineTests: XCTestCase {
         for _ in 0..<2 { await pipeline.process(frame, region: CropRegion()) }
         XCTAssertTrue(sender.sent.isEmpty)
         XCTAssertEqual(pipeline.lastError, .needsDownload)
+    }
+
+    func testFailedTranslationIsRetriedWhileLineStaysOnScreen() async {
+        let sender = FakeSender()
+        let translator = FakeTranslator()
+        translator.failuresLeft = 1
+        let pipeline = SubtitlePipeline(reader: FakeReader(Array(repeating: "Hold the gate", count: 4)), translator: translator, server: sender)
+        for _ in 0..<4 { await pipeline.process(frame, region: CropRegion()) }
+        XCTAssertEqual(sender.sent, ["TR: Hold the gate"])
     }
 
     func testTwoEmptyFramesClearTheTV() async {

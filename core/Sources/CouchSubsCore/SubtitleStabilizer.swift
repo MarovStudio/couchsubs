@@ -61,6 +61,13 @@ public struct SubtitleStabilizer {
         !TextMatch.isSimilar(TextMatch.normalize(source), TextMatch.normalize(translation), threshold: 0.90)
     }
 
+    /// Son gönderilen satırı unutur (ör. çevirisi başarısız oldu); satır ekranda kaldıkça yeniden kararlı sayılıp çevrilir.
+    public mutating func forgetSent() {
+        sent = ""
+        candidate = ""
+        candidateCount = 0
+    }
+
     public mutating func reset() -> StabilizerAction {
         candidate = ""
         candidateCount = 0

@@ -53,3 +53,15 @@ final class SubtitleStabilizerTests: XCTestCase {
         XCTAssertEqual(s.reset(), .none)
     }
 }
+
+final class SubtitleStabilizerRetryTests: XCTestCase {
+    /// Çevirisi başarısız olan satır ekranda kaldıkça yeniden denenebilmeli.
+    func testForgottenLineIsTranslatedAgain() {
+        var s = SubtitleStabilizer()
+        _ = s.feed("Hold the gate")
+        XCTAssertEqual(s.feed("Hold the gate"), .translate("Hold the gate"))
+        s.forgetSent()
+        XCTAssertEqual(s.feed("Hold the gate"), .none)
+        XCTAssertEqual(s.feed("Hold the gate"), .translate("Hold the gate"))
+    }
+}

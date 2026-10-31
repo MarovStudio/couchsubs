@@ -51,8 +51,11 @@ final class SubtitlePipeline {
                 onPair?(source, translation)
             } catch let error as TranslatorError {
                 lastError = error
+                stabilizer.forgetSent()
             } catch {
+                // Geçici hata: satır ekranda kaldıkça yeniden denenir.
                 lastError = nil
+                stabilizer.forgetSent()
             }
         }
     }

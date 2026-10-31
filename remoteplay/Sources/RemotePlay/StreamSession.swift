@@ -45,6 +45,8 @@ public enum DisconnectReason: Equatable, Sendable {
     /// PS5 bağlantıyı reddetti (ör. kayıt geçersiz ya da Uzaktan Oynatma kapalı).
     case refused
     case network
+    /// İkinci kullanıcının PS5'te giriş şifresi var; Uzaktan Oynatma şifre istiyor.
+    case loginPasscode
     case other(String)
 
     init(quit: ChiakiQuitReason) {
@@ -279,6 +281,14 @@ public final class StreamSession: @unchecked Sendable {
                 guard let self, self.box?.generation == eventGeneration else { return }
                 self.policy.reset()
                 self.emit(.streaming)
+            }
+        case CHIAKI_EVENT_LOGIN_PIN_REQUEST:
+            // Kol girdisi göndermediğimiz için şifre giremeyiz; yeniden denemek de aynı yere çıkar.
+            queue.async { [weak self] in
+                guard let self, self.box?.generation == eventGeneration else { return }
+                _ = self.bump(running: false)
+                self.closeBox()
+                self.emit(.disconnected(.loginPasscode))
             }
         case CHIAKI_EVENT_QUIT:
             let reason = DisconnectReason(quit: event.quit.reason)

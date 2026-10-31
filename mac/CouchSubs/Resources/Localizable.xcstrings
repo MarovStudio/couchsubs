@@ -769,18 +769,18 @@
         }
       }
     },
-    "Open System Settings › General › Language & Region › Translation Languages and download English and Turkish.": {
+    "Open System Settings › General › Language & Region › Translation Languages and download both languages.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open System Settings › General › Language & Region › Translation Languages and download English and Turkish."
+            "value": "Open System Settings › General › Language & Region › Translation Languages and download both languages."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sistem Ayarları › Genel › Dil ve Bölge › Çeviri Dilleri'ni açıp İngilizce ve Türkçe'yi indirin."
+            "value": "Sistem Ayarları › Genel › Dil ve Bölge › Çeviri Dilleri'ni açıp iki dili de indirin."
           }
         }
       }
@@ -1281,18 +1281,18 @@
         }
       }
     },
-    "The English–Turkish language pack is not downloaded yet.": {
+    "The %@–%@ language pack is not downloaded yet.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The English–Turkish language pack is not downloaded yet."
+            "value": "The %@–%@ language pack is not downloaded yet."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "İngilizce–Türkçe dil paketi henüz indirilmedi."
+            "value": "%@–%@ dil paketi henüz indirilmedi."
           }
         }
       }
@@ -1377,6 +1377,22 @@
         }
       }
     },
+    "The second user has a login passcode on the PS5. Turn it off in Settings › Users and Accounts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The second user has a login passcode on the PS5. Turn it off in Settings › Users and Accounts."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İkinci kullanıcının PS5'te giriş şifresi var. Ayarlar › Kullanıcılar ve Hesaplar'dan kapatın."
+          }
+        }
+      }
+    },
     "This is a test subtitle. Can you see it on top of the game?": {
       "localizations": {
         "en": {
@@ -1405,6 +1421,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Üst"
+          }
+        }
+      }
+    },
+    "Translation from %@ to %@ is not available on this Mac.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation from %@ to %@ is not available on this Mac."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Mac'te %@ dilinden %@ diline çeviri kullanılamıyor."
           }
         }
       }

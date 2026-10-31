@@ -7,6 +7,9 @@ struct MainView: View {
     @Environment(AppModel.self) private var model
     @State private var showSettings = false
 
+    private var sourceName: String { Locale.current.localizedString(forLanguageCode: model.settings.sourceLanguage) ?? model.settings.sourceLanguage }
+    private var targetName: String { Locale.current.localizedString(forLanguageCode: model.settings.targetLanguage) ?? model.settings.targetLanguage }
+
     private var ps5Status: (String, Bool) {
         (AppModel.statusText(model.sessionState, running: model.isRunning), model.sessionState == .streaming)
     }
@@ -43,14 +46,20 @@ struct MainView: View {
                 .padding(6)
             }
 
-            if model.translatorStatus == .needsDownload {
+            if model.translatorStatus != .ready {
                 GroupBox {
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("The English–Turkish language pack is not downloaded yet.", systemImage: "arrow.down.circle")
-                        Text("Open System Settings › General › Language & Region › Translation Languages and download English and Turkish.")
-                            .font(.callout).foregroundStyle(.secondary)
-                        Button("Open Language & Region") {
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension")!)
+                        if model.translatorStatus == .needsDownload {
+                            Label(String(format: String(localized: "The %@–%@ language pack is not downloaded yet."), sourceName, targetName),
+                                  systemImage: "arrow.down.circle")
+                            Text("Open System Settings › General › Language & Region › Translation Languages and download both languages.")
+                                .font(.callout).foregroundStyle(.secondary)
+                            Button("Open Language & Region") {
+                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension")!)
+                            }
+                        } else {
+                            Label(String(format: String(localized: "Translation from %@ to %@ is not available on this Mac."), sourceName, targetName),
+                                  systemImage: "exclamationmark.triangle")
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

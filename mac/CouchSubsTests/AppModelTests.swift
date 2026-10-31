@@ -178,6 +178,35 @@ final class AppModelRunTests: XCTestCase {
         XCTAssertTrue(sawClear)
     }
 
+    func testTranslatorStatusFollowsPipeline() {
+        XCTAssertEqual(AppModel.translatorStatus(after: nil), .ready)
+        XCTAssertEqual(AppModel.translatorStatus(after: .needsDownload), .needsDownload)
+        XCTAssertEqual(AppModel.translatorStatus(after: .unsupported), .unsupported)
+    }
+
+    func testSettingsGoToPreferencesNotKeychain() {
+        let store = MemoryStore()
+        let defaults = UserDefaults(suiteName: "couchsubs-test-\(UUID())")!
+        let model = AppModel(services: FakeServices(), store: store, defaults: defaults)
+        model.settings.style.fontSize = 58
+        XCTAssertNil(store.values[StoreKey.settings])
+        XCTAssertEqual(AppModel(services: FakeServices(), store: store, defaults: defaults).settings.style.fontSize, 58)
+    }
+
+    func testChangingLanguageWhileRunningRebuildsPipeline() async {
+        let model = readyModel(FakeServices())
+        await model.start()
+        defer { model.stop() }
+        XCTAssertEqual(model.activeLanguages?.source, "en")
+        model.settings.sourceLanguage = "ja"
+        XCTAssertEqual(model.activeLanguages?.source, "ja")
+    }
+
+    func testLoginPasscodeIsExplained() {
+        XCTAssertEqual(AppModel.statusText(.disconnected(.loginPasscode), running: true),
+                       String(localized: "The second user has a login passcode on the PS5. Turn it off in Settings › Users and Accounts."))
+    }
+
     func testDisconnectReasonsAreExplained() {
         XCTAssertEqual(AppModel.statusText(.disconnected(.consoleAsleep), running: true), String(localized: "Turn on your PS5"))
         XCTAssertEqual(AppModel.statusText(.disconnected(.inUse), running: true), String(localized: "Remote Play is in use on another device"))
