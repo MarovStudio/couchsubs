@@ -23,7 +23,7 @@ print("Eşleşildi.")
 try await client.launch(appId: "com.couchsubs.tv", params: ["server": server])
 print("TV uygulaması başlatıldı (\(server)). Önplandaki uygulama: \(try await client.foregroundAppId())")
 
-let keeper = TVKeeper(control: client, appId: "com.couchsubs.tv", params: ["server": server])
+let keeper = TVKeeper(connect: { client }, appId: "com.couchsubs.tv", params: ["server": server])
 keeper.start()
 print("Öne getirme açık. TV'yi kumandayla başka girişe geçirin; 5 sn içinde uygulama geri gelmeli. Çıkmak için Ctrl+C.")
 while true { try await Task.sleep(for: .seconds(60)) }

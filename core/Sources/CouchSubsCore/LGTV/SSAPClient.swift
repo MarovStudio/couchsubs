@@ -65,6 +65,8 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
     public func close() {
         socket?.cancel(with: .normalClosure, reason: nil)
         socket = nil
+        // URLSession temsilcisini (self) güçlü tutar; kapatılmazsa istemci hiç bırakılmaz.
+        session.invalidateAndCancel()
     }
 
     public func launch(appId: String, params: [String: Any]) async throws {
@@ -133,37 +135,66 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
     }
 }
 
-/// TV kendi HDMI girişine geçerse (SimpLink/CEC) TV uygulamasını yeniden öne getirir.
+/// TV uygulamasını açık tutar: TV kendi HDMI ya da yayın girişine geçerse (SimpLink/CEC) uygulamayı
+/// yeniden öne getirir. TV kapalıysa ya da bağlantı koparsa bir sonraki kontrolde yeniden bağlanır.
 public final class TVKeeper: @unchecked Sendable {
-    private let control: TVControlling
+    private let connect: () async throws -> TVControlling
     private let appId: String
     private let params: [String: Any]
+    private var control: TVControlling?
     private var loop: Task<Void, Never>?
 
-    public init(control: TVControlling, appId: String, params: [String: Any]) {
-        self.control = control
+    public init(connect: @escaping () async throws -> TVControlling, appId: String, params: [String: Any]) {
+        self.connect = connect
         self.appId = appId
         self.params = params
     }
 
-    /// Bir kontrol: önde başka uygulama varsa bizimkini başlatır.
-    public func tick() async throws {
-        let current = try await control.foregroundAppId()
-        if current != appId { try await control.launch(appId: appId, params: params) }
+    /// Kullanıcının bilerek açtığı uygulamalara (Netflix vb.) dokunulmaz; yalnız giriş ve yayın ekranları.
+    static func isInputOrLiveTV(_ appId: String) -> Bool {
+        appId.hasPrefix("com.webos.app.hdmi") || appId.hasPrefix("com.webos.app.externalinput") || appId == "com.webos.app.livetv"
+    }
+
+    /// Bir kontrol. Hata fırlatmaz; bağlantı sorununda bir sonraki kontrolde yeniden dener.
+    public func tick() async {
+        do {
+            if control == nil {
+                let fresh = try await connect()
+                control = fresh
+                try await fresh.launch(appId: appId, params: params)
+                return
+            }
+            guard let control else { return }
+            let current = try await control.foregroundAppId()
+            if Self.isInputOrLiveTV(current) { try await control.launch(appId: appId, params: params) }
+        } catch {
+            (control as? SSAPClient)?.close()
+            control = nil
+        }
     }
 
     public func start(interval: Duration = .seconds(5)) {
         loop?.cancel()
         loop = Task { [weak self] in
             while !Task.isCancelled {
-                try? await self?.tick()
+                await self?.tick()
                 try? await Task.sleep(for: interval)
             }
         }
     }
 
+    /// Mac uykudan uyandığında: bağlantıyı yenile.
+    public func reconnect() {
+        (control as? SSAPClient)?.close()
+        control = nil
+    }
+
     public func stop() {
         loop?.cancel()
         loop = nil
+        (control as? SSAPClient)?.close()
+        control = nil
     }
+
+    deinit { loop?.cancel() }
 }

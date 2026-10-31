@@ -114,21 +114,47 @@ final class TVKeeperTests: XCTestCase {
     final class FakeControl: TVControlling, @unchecked Sendable {
         var foreground: [String]
         var launches: [(String, [String: String])] = []
+        var failNext = false
         init(foreground: [String]) { self.foreground = foreground }
-        func foregroundAppId() async throws -> String { foreground.isEmpty ? "" : foreground.removeFirst() }
+        func foregroundAppId() async throws -> String {
+            if failNext { failNext = false; throw URLError(.networkConnectionLost) }
+            return foreground.isEmpty ? "com.couchsubs.tv" : foreground.removeFirst()
+        }
         func launch(appId: String, params: [String: Any]) async throws {
             launches.append((appId, params.compactMapValues { $0 as? String }))
         }
     }
 
-    func testRelaunchesOnlyWhenAnotherAppIsInFront() async throws {
-        let control = FakeControl(foreground: ["com.webos.app.hdmi2", "com.couchsubs.tv", "com.couchsubs.tv"])
-        let keeper = TVKeeper(control: control, appId: "com.couchsubs.tv", params: ["server": "http://1.2.3.4:8787"])
-        try await keeper.tick()
-        try await keeper.tick()
-        try await keeper.tick()
+    func testRelaunchesOnlyWhenHdmiInputIsInFront() async throws {
+        let control = FakeControl(foreground: ["com.couchsubs.tv", "com.webos.app.hdmi2", "com.couchsubs.tv", "netflix"])
+        let keeper = TVKeeper(connect: { control }, appId: "com.couchsubs.tv", params: ["server": "http://1.2.3.4:8787"])
+        await keeper.tick()   // bağlanır ve uygulamayı bir kez başlatır
+        await keeper.tick()   // önde HDMI girişi → geri getir
+        await keeper.tick()   // önde bizimki
+        await keeper.tick()   // kullanıcı Netflix'i açtı → dokunma
+        XCTAssertEqual(control.launches.count, 2)
+        XCTAssertEqual(control.launches.last?.0, "com.couchsubs.tv")
+        XCTAssertEqual(control.launches.last?.1["server"], "http://1.2.3.4:8787")
+    }
+
+    func testReconnectsWhenTVWasOffOrConnectionDropped() async throws {
+        struct Off: Error {}
+        let control = FakeControl(foreground: [])
+        var attempts = 0
+        let keeper = TVKeeper(connect: {
+            attempts += 1
+            if attempts == 1 { throw Off() }   // TV kapalı
+            return control
+        }, appId: "com.couchsubs.tv", params: [:])
+        await keeper.tick()
+        XCTAssertTrue(control.launches.isEmpty)
+        await keeper.tick()                     // TV açıldı → bağlan ve başlat
         XCTAssertEqual(control.launches.count, 1)
-        XCTAssertEqual(control.launches.first?.0, "com.couchsubs.tv")
-        XCTAssertEqual(control.launches.first?.1["server"], "http://1.2.3.4:8787")
+
+        control.failNext = true                 // bağlantı koptu
+        await keeper.tick()
+        await keeper.tick()                     // yeniden bağlanır ve tekrar başlatır
+        XCTAssertEqual(attempts, 3)
+        XCTAssertEqual(control.launches.count, 2)
     }
 }
