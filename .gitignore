@@ -1,3 +1,8 @@
 dist/
-okuyucu/okuyucu
+prototip/okuyucu/okuyucu
 .DS_Store
+.superpowers/
+build/
+*.xcodeproj/xcuserdata/
+third-party/build/
+.build/

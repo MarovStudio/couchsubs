@@ -2,7 +2,7 @@
 # TV uygulamasını Mac'in IP adresiyle paketler, LG TV'ye kurar ve açar.
 # Önce bir kez: npm install -g @webos-tools/cli  ve  ares-setup-device ile "tv" cihazını ekle.
 set -e
-cd "${0:A:h}"
+cd "${0:A:h}/.."
 
 DEVICE="${DEVICE:-tv}"
 PORT="${PORT:-8787}"
