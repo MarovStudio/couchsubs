@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  FFMPEG_VERSION: "7.1.1"
+  FFMPEG_VERSION: "7.1.2"
 
 jobs:
   native:
@@ -53,7 +53,7 @@ jobs:
 
       - name: FFmpeg önbelleği
         id: ffmpeg-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ffmpeg-prefix
           key: ffmpeg-${{ env.FFMPEG_VERSION }}-mingw64-h264-swscale-v1
@@ -75,6 +75,14 @@ jobs:
             --enable-decoder=h264 --enable-parser=h264
           make -j"$(nproc)"
           make install
+
+      # Sonraki adımlar başarısız olsa da derlenen FFmpeg saklansın.
+      - name: FFmpeg'i önbelleğe yaz
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ffmpeg-prefix
+          key: ${{ steps.ffmpeg-cache.outputs.cache-primary-key }}
 
       - name: Statik bağımlılıklar mevcut mu
         run: ls -l /mingw64/lib/libcrypto.a /mingw64/lib/libjson-c.a /mingw64/lib/libevent.a /mingw64/lib/libminiupnpc.a ffmpeg-prefix/lib/*.a

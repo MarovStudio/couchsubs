@@ -33,6 +33,7 @@
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <time.h>
 #endif
 
@@ -82,22 +83,39 @@ static void cs_logf(cs_log_cb cb, void *user, int level, const char *fmt, const 
 
 /* --- Başlatma --- */
 
-static volatile long cs_initialized = 0;
+static int cs_init_result = -1;
+
+/* chiaki_lib_init WSAStartup'ı ve FEC'in Galois tablolarını hazırlar; bir kez yeterli. */
+static void cs_init_once(void)
+{
+	/* FFmpeg günlüğü kapalı: uygulama penceresinde stderr yok, bozuk karelerde satır yağar. */
+	av_log_set_level(AV_LOG_QUIET);
+	cs_init_result = (int)chiaki_lib_init();
+}
+
+#ifdef _WIN32
+static INIT_ONCE cs_once = INIT_ONCE_STATIC_INIT;
+
+static BOOL CALLBACK cs_init_once_win(PINIT_ONCE once, PVOID parameter, PVOID *context)
+{
+	(void)once;
+	(void)parameter;
+	(void)context;
+	cs_init_once();
+	return TRUE;
+}
+#else
+static pthread_once_t cs_once = PTHREAD_ONCE_INIT;
+#endif
 
 CS_API int cs_init(void)
 {
-	/* chiaki_lib_init WSAStartup'ı ve FEC'in Galois tablolarını hazırlar; bir kez yeterli. */
-	if(__atomic_exchange_n(&cs_initialized, 1, __ATOMIC_SEQ_CST))
-		return 0;
-	/* FFmpeg günlüğü kapalı: uygulama penceresinde stderr yok, bozuk karelerde satır yağar. */
-	av_log_set_level(AV_LOG_QUIET);
-	ChiakiErrorCode err = chiaki_lib_init();
-	if(err != CHIAKI_ERR_SUCCESS)
-	{
-		__atomic_store_n(&cs_initialized, 0, __ATOMIC_SEQ_CST);
-		return (int)err;
-	}
-	return 0;
+#ifdef _WIN32
+	InitOnceExecuteOnce(&cs_once, cs_init_once_win, NULL, NULL);
+#else
+	pthread_once(&cs_once, cs_init_once);
+#endif
+	return cs_init_result;
 }
 
 /* --- PS5 arama ve uyandırma --- */
