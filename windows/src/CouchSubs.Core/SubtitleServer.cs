@@ -1,0 +1,246 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+
+namespace CouchSubs.Core;
+
+/// <summary>TV'de altyazının görünümü.</summary>
+/// <param name="FontSize">36 (küçük), 46 (orta), 58 (büyük)</param>
+/// <param name="BottomPercent">Altyazının ekranın altından uzaklığı, yüzde.</param>
+public sealed record SubtitleStyle(int FontSize = 46, int BottomPercent = 7);
+
+/// <summary>Altyazıları TV'ye ileten taraf (gerçekte <see cref="SubtitleServer"/>).</summary>
+public interface ISubtitleSender
+{
+    void SendSubtitle(string text, int durationMs = 15000);
+    void Clear();
+}
+
+/// <summary>
+/// TV uygulamasının bağlandığı yerel Server-Sent Events sunucusu.
+/// <c>GET /events</c> akışında <c>subtitle</c>, <c>clear</c> ve <c>style</c> olaylarını yayınlar.
+/// </summary>
+public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposable
+{
+    private sealed class Client(TcpClient tcp)
+    {
+        public TcpClient Tcp { get; } = tcp;
+        public Stream Stream { get; } = tcp.GetStream();
+        /// <summary>Aynı bağlantıya iki yazma iç içe geçmesin.</summary>
+        public SemaphoreSlim WriteLock { get; } = new(1, 1);
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        // Türkçe harfler ı gibi kaçışlarla değil olduğu gibi gönderilir.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    private readonly object gate = new();
+    private readonly List<Client> clients = [];
+    private TcpListener? listener;
+    private Timer? pingTimer;
+    private SubtitleStyle? lastStyle;
+
+    /// <summary>Bağlı TV sayısı değişince çağrılır (iş parçacığı havuzunda).</summary>
+    public event Action<int>? ClientsChanged;
+
+    public int ConnectedClients
+    {
+        get { lock (gate) return clients.Count; }
+    }
+
+    /// <summary>Sunucuyu başlatır ve dinlenen portu döner (<c>port: 0</c> ise rastgele seçilen port).</summary>
+    public Task<int> StartAsync()
+    {
+        var listener = new TcpListener(IPAddress.Any, port);
+        listener.Start();
+        this.listener = listener;
+        _ = AcceptLoop(listener);
+        pingTimer = new Timer(_ => Broadcast(": ping\n\n"), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+        return Task.FromResult(((IPEndPoint)listener.LocalEndpoint).Port);
+    }
+
+    public void Stop()
+    {
+        pingTimer?.Dispose();
+        pingTimer = null;
+        listener?.Stop();
+        listener = null;
+        List<Client> closing;
+        lock (gate)
+        {
+            closing = [.. clients];
+            clients.Clear();
+        }
+        foreach (var client in closing) client.Tcp.Dispose();
+    }
+
+    public void Dispose() => Stop();
+
+    public void SendSubtitle(string text, int durationMs = 15000) =>
+        Broadcast(Frame("subtitle", new SortedDictionary<string, object>
+        {
+            ["at"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            ["duration"] = durationMs,
+            ["text"] = text,
+        }));
+
+    public void Clear() => Broadcast(Frame("clear", new SortedDictionary<string, object>()));
+
+    public void SendStyle(SubtitleStyle style)
+    {
+        lock (gate) lastStyle = style;
+        Broadcast(StyleFrame(style));
+    }
+
+    // --- Bağlantılar ---
+
+    private async Task AcceptLoop(TcpListener listener)
+    {
+        while (true)
+        {
+            TcpClient tcp;
+            try { tcp = await listener.AcceptTcpClientAsync(); }
+            catch { return; }
+            _ = Serve(tcp);
+        }
+    }
+
+    private async Task Serve(TcpClient tcp)
+    {
+        try
+        {
+            EnableKeepAlive(tcp.Client);
+            var stream = tcp.GetStream();
+            var requestLine = await ReadRequestLine(stream);
+            var parts = requestLine?.Split(' ') ?? [];
+            var method = parts.Length > 0 ? parts[0] : "";
+            var path = parts.Length > 1 ? parts[1].Split('?')[0] : "";
+
+            if (method == "OPTIONS") await RespondAndClose(tcp, "204 No Content");
+            else if (method == "GET" && path == "/events") await OpenStream(tcp);
+            else await RespondAndClose(tcp, "404 Not Found");
+        }
+        catch
+        {
+            tcp.Dispose();
+        }
+    }
+
+    /// <summary>Başlıkların sonuna (boş satır) kadar okur, ilk satırı döner. 64 KB'yi aşan istek kapatılır.</summary>
+    private static async Task<string?> ReadRequestLine(Stream stream)
+    {
+        var buffer = new byte[8192];
+        using var head = new MemoryStream();
+        while (head.Length < 65536)
+        {
+            var count = await stream.ReadAsync(buffer);
+            if (count == 0) return null;
+            head.Write(buffer, 0, count);
+            var text = Encoding.ASCII.GetString(head.GetBuffer(), 0, (int)head.Length);
+            var end = text.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+            if (end >= 0) return text[..text.IndexOf("\r\n", StringComparison.Ordinal)];
+        }
+        return null;
+    }
+
+    private static async Task RespondAndClose(TcpClient tcp, string status)
+    {
+        var head = $"HTTP/1.1 {status}\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        await tcp.GetStream().WriteAsync(Encoding.ASCII.GetBytes(head));
+        tcp.Dispose();
+    }
+
+    private async Task OpenStream(TcpClient tcp)
+    {
+        var head = new StringBuilder()
+            .Append("HTTP/1.1 200 OK\r\n")
+            .Append("Content-Type: text/event-stream; charset=utf-8\r\n")
+            .Append("Cache-Control: no-cache\r\n")
+            .Append("Connection: keep-alive\r\n")
+            .Append("Access-Control-Allow-Origin: *\r\n\r\n")
+            .Append("retry: 2000\n\n");
+        var client = new Client(tcp);
+        int count;
+        lock (gate)
+        {
+            if (lastStyle is { } style) head.Append(StyleFrame(style));
+            clients.Add(client);
+            count = clients.Count;
+        }
+        await Write(client, head.ToString());
+        ClientsChanged?.Invoke(count);
+        await WatchForClose(client);
+    }
+
+    /// <summary>İstemci bağlantıyı kapattığında listeden çıkarır.</summary>
+    private async Task WatchForClose(Client client)
+    {
+        var buffer = new byte[1024];
+        try
+        {
+            while (await client.Stream.ReadAsync(buffer) > 0) { }
+        }
+        catch { }
+        Remove(client);
+    }
+
+    private void Remove(Client client)
+    {
+        int count;
+        lock (gate)
+        {
+            if (!clients.Remove(client)) return;
+            count = clients.Count;
+        }
+        client.Tcp.Dispose();
+        ClientsChanged?.Invoke(count);
+    }
+
+    /// <summary>Gönderim hatası alan bağlantı kopmuş sayılır ve listeden çıkarılır.</summary>
+    private void Broadcast(string frame)
+    {
+        List<Client> targets;
+        lock (gate) targets = [.. clients];
+        foreach (var client in targets)
+            _ = Write(client, frame).ContinueWith(t => Remove(client), TaskContinuationOptions.OnlyOnFaulted);
+    }
+
+    private static async Task Write(Client client, string text)
+    {
+        await client.WriteLock.WaitAsync();
+        try
+        {
+            await client.Stream.WriteAsync(Encoding.UTF8.GetBytes(text));
+            await client.Stream.FlushAsync();
+        }
+        finally
+        {
+            client.WriteLock.Release();
+        }
+    }
+
+    /// <summary>Sessizce kaybolan TV'ler (fişten çekme, Wi-Fi kopması) TCP canlılık denetimiyle fark edilir.</summary>
+    private static void EnableKeepAlive(Socket socket)
+    {
+        try
+        {
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 10);
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 5);
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, 3);
+        }
+        catch (SocketException) { }
+    }
+
+    private static string StyleFrame(SubtitleStyle style) =>
+        Frame("style", new SortedDictionary<string, object> { ["bottomPercent"] = style.BottomPercent, ["fontSize"] = style.FontSize });
+
+    private static string Frame(string name, SortedDictionary<string, object> json) =>
+        $"event: {name}\ndata: {JsonSerializer.Serialize(json, JsonOptions)}\n\n";
+}

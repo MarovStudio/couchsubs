@@ -2,8 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Mac uygulamasıyla ortak tek kaynaklar: tasarım değerleri ve metinler. -->
+    <EmbeddedResource Include="..\..\..\design\tokens.json" LogicalName="tokens.json" />
+    <EmbeddedResource Include="..\..\..\mac\CouchSubs\Resources\Localizable.xcstrings" LogicalName="Localizable.xcstrings" />
+  </ItemGroup>
 
 </Project>
