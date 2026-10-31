@@ -24,6 +24,7 @@ let package = Package(
                 .linkedFramework("SystemConfiguration"),
             ]
         ),
-        .testTarget(name: "RemotePlayTests", dependencies: ["RemotePlay", "CChiaki"], swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "rp-smoke", dependencies: ["RemotePlay"], swiftSettings: [.swiftLanguageMode(.v5)]),
+        .testTarget(name: "RemotePlayTests", dependencies: ["RemotePlay", "CChiaki"], resources: [.copy("Fixtures")], swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
 )
