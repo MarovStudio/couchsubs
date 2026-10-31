@@ -261,10 +261,15 @@ public class ReadingFallbackTests
     [Fact]
     public void FallbackReadingsRunAtTheSameTime()
     {
-        var start = DateTime.UtcNow;
-        // Art arda 1000 ms sürerdi; aynı anda ~500 ms. Pay, yoğun sürekli tümleştirme makineleri için.
-        ReadingFallback.FirstReading(Image, candidate => { if (candidate.Width != 64) Thread.Sleep(500); return ""; });
-        Assert.True(DateTime.UtcNow - start < TimeSpan.FromMilliseconds(900));
+        // İki yedek okuma birbirini bekler; art arda yapılsalardı buluşamaz, süre dolardı.
+        using var barrier = new Barrier(2);
+        var met = 0;
+        ReadingFallback.FirstReading(Image, candidate =>
+        {
+            if (candidate.Width != 64 && barrier.SignalAndWait(TimeSpan.FromSeconds(10))) Interlocked.Increment(ref met);
+            return "";
+        });
+        Assert.Equal(2, met);
     }
 }
 
