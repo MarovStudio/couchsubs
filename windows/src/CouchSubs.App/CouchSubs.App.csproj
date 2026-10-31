@@ -26,6 +26,7 @@
     <ProjectReference Include="..\CouchSubs.Core\CouchSubs.Core.csproj" />
     <ProjectReference Include="..\CouchSubs.Translation\CouchSubs.Translation.csproj" />
     <ProjectReference Include="..\CouchSubs.RemotePlay\CouchSubs.RemotePlay.csproj" />
+    <ProjectReference Include="..\CouchSubs.Shell\CouchSubs.Shell.csproj" />
   </ItemGroup>
 
 </Project>

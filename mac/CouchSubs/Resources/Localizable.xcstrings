@@ -33,6 +33,22 @@
         }
       }
     },
+    "A PS5 on the same network as this computer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A PS5 on the same network as this computer"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu bilgisayarla aynı ağda bir PS5"
+          }
+        }
+      }
+    },
     "A free second PlayStation Network account": {
       "localizations": {
         "en": {
@@ -337,6 +353,22 @@
         }
       }
     },
+    "CouchSubs translates on this computer, without the internet. The English–Turkish model (about 360 MB) is downloaded once and kept on this computer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs translates on this computer, without the internet. The English–Turkish model (about 360 MB) is downloaded once and kept on this computer."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs çeviriyi bu bilgisayarda, internetsiz yapar. İngilizce–Türkçe model (yaklaşık 360 MB) bir kez indirilir ve bu bilgisayarda kalır."
+          }
+        }
+      }
+    },
     "CouchSubs watches the game through Remote Play. If it used your own account, the PS5 would turn off your controller. With a second account you keep playing undisturbed.": {
       "localizations": {
         "en": {
@@ -413,6 +445,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bitti"
+          }
+        }
+      }
+    },
+    "Download": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İndir"
+          }
+        }
+      }
+    },
+    "Download the model": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download the model"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modeli indir"
+          }
+        }
+      }
+    },
+    "Download the translation model": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download the translation model"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çeviri modelini indirin"
+          }
+        }
+      }
+    },
+    "Downloading…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İndiriliyor…"
           }
         }
       }
@@ -509,6 +605,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "IP adresi, ör. 192.168.1.20"
+          }
+        }
+      }
+    },
+    "If Windows asks whether CouchSubs may use the network, allow it for private networks.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If Windows asks whether CouchSubs may use the network, allow it for private networks."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows, CouchSubs'ın ağı kullanmasına izin verip vermeyeceğinizi sorarsa özel ağlar için izin verin."
           }
         }
       }
@@ -753,6 +865,22 @@
         }
       }
     },
+    "Open Settings › Time & language › Language & region, add English and select its optical character recognition feature.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings › Time & language › Language & region, add English and select its optical character recognition feature."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar › Saat ve dil › Dil ve bölge'yi açın, İngilizce'yi ekleyin ve optik karakter tanıma özelliğini seçin."
+          }
+        }
+      }
+    },
     "Open System Settings › General › Language & Region › Translation Languages and download both languages.": {
       "localizations": {
         "en": {
@@ -765,6 +893,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sistem Ayarları › Genel › Dil ve Bölge › Çeviri Dilleri'ni açıp iki dili de indirin."
+          }
+        }
+      }
+    },
+    "Open language settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open language settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dil ayarlarını aç"
           }
         }
       }
@@ -1281,6 +1425,22 @@
         }
       }
     },
+    "Text recognition for the game language is not installed on this computer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text recognition for the game language is not installed on this computer."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oyun dilinin yazı tanıma özelliği bu bilgisayarda yüklü değil."
+          }
+        }
+      }
+    },
     "Text size": {
       "localizations": {
         "en": {
@@ -1393,6 +1553,22 @@
         }
       }
     },
+    "The download did not complete. Check your internet connection and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download did not complete. Check your internet connection and try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İndirme tamamlanamadı. İnternet bağlantınızı kontrol edip yeniden deneyin."
+          }
+        }
+      }
+    },
     "The game picture appears here once translating starts.": {
       "localizations": {
         "en": {
@@ -1405,6 +1581,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Çeviri başlayınca oyun görüntüsü burada görünür."
+          }
+        }
+      }
+    },
+    "The model is ready.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The model is ready."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model hazır."
           }
         }
       }
@@ -1437,6 +1629,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "İkinci kullanıcının PS5'te giriş şifresi var. Ayarlar › Kullanıcılar ve Hesaplar'dan kapatın."
+          }
+        }
+      }
+    },
+    "The translation model is not downloaded yet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The translation model is not downloaded yet."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çeviri modeli henüz indirilmedi."
           }
         }
       }
@@ -1485,6 +1693,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu Mac'te %@ dilinden %@ diline çeviri kullanılamıyor."
+          }
+        }
+      }
+    },
+    "Translation from %@ to %@ is not available yet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation from %@ to %@ is not available yet."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ dilinden %@ diline çeviri henüz yok."
+          }
+        }
+      }
+    },
+    "Try again": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeniden dene"
           }
         }
       }
