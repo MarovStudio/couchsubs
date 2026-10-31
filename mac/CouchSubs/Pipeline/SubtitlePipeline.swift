@@ -18,15 +18,20 @@ final class SubtitlePipeline {
     private let reader: TextReader
     private let translator: TextTranslator
     private let server: SubtitleSending
-    /// Kareler saniyede ~10 kez okunur; yaklaşık 0,4 sn boş kalan bölge altyazının kalktığı anlamına gelir.
+    /// Kareler saniyede ~15 kez okunur; yaklaşık 0,3 sn boş kalan bölge altyazının kalktığı anlamına gelir.
     private var stabilizer = SubtitleStabilizer(emptyFramesToClear: 4)
-    /// Her yeni satırda ya da temizlemede artar; eskimiş çeviriler gösterilmez.
-    private var generation = 0
+    /// Her çeviri isteği sıra numarası alır. Hızlı konuşmada çeviriler sırasız dönebilir:
+    /// daha yeni bir satırın çevirisi gösterilmediyse eski satırınki yine gösterilir.
+    private var lastRequested = 0
+    private var lastShown = 0
+    /// Şu an oyun ekranında duran satırın numarası (bölge boşalınca nil).
+    private var lineOnScreen: Int?
+    /// Okuma durdurulunca artar; önceki oturumdan dönen çeviriler gösterilmez.
+    private var session = 0
+    private var translations: [Int: Task<Void, Never>] = [:]
 
     private(set) var lastPair: (source: String, translation: String)?
     private(set) var lastError: TranslatorError?
-    /// Süren çeviri. Okuma bunu beklemez; böylece çeviri sürerken gelen kısa satırlar da yakalanır.
-    private(set) var translation: Task<Void, Never>?
     var onPair: ((String, String) -> Void)?
     /// Her çeviri denemesinden sonra çağrılır (başarılıysa nil).
     var onTranslationResult: ((TranslatorError?) -> Void)?
@@ -37,6 +42,7 @@ final class SubtitlePipeline {
         self.server = server
     }
 
+    /// Okuma çeviriyi beklemez; böylece çeviri sürerken gelen satırlar da yakalanır.
     func process(_ frame: CGImage, region: CropRegion) async {
         // Yazı tanıma uzun sürebilir; arayüz takılmasın diye ana iş parçacığının dışında yapılır.
         let reader = self.reader
@@ -47,31 +53,49 @@ final class SubtitlePipeline {
         case .none:
             break
         case .clear:
-            generation += 1
+            lineOnScreen = nil
             server.clear()
         case .translate(let source):
-            generation += 1
-            let current = generation
-            translation = Task { [weak self] in await self?.translate(source, generation: current) }
+            lastRequested += 1
+            let number = lastRequested, current = session
+            lineOnScreen = number
+            translations[number] = Task { [weak self] in
+                await self?.translate(source, number: number, session: current)
+                self?.translations[number] = nil
+            }
         }
     }
 
-    private func translate(_ source: String, generation current: Int) async {
+    /// Süren bütün çevirilerin bitmesini bekler.
+    func waitForTranslations() async {
+        while !translations.isEmpty {
+            for task in Array(translations.values) { await task.value }
+        }
+    }
+
+    /// Satır ekrandan kalktıktan sonra gelen çevirinin TV'de kalacağı süre (TV uygulamasıyla aynı kural).
+    static func readingTime(for text: String) -> Int {
+        min(8000, 2000 + text.count * 60)
+    }
+
+    private func translate(_ source: String, number: Int, session current: Int) async {
         do {
             let translated = try await translator.translate(source)
-            guard current == generation else { return }
+            guard current == session else { return }
             lastError = nil
             onTranslationResult?(nil)
-            guard stabilizer.shouldSend(source: source, translation: translated) else { return }
-            server.sendSubtitle(translated, durationMs: 15000)
+            guard number > lastShown, stabilizer.shouldSend(source: source, translation: translated) else { return }
+            lastShown = number
+            // Satır hâlâ ekrandaysa kalkınca silinir; kalktıysa okunacak kadar gösterilir.
+            server.sendSubtitle(translated, durationMs: number == lineOnScreen ? 15000 : Self.readingTime(for: translated))
             lastPair = (source, translated)
             onPair?(source, translated)
         } catch {
-            guard current == generation else { return }
+            guard current == session else { return }
             // Dil paketi eksikse ya da geçici bir hata olduysa satır ekranda kaldıkça yeniden denenir.
             lastError = error as? TranslatorError
             onTranslationResult?(lastError)
-            stabilizer.forgetSent()
+            if number == lineOnScreen { stabilizer.forgetSent() }
         }
     }
 
@@ -89,7 +113,8 @@ final class SubtitlePipeline {
 
     /// Okuma durunca TV'deki son altyazıyı kaldırır.
     func reset() {
-        generation += 1
+        session += 1
+        lineOnScreen = nil
         if stabilizer.reset() == .clear { server.clear() }
     }
 }

@@ -30,6 +30,21 @@ html, body {
 
 #subtitle.hidden { opacity: 0; }
 
+/* Hızlı konuşmada önceki satır kısa süre yeni satırın üstünde, daha soluk durur. */
+#subtitle-prev { margin-bottom: 10px; opacity: 0.7; }
+#subtitle-prev.hidden { display: none; }
+
+#subtitle-prev-text {
+  display: inline-block;
+  padding: 6px 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 37px;
+  line-height: 1.3;
+  font-weight: 600;
+  text-shadow: 0 2px 4px #000;
+}
+
 #subtitle-text {
   display: inline-block;
   padding: 10px 26px;

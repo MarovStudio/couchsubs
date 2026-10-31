@@ -4,11 +4,21 @@ import XCTest
 @testable import CouchSubsCore
 
 final class SubtitleStabilizerTests: XCTestCase {
-    func testEmitsAfterTwoStableFrames() {
+    /// Noktalamayla bitmeyen satır yazılmakta olabilir; iki kare aynı okununca gönderilir.
+    func testUnfinishedLineIsSentAfterTwoStableFrames() {
         var s = SubtitleStabilizer()
-        XCTAssertEqual(s.feed("We do not have time."), .none)
-        XCTAssertEqual(s.feed("We do not have time."), .translate("We do not have time."))
-        XCTAssertEqual(s.feed("We do not have time."), .none)
+        XCTAssertEqual(s.feed("We do not have time"), .none)
+        XCTAssertEqual(s.feed("We do not have time"), .translate("We do not have time"))
+        XCTAssertEqual(s.feed("We do not have time"), .none)
+    }
+
+    /// Cümle bitmişse beklemeye gerek yok; hızlı konuşmada her kare önemli.
+    func testFinishedSentenceIsSentOnFirstFrame() {
+        for line in ["We do not have time.", "Wait!", "Who are you?", "I know…", "\"Run.\""] {
+            var s = SubtitleStabilizer()
+            XCTAssertEqual(s.feed(line), .translate(line), line)
+            XCTAssertEqual(s.feed(line), .none, line)
+        }
     }
 
     func testOcrNoiseDoesNotReemit() {
@@ -28,8 +38,8 @@ final class SubtitleStabilizerTests: XCTestCase {
     func testTypewriterSendsCompletedLine() {
         var s = SubtitleStabilizer()
         _ = s.feed("We do"); _ = s.feed("We do not have")
-        _ = s.feed("We do not have time for this, boy.")
         XCTAssertEqual(s.feed("We do not have time for this, boy."), .translate("We do not have time for this, boy."))
+        XCTAssertEqual(s.feed("We do not have time for this, boy."), .none)
     }
 
     func testTwoEmptyFramesClearAfterSend() {

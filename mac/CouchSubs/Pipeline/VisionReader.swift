@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import CoreGraphics
+import Foundation
 import Vision
 
 protocol TextReader: Sendable {
@@ -16,19 +17,34 @@ struct VisionReader: TextReader {
     }
 
     /// Vision geniş bölgede "Go!" gibi kısa satırları sık sık hiç bulmaz. Bölgede yazı çıkmazsa
-    /// önce ortadaki şerit (altyazılar ortalıdır), sonra bölgenin tamamı büyütülerek yeniden okunur.
-    static func firstReading(of image: CGImage, using recognize: (CGImage) throws -> String) rethrows -> String {
-        let candidates: [() -> CGImage?] = [
-            { image },
+    /// ortadaki şerit (altyazılar ortalıdır) ve bölgenin tamamı büyütülerek aynı anda yeniden okunur;
+    /// ikisi de yazı bulursa şeridinki seçilir. Aynı anda okumak, boş karede yeni satırı geç fark etmeyi önler.
+    static func firstReading(of image: CGImage, using recognize: @Sendable (CGImage) throws -> String) throws -> String {
+        let text = try recognize(image)
+        guard text.isEmpty else { return text }
+
+        let fallbacks: [@Sendable () -> CGImage?] = [
             { centerStrip(of: image, widthFraction: 0.4).flatMap { scaled($0, by: 2) } },
             { scaled(image, by: 2) },
         ]
-        for candidate in candidates {
-            guard let variant = candidate() else { continue }
-            let text = try recognize(variant)
-            if !text.isEmpty { return text }
+        let results = Results(count: fallbacks.count)
+        DispatchQueue.concurrentPerform(iterations: fallbacks.count) { index in
+            guard let variant = fallbacks[index]() else { return }
+            results.set(index, Result { try recognize(variant) })
+        }
+        for result in results.all {
+            if let text = try result?.get(), !text.isEmpty { return text }
         }
         return ""
+    }
+
+    /// Aynı anda yapılan okumaların sonuçları.
+    private final class Results: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [Result<String, Error>?]
+        init(count: Int) { values = Array(repeating: nil, count: count) }
+        func set(_ index: Int, _ value: Result<String, Error>) { lock.withLock { values[index] = value } }
+        var all: [Result<String, Error>?] { lock.withLock { values } }
     }
 
     private func recognize(_ image: CGImage) throws -> String {

@@ -49,11 +49,22 @@ public struct SubtitleStabilizer {
             candidateCount = 1
         }
         // Daktilo efektinde metin büyürken aday değişir; tamamlanıp kararlı olunca gider.
-        guard candidateCount == stableFrames, !TextMatch.isSimilar(text, sent, threshold: similarity) else {
+        // Noktalamayla biten satır zaten tamamdır; hızlı konuşmada beklemeden ilk karede gider.
+        let ready = candidateCount == stableFrames || (candidateCount == 1 && Self.endsSentence(rawText))
+        guard ready, !TextMatch.isSimilar(text, sent, threshold: similarity) else {
             return .none
         }
         sent = text
         return .translate(rawText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Satır nokta, ünlem, soru ya da üç noktayla bitiyor mu (kapanan tırnak ve parantezler yok sayılır).
+    static func endsSentence(_ raw: String) -> Bool {
+        let closers: Set<Character> = ["\"", "'", "”", "’", "»", ")", "]"]
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let last = text.last, closers.contains(last) { text.removeLast() }
+        guard let last = text.last else { return false }
+        return ".!?…".contains(last)
     }
 
     /// Çeviri kaynağıyla neredeyse aynıysa metin zaten hedef dildedir (ör. konsolun Türkçe menüleri).

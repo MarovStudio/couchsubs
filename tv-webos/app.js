@@ -17,6 +17,11 @@
 
   var bottomPercent = 7;
 
+  // Önceki satır bu süreden kısa göründüyse okunamamış olabilir; yeni satırın üstünde bir süre daha kalır.
+  var PREVIOUS_HOLD_MS = 2500;
+  var shownAt = 0;
+  var previousTimer = null;
+
   var hideTimer = null;
   var panelTimer = null;
 
@@ -130,6 +135,12 @@
   // --- Altyazı ---
 
   function showSubtitle(text, duration) {
+    var current = $('subtitle-text').textContent;
+    var now = Date.now();
+    if ($('subtitle').className !== 'hidden' && current && current !== text && now - shownAt < PREVIOUS_HOLD_MS) {
+      showPrevious(current);
+    }
+    shownAt = now;
     $('subtitle-text').textContent = text;
     $('subtitle').className = '';
     clearTimeout(hideTimer);
@@ -140,6 +151,19 @@
   function hideSubtitle() {
     clearTimeout(hideTimer);
     $('subtitle').className = 'hidden';
+    hidePrevious();
+  }
+
+  function showPrevious(text) {
+    $('subtitle-prev-text').textContent = text;
+    $('subtitle-prev').className = '';
+    clearTimeout(previousTimer);
+    previousTimer = setTimeout(hidePrevious, PREVIOUS_HOLD_MS);
+  }
+
+  function hidePrevious() {
+    clearTimeout(previousTimer);
+    $('subtitle-prev').className = 'hidden';
   }
 
   // Konum hem CouchSubs uygulamasından hem kumandanın oklarıyla ayarlanır. Kumandayla
@@ -150,7 +174,10 @@
   }
 
   function applyStyle(style) {
-    if (style.fontSize) $('subtitle-text').style.fontSize = style.fontSize + 'px';
+    if (style.fontSize) {
+      $('subtitle-text').style.fontSize = style.fontSize + 'px';
+      $('subtitle-prev-text').style.fontSize = Math.round(style.fontSize * 0.8) + 'px';
+    }
     if (style.bottomPercent >= 0 && String(style.bottomPercent) !== load('appBottom')) {
       save('appBottom', style.bottomPercent);
       save('bottom', '');
