@@ -28,17 +28,80 @@ struct ReconnectPolicy {
     private var attempt = 0
 
     mutating func nextDelay() -> Int {
-        defer { attempt += 1 }
+        defer { attempt = min(attempt + 1, 5) }
         return min(30, 2 << attempt)
     }
 
     mutating func reset() { attempt = 0 }
 }
 
+/// Bağlantının neden koptuğu; kullanıcıya anlatılabilecek biçimde.
+public enum DisconnectReason: Equatable, Sendable {
+    case stopped
+    /// PS5 kapalı ya da uyandırılamadı.
+    case consoleAsleep
+    /// Remote Play başka bir cihazda kullanılıyor.
+    case inUse
+    /// PS5 bağlantıyı reddetti (ör. kayıt geçersiz ya da Uzaktan Oynatma kapalı).
+    case refused
+    case network
+    case other(String)
+
+    init(quit: ChiakiQuitReason) {
+        switch quit {
+        case CHIAKI_QUIT_REASON_STOPPED: self = .stopped
+        case CHIAKI_QUIT_REASON_SESSION_REQUEST_RP_IN_USE: self = .inUse
+        case CHIAKI_QUIT_REASON_SESSION_REQUEST_CONNECTION_REFUSED, CHIAKI_QUIT_REASON_CTRL_CONNECTION_REFUSED,
+             CHIAKI_QUIT_REASON_PSN_REGIST_FAILED: self = .refused
+        case CHIAKI_QUIT_REASON_STREAM_CONNECTION_REMOTE_DISCONNECTED, CHIAKI_QUIT_REASON_STREAM_CONNECTION_REMOTE_SHUTDOWN,
+             CHIAKI_QUIT_REASON_CTRL_CONNECT_FAILED, CHIAKI_QUIT_REASON_STREAM_CONNECTION_UNKNOWN: self = .network
+        default: self = .other(String(cString: chiaki_quit_reason_string(quit)))
+        }
+    }
+}
+
 public enum SessionState: Equatable, Sendable {
     case connecting
     case streaming
-    case disconnected(reason: String)
+    case disconnected(DisconnectReason)
+}
+
+/// Tek bir libchiaki oturumunun sahibi. Geri çağrılar bu kutuya gelir; kutu, oturum kapatılıp
+/// iş parçacığı beklenene (join) kadar yaşar, böylece geri çağrı serbest bırakılmış belleğe düşmez.
+private final class ChiakiSessionBox {
+    let pointer = UnsafeMutablePointer<ChiakiSession>.allocate(capacity: 1)
+    let generation: Int
+    weak var owner: StreamSession?
+    private var torn = false
+    private let lock = NSLock()
+
+    init(generation: Int, owner: StreamSession) {
+        self.generation = generation
+        self.owner = owner
+    }
+
+    /// Oturumu durdurur ve iş parçacığını bekler. libchiaki iş parçacığından çağrılmamalı.
+    func tearDown() {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !torn else { return }
+        torn = true
+        chiaki_session_stop(pointer)
+        chiaki_session_join(pointer)
+        chiaki_session_fini(pointer)
+    }
+
+    /// `chiaki_session_init`/`start` başarısız olduysa: join edilecek iş parçacığı yok, kapatma adımları atlanır.
+    func markUnused() {
+        lock.lock()
+        torn = true
+        lock.unlock()
+    }
+
+    deinit {
+        tearDown()
+        pointer.deallocate()
+    }
 }
 
 /// PS5'e (ikinci hesapla) Remote Play bağlantısı kurar ve görüntüyü kare kare verir.
@@ -52,12 +115,17 @@ public final class StreamSession: @unchecked Sendable {
     private let queue = DispatchQueue(label: "couchsubs.stream-session")
     private let decodeQueue = DispatchQueue(label: "couchsubs.decode")
     private let logger = ChiakiLogger()
-    private let decoder = H264FrameDecoder()
+    private var decoder = H264FrameDecoder()
     private var throttle = FrameThrottle(minInterval: 0.25)
     private var policy = ReconnectPolicy()
-    private var session: UnsafeMutablePointer<ChiakiSession>?
-    private var hostPointer: UnsafeMutablePointer<CChar>?
-    private var wantsToRun = false
+    /// Yalnız `queue` üzerinde okunup yazılır.
+    private var box: ChiakiSessionBox?
+
+    /// Durdurma isteği ve kuşak numarası; her başlat/durdur yeni bir kuşak açar ve eski
+    /// bloklar (yeniden deneme, eski oturumun kapanma olayı) kendini iptal eder.
+    private let stateLock = NSLock()
+    private var running = false
+    private var generation = 0
 
     public init(console: RegisteredConsole, accountId: Data) {
         self.console = console
@@ -65,58 +133,93 @@ public final class StreamSession: @unchecked Sendable {
     }
 
     deinit {
-        stop()
+        // Kuyruk bloklarının hiçbiri self'i güçlü tutmaz; kalan oturum (varsa) arka planda kapatılır.
+        if let box { DispatchQueue.global().async { box.tearDown() } }
     }
 
     public func start() {
-        queue.async {
-            self.wantsToRun = true
-            self.policy.reset()
-            self.connect()
+        let current = bump(running: true)
+        queue.async { [weak self] in
+            self?.policy.reset()
+            self?.connect(current)
         }
     }
 
+    /// Bloklamaz: oturum arka planda kapatılır.
     public func stop() {
-        queue.sync {
-            wantsToRun = false
-            tearDown()
-        }
+        _ = bump(running: false)
+        queue.async { [weak self] in self?.closeBox() }
     }
 
     /// Mac uykudan uyandığında ya da ağ değiştiğinde uygulama tarafından çağrılır.
     public func reconnectNow() {
-        queue.async {
-            guard self.wantsToRun else { return }
-            self.tearDown()
+        guard isRunning else { return }
+        let current = bump(running: true)
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.closeBox()
             self.policy.reset()
-            self.connect()
+            self.connect(current)
         }
     }
 
-    // MARK: - Bağlantı
+    // MARK: - Durum
 
-    private func connect() {
-        guard wantsToRun, session == nil else { return }
+    private var isRunning: Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return running
+    }
+
+    private func bump(running: Bool) -> Int {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        self.running = running
+        generation += 1
+        return generation
+    }
+
+    private func isCurrent(_ value: Int) -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return running && generation == value
+    }
+
+    // MARK: - Bağlantı (hepsi `queue` üzerinde)
+
+    private func connect(_ current: Int) {
+        guard isCurrent(current), box == nil else { return }
         emit(.connecting)
 
-        // PS5 uyuyorsa uyandır ve uyanmasını bekle (en çok 20 sn).
-        let consoles = Self.blockingDiscover(timeout: 2, host: console.host)
-        if let info = consoles.first(where: { $0.host == console.host }), !info.isAwake {
+        // PS5 uyuyorsa uyandır; uyanmayı kuyruğu bloklamadan, aralıklı kontrollerle bekle.
+        if let info = Console.blockingDiscover(timeout: 2, host: console.host).first, !info.isAwake {
             try? Console.wake(console)
-            let deadline = Date().addingTimeInterval(20)
-            var awake = false
-            while Date() < deadline, wantsToRun {
-                if Self.blockingDiscover(timeout: 2, host: console.host).contains(where: { $0.host == console.host && $0.isAwake }) { awake = true; break }
-            }
-            if !awake { return scheduleReconnect(reason: "console-asleep") }
+            return waitForWake(current, deadline: Date().addingTimeInterval(20))
         }
+        openSession(current)
+    }
 
-        let session = UnsafeMutablePointer<ChiakiSession>.allocate(capacity: 1)
-        hostPointer = strdup(console.host)
+    private func waitForWake(_ current: Int, deadline: Date) {
+        queue.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self, self.isCurrent(current) else { return }
+            if Console.blockingDiscover(timeout: 2, host: self.console.host).contains(where: \.isAwake) {
+                self.openSession(current)
+            } else if Date() < deadline {
+                self.waitForWake(current, deadline: deadline)
+            } else {
+                self.scheduleReconnect(current, reason: .consoleAsleep)
+            }
+        }
+    }
 
+    private func openSession(_ current: Int) {
+        guard isCurrent(current), box == nil else { return }
+        // Yeniden bağlanmada çözücü sıfırdan başlar (uykudan sonra eski oturumu geçersiz olabilir).
+        decodeQueue.async { [weak self] in self?.decoder = H264FrameDecoder() }
+
+        let box = ChiakiSessionBox(generation: current, owner: self)
         var info = ChiakiConnectInfo()
         info.ps5 = true
-        info.host = UnsafePointer(hostPointer)
         copy(console.registKey, into: &info.regist_key)
         copy(console.morning, into: &info.morning)
         chiaki_connect_video_profile_preset(&info.video_profile, CHIAKI_VIDEO_RESOLUTION_PRESET_1080p, CHIAKI_VIDEO_FPS_PRESET_30)
@@ -132,70 +235,77 @@ public final class StreamSession: @unchecked Sendable {
         info.packet_loss_max = 0.05
         info.enable_idr_on_fec_failure = true
 
-        let error = chiaki_session_init(session, &info, logger.pointer)
+        // libchiaki adresi oturum açılırken kopyalar; geçici C dizgesi yeterli.
+        let error = console.host.withCString { host -> ChiakiErrorCode in
+            info.host = host
+            return chiaki_session_init(box.pointer, &info, logger.pointer)
+        }
         guard error.isSuccess else {
-            session.deallocate()
-            return scheduleReconnect(reason: ChiakiError(code: error).description)
+            return scheduleReconnect(current, reason: .other(ChiakiError(code: error).description), initialized: false, box: box)
         }
 
-        let user = Unmanaged.passUnretained(self).toOpaque()
-        chiaki_session_set_event_cb(session, { event, user in
+        let user = Unmanaged.passUnretained(box).toOpaque()
+        chiaki_session_set_event_cb(box.pointer, { event, user in
             guard let event, let user else { return }
-            Unmanaged<StreamSession>.fromOpaque(user).takeUnretainedValue().handle(event.pointee)
+            let box = Unmanaged<ChiakiSessionBox>.fromOpaque(user).takeUnretainedValue()
+            box.owner?.handle(event.pointee, generation: box.generation)
         }, user)
-        chiaki_session_set_video_sample_cb(session, { buffer, size, _, _, user in
+        chiaki_session_set_video_sample_cb(box.pointer, { buffer, size, _, _, user in
             guard let buffer, let user else { return true }
-            Unmanaged<StreamSession>.fromOpaque(user).takeUnretainedValue().ingest(Data(bytes: buffer, count: size))
+            Unmanaged<ChiakiSessionBox>.fromOpaque(user).takeUnretainedValue().owner?.ingest(Data(bytes: buffer, count: size))
             return true
         }, user)
 
-        let started = chiaki_session_start(session)
+        let started = chiaki_session_start(box.pointer)
         guard started.isSuccess else {
-            chiaki_session_fini(session)
-            session.deallocate()
-            return scheduleReconnect(reason: ChiakiError(code: started).description)
+            chiaki_session_fini(box.pointer)
+            return scheduleReconnect(current, reason: .other(ChiakiError(code: started).description), initialized: false, box: box)
         }
-        self.session = session
+        self.box = box
     }
 
-    private func tearDown() {
-        guard let session else { return }
-        chiaki_session_stop(session)
-        chiaki_session_join(session)
-        chiaki_session_fini(session)
-        session.deallocate()
-        self.session = nil
-        free(hostPointer)
-        hostPointer = nil
+    /// Geçerli oturumu kapatır. Kapatma join içerdiği için kuyruğu bekletmemek adına arka planda yapılır.
+    private func closeBox() {
+        guard let box else { return }
+        self.box = nil
+        DispatchQueue.global().async { box.tearDown() }
     }
 
-    private func handle(_ event: ChiakiEvent) {
+    /// libchiaki iş parçacığından çağrılır.
+    fileprivate func handle(_ event: ChiakiEvent, generation eventGeneration: Int) {
         switch event.type {
         case CHIAKI_EVENT_CONNECTED:
-            queue.async { self.policy.reset() }
-            emit(.streaming)
+            queue.async { [weak self] in
+                guard let self, self.box?.generation == eventGeneration else { return }
+                self.policy.reset()
+                self.emit(.streaming)
+            }
         case CHIAKI_EVENT_QUIT:
-            let reason = event.quit.reason_str.map { String(cString: $0) } ?? String(cString: chiaki_quit_reason_string(event.quit.reason))
-            // Oturum kendi iş parçacığında bitiyor; kapatma ve yeniden bağlanma kendi kuyruğumuzda.
-            queue.async {
-                self.tearDown()
-                self.scheduleReconnect(reason: reason)
+            let reason = DisconnectReason(quit: event.quit.reason)
+            queue.async { [weak self] in
+                // Eski bir oturumun (ör. reconnectNow ile kapatılanın) kapanma olayı yeni oturumu etkilemez.
+                guard let self, self.box?.generation == eventGeneration else { return }
+                self.closeBox()
+                self.scheduleReconnect(eventGeneration, reason: reason)
             }
         default:
             break
         }
     }
 
-    private func scheduleReconnect(reason: String) {
-        emit(.disconnected(reason: reason))
-        guard wantsToRun else { return }
+    private func scheduleReconnect(_ current: Int, reason: DisconnectReason, initialized: Bool = true, box failed: ChiakiSessionBox? = nil) {
+        // Başlatılamamış kutunun join edilecek iş parçacığı yok; yalnız belleği bırakılır.
+        if let failed, !initialized { failed.markUnused() }
+        emit(.disconnected(reason))
+        guard isCurrent(current) else { return }
         let delay = policy.nextDelay()
-        queue.asyncAfter(deadline: .now() + .seconds(delay)) { self.connect() }
+        queue.asyncAfter(deadline: .now() + .seconds(delay)) { [weak self] in self?.connect(current) }
     }
 
     /// Her kare çözülür (sonraki kareler öncekilere dayanır); görüntü saniyede en çok 4 kez üretilir.
-    func ingest(_ sample: Data) {
-        decodeQueue.async {
+    fileprivate func ingest(_ sample: Data) {
+        decodeQueue.async { [weak self] in
+            guard let self else { return }
             let wanted = self.throttle.shouldPass()
             if let image = self.decoder.decode(annexB: sample, makeImage: wanted), wanted {
                 self.onFrame?(image)
@@ -206,15 +316,11 @@ public final class StreamSession: @unchecked Sendable {
     private func emit(_ state: SessionState) {
         onState?(state)
     }
+}
 
-    private static func blockingDiscover(timeout: Double, host: String) -> [ConsoleInfo] {
-        let semaphore = DispatchSemaphore(value: 0)
-        var result: [ConsoleInfo] = []
-        Task.detached {
-            result = await Console.discover(timeout: .seconds(timeout), host: host)
-            semaphore.signal()
-        }
-        semaphore.wait()
-        return result
+extension Console {
+    /// Senkron arama (yalnız oturum kuyruğunda kullanılır).
+    static func blockingDiscover(timeout: Double, host: String) -> [ConsoleInfo] {
+        search(timeout: .seconds(timeout), host: host)
     }
 }

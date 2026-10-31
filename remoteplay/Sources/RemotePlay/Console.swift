@@ -36,7 +36,7 @@ public enum Console {
         let lock = NSLock()
     }
 
-    private static func search(timeout: Duration, host: String?) -> [ConsoleInfo] {
+    static func search(timeout: Duration, host: String?) -> [ConsoleInfo] {
         let logger = ChiakiLogger()
         let discovery = UnsafeMutablePointer<ChiakiDiscovery>.allocate(capacity: 1)
         let thread = UnsafeMutablePointer<ChiakiDiscoveryThread>.allocate(capacity: 1)

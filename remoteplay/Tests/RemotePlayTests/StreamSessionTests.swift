@@ -2,6 +2,7 @@
 
 import XCTest
 @testable import RemotePlay
+import CChiaki
 
 final class FrameThrottleTests: XCTestCase {
     func testThirtyFramesPerSecondPassAtMostFourTimes() {
@@ -50,5 +51,35 @@ final class ConsoleSubnetTests: XCTestCase {
 
     func testLargeNetworksAreSkipped() {
         XCTAssertTrue(Console.hosts(address: 0x0A00_0001, netmask: 0xFFFF_0000).isEmpty)
+    }
+}
+
+final class StreamSessionLifecycleTests: XCTestCase {
+    /// Bağlanamayan bir adreste yeniden deneme beklerken durdurup bırakmak çökmemeli ve bloklamamalı.
+    func testStopWhileReconnectingDoesNotCrashOrBlock() throws {
+        var session: StreamSession? = StreamSession(
+            console: RegisteredConsole(host: "127.0.0.1", name: "test", registKey: Data(repeating: 0x31, count: 16), morning: Data(repeating: 1, count: 16)),
+            accountId: Data(repeating: 1, count: 8))
+        let disconnected = expectation(description: "kopma bildirildi")
+        disconnected.assertForOverFulfill = false
+        session?.onState = { if case .disconnected = $0 { disconnected.fulfill() } }
+        session?.start()
+        wait(for: [disconnected], timeout: 15)
+
+        let begin = Date()
+        session?.stop()
+        XCTAssertLessThan(Date().timeIntervalSince(begin), 0.2)
+        session = nil
+        // Bekleyen yeniden deneme bloğu çalışacağı zamanı geçir; süreç hâlâ ayaktaysa çökme yok.
+        Thread.sleep(forTimeInterval: 3)
+    }
+}
+
+final class DisconnectReasonTests: XCTestCase {
+    func testQuitReasonsMapToUserFacingCases() {
+        XCTAssertEqual(DisconnectReason(quit: CHIAKI_QUIT_REASON_SESSION_REQUEST_RP_IN_USE), .inUse)
+        XCTAssertEqual(DisconnectReason(quit: CHIAKI_QUIT_REASON_STOPPED), .stopped)
+        XCTAssertEqual(DisconnectReason(quit: CHIAKI_QUIT_REASON_SESSION_REQUEST_CONNECTION_REFUSED), .refused)
+        XCTAssertEqual(DisconnectReason(quit: CHIAKI_QUIT_REASON_STREAM_CONNECTION_REMOTE_DISCONNECTED), .network)
     }
 }
