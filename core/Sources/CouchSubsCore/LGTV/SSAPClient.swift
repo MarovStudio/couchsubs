@@ -24,6 +24,7 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
     public enum SSAPError: Error { case cannotConnect, rejected(String), badResponse }
 
     private let endpoints: [URL]
+    private let approvalTimeout: Duration
     private var clientKey: String?
     private var session: URLSession!
     private var socket: URLSessionWebSocketTask?
@@ -34,9 +35,10 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
         self.init(endpoints: [URL(string: "wss://\(tv.host):3001")!, URL(string: "ws://\(tv.host):3000")!], clientKey: clientKey)
     }
 
-    init(endpoints: [URL], clientKey: String?) {
+    init(endpoints: [URL], clientKey: String?, approvalTimeout: Duration = .seconds(60)) {
         self.endpoints = endpoints
         self.clientKey = clientKey
+        self.approvalTimeout = approvalTimeout
         super.init()
         session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil)
     }
@@ -81,21 +83,35 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
 
     // MARK: - İç işleyiş
 
+    /// TV'deki izin sorusu yanıtlanana kadar bekler; `approvalTimeout` dolarsa vazgeçer.
     private func waitForRegistration(on task: URLSessionWebSocketTask) async throws -> String {
-        let deadline = Date().addingTimeInterval(60)
-        while Date() < deadline {
-            let message = try await Self.decode(task.receive())
-            switch message["type"] as? String {
-            case "registered":
-                guard let key = (message["payload"] as? [String: Any])?["client-key"] as? String else { throw SSAPError.badResponse }
-                return key
-            case "error":
-                throw SSAPError.rejected(message["error"] as? String ?? "register")
-            default:
-                continue // "response" (TV soruyu gösterdi), onay bekleniyor
+        try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask {
+                while true {
+                    let message = try await Self.decode(task.receive())
+                    switch message["type"] as? String {
+                    case "registered":
+                        guard let key = (message["payload"] as? [String: Any])?["client-key"] as? String else { throw SSAPError.badResponse }
+                        return key
+                    case "error":
+                        throw SSAPError.rejected(message["error"] as? String ?? "register")
+                    default:
+                        continue // "response": TV soruyu gösterdi, onay bekleniyor
+                    }
+                }
             }
+            group.addTask { [approvalTimeout] in
+                try await Task.sleep(for: approvalTimeout)
+                // receive() iptale yanıt vermez; soketi kapatmak onu da sonlandırır.
+                task.cancel()
+                throw SSAPError.rejected("timeout")
+            }
+            defer {
+                group.cancelAll()
+            }
+            guard let key = try await group.next() else { throw SSAPError.badResponse }
+            return key
         }
-        throw SSAPError.rejected("timeout")
     }
 
     private func request(_ uri: String, payload: [String: Any]?) async throws -> [String: Any] {

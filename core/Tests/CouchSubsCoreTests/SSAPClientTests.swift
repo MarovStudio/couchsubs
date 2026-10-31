@@ -11,6 +11,8 @@ final class FakeLGTV: @unchecked Sendable {
     private(set) var receivedURIs: [String] = []
     private(set) var receivedPayloads: [[String: Any]] = []
     var foregroundApps: [String] = []
+    /// true ise register'a yalnız "soru gösterildi" yanıtı verir, onay hiç gelmez.
+    var neverApprove = false
 
     init() throws {
         let parameters = NWParameters.tcp
@@ -47,7 +49,7 @@ final class FakeLGTV: @unchecked Sendable {
         let id = message["id"] as? String ?? ""
         if message["type"] as? String == "register" {
             send(["type": "response", "id": id, "payload": ["pairingType": "PROMPT", "returnValue": true]], on: connection)
-            send(["type": "registered", "id": id, "payload": ["client-key": "fake-key"]], on: connection)
+            if !neverApprove { send(["type": "registered", "id": id, "payload": ["client-key": "fake-key"]], on: connection) }
             return
         }
         let uri = message["uri"] as? String ?? ""
@@ -95,6 +97,21 @@ final class SSAPClientTests: XCTestCase {
         let app = try await client.foregroundAppId()
         XCTAssertEqual(app, "com.webos.app.hdmi2")
         client.close()
+    }
+
+    func testUnansweredPairingPromptTimesOut() async throws {
+        let tv = try FakeLGTV()
+        tv.neverApprove = true
+        let port = await tv.start()
+        defer { tv.stop() }
+
+        let client = SSAPClient(endpoints: [URL(string: "ws://127.0.0.1:\(port)")!], clientKey: nil, approvalTimeout: .seconds(1))
+        let begin = Date()
+        do {
+            _ = try await client.connect()
+            XCTFail("Onaysız eşleşme başarılı olmamalı")
+        } catch {}
+        XCTAssertLessThan(Date().timeIntervalSince(begin), 5)
     }
 
     func testFallsBackToNextEndpoint() async throws {

@@ -41,7 +41,13 @@ public final class SubtitleServer: @unchecked Sendable {
     /// Sunucuyu başlatır ve dinlenen portu döner (`port: 0` ise rastgele seçilen port).
     public func start() async throws -> UInt16 {
         let port: NWEndpoint.Port = requestedPort == 0 ? .any : NWEndpoint.Port(rawValue: requestedPort)!
-        let listener = try NWListener(using: .tcp, on: port)
+        // Sessizce kaybolan TV'ler (fişten çekme, Wi-Fi kopması) TCP canlılık denetimiyle fark edilir.
+        let tcp = NWProtocolTCP.Options()
+        tcp.enableKeepalive = true
+        tcp.keepaliveIdle = 10
+        tcp.keepaliveInterval = 5
+        tcp.keepaliveCount = 3
+        let listener = try NWListener(using: NWParameters(tls: nil, tcp: tcp), on: port)
         self.listener = listener
         listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
 
@@ -55,8 +61,10 @@ public final class SubtitleServer: @unchecked Sendable {
                     self.startContinuation = nil
                     self.startPing()
                     continuation.resume(returning: listener.port?.rawValue ?? 0)
-                case .failed(let error):
+                case .failed(let error), .waiting(let error):
+                    // .waiting: port ya da ağ şu an kullanılamıyor; beklemek yerine hata ver ki çağıran başka port denesin.
                     self.startContinuation = nil
+                    listener.cancel()
                     continuation.resume(throwing: ServerError.failedToStart(error.localizedDescription))
                 default:
                     break
@@ -173,20 +181,24 @@ public final class SubtitleServer: @unchecked Sendable {
 
     private func broadcast(event: String, json: [String: Any]) {
         let data = Data(Self.frame(event: event, json: json).utf8)
-        queue.async {
-            for connection in self.clients.values {
-                connection.send(content: data, completion: .contentProcessed { _ in })
-            }
+        queue.async { self.sendToAll(data) }
+    }
+
+    /// Gönderim hatası alan bağlantı kopmuş sayılır ve listeden çıkarılır.
+    private func sendToAll(_ data: Data) {
+        for (id, connection) in clients {
+            connection.send(content: data, completion: .contentProcessed { [weak self] error in
+                guard let self, error != nil else { return }
+                connection.cancel()
+                if self.clients.removeValue(forKey: id) != nil { self.notifyClientsChanged() }
+            })
         }
     }
 
     private func startPing() {
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now() + 15, repeating: 15)
-        timer.setEventHandler { [weak self] in
-            let ping = Data(": ping\n\n".utf8)
-            self?.clients.values.forEach { $0.send(content: ping, completion: .contentProcessed { _ in }) }
-        }
+        timer.setEventHandler { [weak self] in self?.sendToAll(Data(": ping\n\n".utf8)) }
         timer.resume()
         pingTimer = timer
     }
