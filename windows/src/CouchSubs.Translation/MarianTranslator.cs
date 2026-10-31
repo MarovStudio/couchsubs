@@ -58,10 +58,7 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
                 continue;
             }
             if (!_cache.TryGetValue(piece.Text, out var sentence))
-            {
                 sentence = await TranslateUncachedAsync(piece.Text, cancellationToken).ConfigureAwait(false);
-                Remember(piece.Text, sentence);
-            }
             builder.Append(sentence);
         }
         var result = builder.ToString();
@@ -86,8 +83,11 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
             var engine = _engine ??= CreateEngine();
             // Çıkarım CPU'yu saniyenin onda biri kadar tutar; çağıranın (arayüz) iş parçacığını bloklamasın.
             var input = SubtitleSegmenter.NormalizeCase(sentence);
-            return await Task.Run(() => engine.Translate(input, cancellationToken), cancellationToken)
+            var translation = await Task.Run(() => engine.Translate(input, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
+            // Sıra bırakılmadan önce önbelleğe yazılır; sırada bekleyen aynı cümle yeniden çevrilmez.
+            Remember(sentence, translation);
+            return translation;
         }
         finally
         {

@@ -113,9 +113,10 @@ public class MarianTranslatorTests
     [Fact]
     public async Task HonorsCancellationWhileWaiting()
     {
-        var (translator, _) = Create(delay: 200);
+        // Windows'un zamanlayıcısı ~15 ms adımlıdır; süreler bunun çok üstünde tutulur.
+        var (translator, _) = Create(delay: 1000);
         var first = translator.TranslateAsync("Slow line.");
-        using var cts = new CancellationTokenSource(20);
+        using var cts = new CancellationTokenSource(150);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => translator.TranslateAsync("Other line.", cts.Token));
         Assert.Equal("SLOW LINE.", await first);

@@ -262,8 +262,9 @@ public class ReadingFallbackTests
     public void FallbackReadingsRunAtTheSameTime()
     {
         var start = DateTime.UtcNow;
-        ReadingFallback.FirstReading(Image, candidate => { if (candidate.Width != 64) Thread.Sleep(200); return ""; });
-        Assert.True(DateTime.UtcNow - start < TimeSpan.FromMilliseconds(350));
+        // Art arda 1000 ms sürerdi; aynı anda ~500 ms. Pay, yoğun sürekli tümleştirme makineleri için.
+        ReadingFallback.FirstReading(Image, candidate => { if (candidate.Width != 64) Thread.Sleep(500); return ""; });
+        Assert.True(DateTime.UtcNow - start < TimeSpan.FromMilliseconds(900));
     }
 }
 

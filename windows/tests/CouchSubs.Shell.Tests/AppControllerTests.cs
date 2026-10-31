@@ -214,7 +214,7 @@ public class AppControllerTests
         controller.Dispose();
     }
 
-    /// Çeviri modeli (~360 MB) sihirbazın başında arka planda inmeye başlar; model adımına gelindiğinde çoğunlukla hazırdır.
+    /// Çeviri modeli (~534 MB) sihirbazın başında arka planda inmeye başlar; model adımına gelindiğinde çoğunlukla hazırdır.
     [Fact]
     public void ModelDownloadStartsInBackgroundAfterWelcome()
     {

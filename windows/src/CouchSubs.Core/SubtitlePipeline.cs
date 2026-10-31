@@ -51,11 +51,10 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     var number = ++lastRequested;
                     var current = session;
                     lineOnScreen = number;
-                    translations[number] = Task.Run(async () =>
-                    {
-                        await Translate(action.Text!, number, current);
-                        lock (gate) translations.Remove(number);
-                    });
+                    // Çevirmen burada, istek sırasıyla çağrılır (ayrı görevle başlatılsa sıra karışabilirdi).
+                    // Çeviri hemen bittiyse kendini zaten listeden çıkarmıştır; yeniden eklenmez.
+                    var task = TranslateAndForget(action.Text!, number, current);
+                    if (!task.IsCompleted) translations[number] = task;
                     break;
             }
         }
@@ -75,6 +74,12 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
 
     /// <summary>Satır ekrandan kalktıktan sonra gelen çevirinin TV'de kalacağı süre (TV uygulamasıyla aynı kural).</summary>
     public static int ReadingTime(string text) => Math.Min(8000, 2000 + (text.Length * 60));
+
+    private async Task TranslateAndForget(string source, int number, int current)
+    {
+        await Translate(source, number, current);
+        lock (gate) translations.Remove(number);
+    }
 
     private async Task Translate(string source, int number, int current)
     {
