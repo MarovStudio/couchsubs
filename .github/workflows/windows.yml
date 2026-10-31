@@ -132,8 +132,12 @@ jobs:
           name: couchsubs-native
           path: windows/native/bin
 
+      - name: Derle
+        run: dotnet build windows/CouchSubs.Windows.slnx -c Release
+
+      # Zamanlamaya bakan testler var; test projeleri aynı anda koşup işlemciyi paylaşmasın.
       - name: Testler
-        run: dotnet test windows/CouchSubs.Windows.slnx -c Release
+        run: dotnet test windows/CouchSubs.Windows.slnx -c Release --no-build -m:1
 
       - name: Yayınla
         run: dotnet publish windows/src/CouchSubs.App -c Release -r win-x64 --self-contained -o publish/CouchSubs
