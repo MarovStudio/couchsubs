@@ -6,14 +6,20 @@ import Foundation
 /// libchiaki'nin günlüğünü uygulamanın günlüğüne yönlendirir (hata ve uyarılar).
 final class ChiakiLogger {
     let pointer: UnsafeMutablePointer<ChiakiLog>
+    /// Her satır için çağrılır (libchiaki'nin iş parçacığında).
+    var onMessage: ((String) -> Void)?
 
     init() {
         pointer = .allocate(capacity: 1)
         let mask = UInt32(CHIAKI_LOG_ERROR.rawValue | CHIAKI_LOG_WARNING.rawValue | CHIAKI_LOG_INFO.rawValue)
-        chiaki_log_init(pointer, mask, { level, message, _ in
+        chiaki_log_init(pointer, mask, { level, message, user in
             guard let message else { return }
-            print("[chiaki] \(String(cString: message))")
+            let text = String(cString: message)
+            print("[chiaki] \(text)")
+            if let user { Unmanaged<ChiakiLogger>.fromOpaque(user).takeUnretainedValue().onMessage?(text) }
         }, nil)
+        // Günlük yapısı bu nesneyle birlikte yaşar; geri çağrıya sahibini sahiplenmeden ver.
+        pointer.pointee.user = Unmanaged.passUnretained(self).toOpaque()
     }
 
     deinit { pointer.deallocate() }

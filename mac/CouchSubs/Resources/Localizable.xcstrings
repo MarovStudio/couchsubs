@@ -1297,6 +1297,38 @@
         }
       }
     },
+    "The PS5 did not recognise this account. Get the code from the PS5 user signed in with the account you used in CouchSubs, or sign in again with that user's account.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The PS5 did not recognise this account. Get the code from the PS5 user signed in with the account you used in CouchSubs, or sign in again with that user's account."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PS5 bu hesabı tanımadı. Kodu, CouchSubs'ta giriş yaptığınız hesapla oturum açmış PS5 kullanıcısından alın ya da bir önceki adımda o kullanıcının hesabıyla yeniden giriş yapın."
+          }
+        }
+      }
+    },
+    "The PS5 refused the code. Open Pair Device again on the PS5 and enter the new code.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The PS5 refused the code. Open Pair Device again on the PS5 and enter the new code."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PS5 kodu kabul etmedi. PS5'te Cihazı Eşleştir'i yeniden açın ve yeni kodu girin."
+          }
+        }
+      }
+    },
     "The PS5 refused the connection. Set up the PS5 again.": {
       "localizations": {
         "en": {
@@ -1452,7 +1484,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "PS5'i açın. İkinci kullanıcıyla Ayarlar › Sistem › Uzaktan Oynatma › Cihazı Bağla'yı açın ve orada görünen 8 haneli kodu girin."
+            "value": "PS5'i açın. CouchSubs'ta giriş yaptığınız ikinci hesabın kullanıcısıyla Ayarlar › Sistem › Uzaktan Oynatma › Cihazı Eşleştir'i açın ve orada görünen 8 haneli kodu girin."
           }
         }
       }

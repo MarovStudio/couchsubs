@@ -101,13 +101,15 @@ final class LiveServices: AppServices {
 }
 
 enum AppError: LocalizedError, Equatable {
-    case invalidPin, invalidLogin, missingAccount
+    case invalidPin, invalidLogin, missingAccount, wrongAccount, registrationFailed
 
     var errorDescription: String? {
         switch self {
         case .invalidPin: String(localized: "The code must be 8 digits.")
         case .invalidLogin: String(localized: "Sign-in did not complete. Please try again.")
         case .missingAccount: String(localized: "Sign in to PlayStation Network first.")
+        case .wrongAccount: String(localized: "The PS5 did not recognise this account. Get the code from the PS5 user signed in with the account you used in CouchSubs, or sign in again with that user's account.")
+        case .registrationFailed: String(localized: "The PS5 refused the code. Open Pair Device again on the PS5 and enter the new code.")
         }
     }
 }
@@ -214,7 +216,14 @@ final class AppModel {
         let digits = pin.filter(\.isNumber)
         guard digits.count == 8, let value = UInt32(digits) else { throw AppError.invalidPin }
         guard let accountId else { throw AppError.missingAccount }
-        let registered = try await services.register(host: host, accountId: accountId, pin: value)
+        let registered: RegisteredConsole
+        do {
+            registered = try await services.register(host: host, accountId: accountId, pin: value)
+        } catch Registration.RegistrationError.wrongAccount {
+            throw AppError.wrongAccount
+        } catch is Registration.RegistrationError {
+            throw AppError.registrationFailed
+        }
         console = registered
         store.save(registered, for: StoreKey.console)
     }

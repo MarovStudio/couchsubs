@@ -47,6 +47,11 @@ public enum Registration {
             }
         }
 
+        // PS5'in red nedeni olaya değil yalnız günlüğe yazılır; olaydan önce aynı iş parçacığında gelir.
+        logger.onMessage = { line in
+            if let reason = reason(fromLog: line) { box.reason = reason }
+        }
+
         let console: RegisteredConsole = try await withCheckedThrowingContinuation { continuation in
             box.continuation = continuation
             host.withCString { hostPointer in
@@ -77,10 +82,26 @@ public enum Registration {
         return console.withHost(host)
     }
 
-    public enum RegistrationError: Error { case failed, canceled }
+    public enum RegistrationError: Error, Equatable {
+        case failed, canceled
+        /// PS5 hesabı tanımadı: kod, uygulamada giriş yapılan hesabın PS5 kullanıcısından alınmamış.
+        case wrongAccount
+
+        init(reason: UInt32?) {
+            self = reason == UInt32(CHIAKI_RP_APPLICATION_REASON_INVALID_PSN_ID) ? .wrongAccount : .failed
+        }
+    }
+
+    /// "Reported Application Reason: 0x80108b02 (...)" satırından nedeni okur.
+    static func reason(fromLog line: String) -> UInt32? {
+        let prefix = "Reported Application Reason: 0x"
+        guard let range = line.range(of: prefix) else { return nil }
+        return UInt32(line[range.upperBound...].prefix { $0.isHexDigit }, radix: 16)
+    }
 
     private final class Box {
         var continuation: CheckedContinuation<RegisteredConsole, Error>?
+        var reason: UInt32?
 
         func finish(_ event: ChiakiRegistEvent) {
             switch event.type {
@@ -91,7 +112,7 @@ public enum Registration {
             case CHIAKI_REGIST_EVENT_TYPE_FINISHED_CANCELED:
                 resume(.failure(RegistrationError.canceled))
             default:
-                resume(.failure(RegistrationError.failed))
+                resume(.failure(RegistrationError(reason: reason)))
             }
         }
 

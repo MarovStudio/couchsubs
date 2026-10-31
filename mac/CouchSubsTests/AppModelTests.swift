@@ -12,10 +12,16 @@ final class MemoryStore: AppStore {
     func remove(_ key: String) { values[key] = nil }
 }
 
+extension UserDefaults {
+    /// Testler gerçek uygulamanın tercihlerine yazmasın diye her model ayrı bir alan kullanır.
+    static func isolated() -> UserDefaults { UserDefaults(suiteName: "couchsubs-test-\(UUID())")! }
+}
+
 final class FakeServices: AppServices {
     var consoles = [ConsoleInfo(host: "192.168.1.253", name: "PS5-789", isAwake: true)]
     var tvs = [LGTV(name: "LG TV", host: "192.168.1.153")]
     var registered: RegisteredConsole?
+    var registerError: Error?
     var launchedServer: String?
     var streams: [FakeStream] = []
     var keepers: [FakeKeeper] = []
@@ -23,6 +29,7 @@ final class FakeServices: AppServices {
     func discoverConsoles() async -> [ConsoleInfo] { consoles }
     func accountId(fromRedirect url: URL) async throws -> Data { Data(repeating: 1, count: 8) }
     func register(host: String, accountId: Data, pin: UInt32) async throws -> RegisteredConsole {
+        if let registerError { throw registerError }
         let console = RegisteredConsole(host: host, name: "PS5-789", registKey: Data(repeating: 0x31, count: 16), morning: Data(repeating: 2, count: 16))
         registered = console
         return console
@@ -65,7 +72,7 @@ final class AppModelTests: XCTestCase {
     private let console = RegisteredConsole(host: "192.168.1.253", name: "PS5", registKey: Data(repeating: 0x31, count: 16), morning: Data(repeating: 2, count: 16))
 
     func testFreshInstallStartsAtWelcome() {
-        let model = AppModel(services: FakeServices(), store: MemoryStore())
+        let model = AppModel(services: FakeServices(), store: MemoryStore(), defaults: .isolated())
         XCTAssertEqual(model.step, .welcome)
     }
 
@@ -75,11 +82,11 @@ final class AppModelTests: XCTestCase {
         store.save(console, for: StoreKey.console)
         store.save(LGTV(name: "LG TV", host: "192.168.1.153"), for: StoreKey.tv)
         store.save("tv-key", for: StoreKey.tvKey)
-        XCTAssertEqual(AppModel(services: FakeServices(), store: store).step, .done)
+        XCTAssertEqual(AppModel(services: FakeServices(), store: store, defaults: .isolated()).step, .done)
     }
 
     func testPsnStepNeedsAccountId() {
-        let model = AppModel(services: FakeServices(), store: MemoryStore())
+        let model = AppModel(services: FakeServices(), store: MemoryStore(), defaults: .isolated())
         model.step = .psnLogin
         XCTAssertFalse(model.canAdvance)
         model.accountId = Data(repeating: 1, count: 8)
@@ -88,7 +95,7 @@ final class AppModelTests: XCTestCase {
 
     func testConsoleStepNeedsRegistration() async throws {
         let services = FakeServices()
-        let model = AppModel(services: services, store: MemoryStore())
+        let model = AppModel(services: services, store: MemoryStore(), defaults: .isolated())
         model.accountId = Data(repeating: 1, count: 8)
         model.step = .console
         XCTAssertFalse(model.canAdvance)
@@ -97,8 +104,35 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(services.registered?.host, "192.168.1.253")
     }
 
+    /// PS5 hesabı tanımazsa kullanıcıya kodu hangi kullanıcıdan alacağı söylenmeli.
+    func testWrongAccountRegistrationExplainsWhatToDo() async {
+        let services = FakeServices()
+        services.registerError = Registration.RegistrationError.wrongAccount
+        let model = AppModel(services: services, store: MemoryStore(), defaults: .isolated())
+        model.accountId = Data(repeating: 1, count: 8)
+        do {
+            try await model.register(host: "192.168.1.253", pin: "12345678")
+            XCTFail("Kayıt başarısız olmalı")
+        } catch {
+            XCTAssertEqual(error as? AppError, .wrongAccount)
+        }
+    }
+
+    func testOtherRegistrationFailureSuggestsNewCode() async {
+        let services = FakeServices()
+        services.registerError = Registration.RegistrationError.failed
+        let model = AppModel(services: services, store: MemoryStore(), defaults: .isolated())
+        model.accountId = Data(repeating: 1, count: 8)
+        do {
+            try await model.register(host: "192.168.1.253", pin: "12345678")
+            XCTFail("Kayıt başarısız olmalı")
+        } catch {
+            XCTAssertEqual(error as? AppError, .registrationFailed)
+        }
+    }
+
     func testPinMustBeEightDigits() async {
-        let model = AppModel(services: FakeServices(), store: MemoryStore())
+        let model = AppModel(services: FakeServices(), store: MemoryStore(), defaults: .isolated())
         model.accountId = Data(repeating: 1, count: 8)
         do {
             try await model.register(host: "192.168.1.253", pin: "1234")
@@ -111,7 +145,7 @@ final class AppModelTests: XCTestCase {
     func testPairingTvPassesServerAddressAndStoresKey() async throws {
         let services = FakeServices()
         let store = MemoryStore()
-        let model = AppModel(services: services, store: store)
+        let model = AppModel(services: services, store: store, defaults: .isolated())
         try await model.pair(LGTV(name: "LG TV", host: "192.168.1.153"))
         XCTAssertTrue(services.launchedServer?.hasPrefix("http://") == true)
         XCTAssertTrue(services.launchedServer?.hasSuffix(":\(model.serverPort)") == true)
@@ -119,7 +153,7 @@ final class AppModelTests: XCTestCase {
     }
 
     func testOnboardingWalksAllStepsInOrder() async throws {
-        let model = AppModel(services: FakeServices(), store: MemoryStore())
+        let model = AppModel(services: FakeServices(), store: MemoryStore(), defaults: .isolated())
         XCTAssertEqual(model.step, .welcome); model.advance()
         XCTAssertEqual(model.step, .secondAccount); model.advance()
         XCTAssertEqual(model.step, .psnLogin)
@@ -142,7 +176,7 @@ final class AppModelRunTests: XCTestCase {
         store.save(RegisteredConsole(host: "192.168.1.253", name: "PS5", registKey: Data(repeating: 0x31, count: 16), morning: Data(repeating: 2, count: 16)), for: StoreKey.console)
         store.save(LGTV(name: "LG TV", host: "127.0.0.1"), for: StoreKey.tv)
         store.save("tv-key", for: StoreKey.tvKey)
-        return AppModel(services: services, store: store)
+        return AppModel(services: services, store: store, defaults: .isolated())
     }
 
     func testDoubleStartCreatesOneSession() async {
