@@ -14,12 +14,15 @@ public class MarianTranslatorTests
         public bool SawConcurrentCall { get; private set; }
         public bool Disposed { get; private set; }
         public int Delay { get; init; }
+        /// <summary>Verilirse çeviri, test bunu açana kadar bekler (zamanlamaya bağlı olmayan testler için).</summary>
+        public ManualResetEventSlim? Hold { get; init; }
 
         public string Translate(string sentence, CancellationToken cancellationToken)
         {
             if (Interlocked.Increment(ref _active) > 1) SawConcurrentCall = true;
             try
             {
+                Hold?.Wait();
                 if (Delay > 0) Thread.Sleep(Delay);
                 lock (Calls) Calls.Add(sentence);
                 return sentence.ToUpperInvariant();
@@ -113,12 +116,18 @@ public class MarianTranslatorTests
     [Fact]
     public async Task HonorsCancellationWhileWaiting()
     {
-        // Windows'un zamanlayıcısı ~15 ms adımlıdır; süreler bunun çok üstünde tutulur.
-        var (translator, _) = Create(delay: 1000);
+        // Süreye değil açık iptale dayanır: yoğun makinede zamanlayıcı geç tetiklenebiliyor.
+        using var hold = new ManualResetEventSlim(false);
+        var engine = new FakeEngine { Hold = hold };
+        var translator = new MarianTranslator(() => engine, () => true);
         var first = translator.TranslateAsync("Slow line.");
-        using var cts = new CancellationTokenSource(150);
+        using var cts = new CancellationTokenSource();
+        var second = translator.TranslateAsync("Other line.", cts.Token);
+        Assert.False(second.IsCompleted);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => translator.TranslateAsync("Other line.", cts.Token));
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => second);
+        hold.Set();
         Assert.Equal("SLOW LINE.", await first);
     }
 
