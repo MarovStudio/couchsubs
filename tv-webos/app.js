@@ -226,6 +226,23 @@
 
   // --- Panel ve kumanda ---
 
+  // "1–4: HDMI girişi · 0: …" satırını tuş başına bir satıra böler; tuş adı vurgu renginde.
+  function formatKeys() {
+    var el = $('keys');
+    var parts = el.textContent.split(' · ');
+    el.innerHTML = '';
+    for (var i = 0; i < parts.length; i++) {
+      var colon = parts[i].indexOf(':');
+      var row = document.createElement('div');
+      row.className = 'key';
+      var key = document.createElement('b');
+      key.textContent = colon > 0 ? parts[i].slice(0, colon) : '';
+      row.appendChild(key);
+      row.appendChild(document.createTextNode(colon > 0 ? parts[i].slice(colon + 1).trim() : parts[i]));
+      el.appendChild(row);
+    }
+  }
+
   function showPanel(autoHide) {
     $('panel').className = '';
     clearTimeout(panelTimer);
@@ -267,6 +284,7 @@
   });
 
   window.applyI18n();
+  formatKeys();
   var savedBottom = load('bottom') || load('appBottom');
   if (savedBottom) setBottom(Number(savedBottom));
   showHdmi(hdmiPort);
@@ -278,5 +296,6 @@
   if (!server) {
     if (address) connect(address); else $('waiting').className = '';
   }
-  showPanel(true);
+  // Bekleme ekranı açıksa panel kendiliğinden açılmaz (üst üste binerdi); yeşil tuşla açılabilir.
+  if (server) showPanel(true); else hidePanel();
 })();

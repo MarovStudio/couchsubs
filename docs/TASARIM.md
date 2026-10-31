@@ -68,8 +68,8 @@ Paragraflarda satır arası yazı boyutunun yaklaşık 1,3 katıdır. 12 pt'nin 
 
 Her iki platformda aynı adla bulunur.
 
-- **LogoView** – logo, kenar boşluğu kırpılmış hâliyle.
-- **Düğme** – yükseklik 44, yatay iç boşluk `xl`.
+- **LogoView** – logo, kenar boşluğu kırpılmış hâliyle; koyu temada kenarı seçilsin diye 1 pt `border` çerçeve.
+- **Düğme** – yükseklik 44 (`buttonHeight`), ana ekrandaki "Çeviriyi başlat/durdur" 52 (`primaryActionHeight`), yatay iç boşluk `xl`.
   - *Birincil*: `accent` dolgu, `onAccent` yazı. Ekranda en fazla bir tane.
   - *İkincil*: `surface` dolgu, `border` çerçeve, `textPrimary` yazı.
   - *Tehlikeli*: `danger` dolgu, `onDanger` yazı (yalnız "Çeviriyi durdur").
@@ -78,7 +78,14 @@ Her iki platformda aynı adla bulunur.
 - **IconBadge** – 48 × 48, `accentSoft` zemin, `accentText` simge.
 - **StepLayout** – sihirbaz adımı: IconBadge, `display` başlık, `body`/`textSecondary` açıklama, içerik.
 - **NumberedRow** – 26 pt `accentSoft` dairede numara, yanında `body` metin.
-- **StatusRow** – 10 pt durum noktası (`success`/`warning`), kalın ad, sağda değer.
+- **StatusRow** – 10 pt durum noktası, kalın ad, sağda değer. Nokta: bağlı `success`, çeviri sürerken
+  bağlantı yok `warning`, çeviri başlamamışken `textSecondary` (boşta olmak uyarı değildir).
+- **Metin alanı** – `surface` zemin, 1 pt `border` çerçeve, `control` köşe, en az 40 yükseklik; PS5 kodu
+  alanı 52 yükseklik ve `code` yazı. Etiketi alanın üstünde `callout`/`textSecondary`.
+- **Bölmeli seçim** – yazı boyutu gibi 2–4 seçenek: `background` zeminli çerçeveli kutu, seçili parça
+  `accent` dolgu ve `onAccent` yazı (Mac'te sistemin segmented denetimi).
+- **Kaydırıcı** – ince ray (`border`), dolu kısım `accent`, yuvarlak tutamaç.
+- **Bağlantı** – `accentText` renginde.
 - **DoneLabel** – `success` renkli onay simgesi ve metin.
 - **HintText** – `callout`, `textSecondary`.
 - **ErrorText** – `callout`, `warning`, uyarı simgesi.
@@ -99,6 +106,13 @@ kart; gerekiyorsa dil paketi uyarı kartı; "Son altyazı" kartında `title` boy
 "Dil", "Altyazı bölgesi" kartları ve Hakkında / Yeniden kur düğmeleri; altta "Bitti" (birincil).
 
 **Hakkında**: 88 pt logo, ad, sürüm, lisans, teşekkür, bağlantılar, Sony ile ilişkisizlik notu.
+
+## TV uygulaması
+
+TV'de her zaman koyu temanın renkleri kullanılır (oyunun üstünde durur). Bilgi paneli ve "uygulamayı açın"
+ekranı `background` %92–94 saydam zemin, 2 px `border` çerçeve, 24–32 px köşe; başlıkta logo. Kumanda
+tuşları satır satır, tuş adı `accent` renginde. Altyazı kutusu siyah %72 saydam zemin üstünde beyaz,
+yarı kalın yazı (okunaklılık için tema rengi değil). Bekleme ekranı açıkken panel kendiliğinden açılmaz.
 
 ## Windows'a aktarım
 

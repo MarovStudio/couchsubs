@@ -236,6 +236,17 @@ final class AppModelRunTests: XCTestCase {
         XCTAssertEqual(model.activeLanguages?.source, "ja")
     }
 
+    /// Çeviri başlamamışken bağlı olmamak bir uyarı değildir; nokta gri kalır.
+    func testStatusToneIsIdleUntilTranslationStarts() {
+        XCTAssertEqual(AppModel.ps5Tone(.disconnected(.stopped), running: false), .idle)
+        XCTAssertEqual(AppModel.ps5Tone(.disconnected(.network), running: true), .warning)
+        XCTAssertEqual(AppModel.ps5Tone(.connecting, running: true), .warning)
+        XCTAssertEqual(AppModel.ps5Tone(.streaming, running: true), .good)
+        XCTAssertEqual(AppModel.tvTone(clients: 0, running: false), .idle)
+        XCTAssertEqual(AppModel.tvTone(clients: 0, running: true), .warning)
+        XCTAssertEqual(AppModel.tvTone(clients: 1, running: false), .good)
+    }
+
     func testLoginPasscodeIsExplained() {
         XCTAssertEqual(AppModel.statusText(.disconnected(.loginPasscode), running: true),
                        String(localized: "The second user has a login passcode on the PS5. Turn it off in Settings › Users and Accounts."))

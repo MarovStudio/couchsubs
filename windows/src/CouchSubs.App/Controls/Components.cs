@@ -2,6 +2,7 @@
 
 using System.Windows;
 using System.Windows.Controls;
+using CouchSubs.Shell;
 
 namespace CouchSubs.App.Controls;
 
@@ -49,13 +50,13 @@ public class StatusRow : Control
 {
     public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(StatusRow));
     public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(nameof(Value), typeof(string), typeof(StatusRow));
-    public static readonly DependencyProperty IsGoodProperty = DependencyProperty.Register(nameof(IsGood), typeof(bool), typeof(StatusRow));
+    public static readonly DependencyProperty ToneProperty = DependencyProperty.Register(nameof(Tone), typeof(StatusTone), typeof(StatusRow));
 
     static StatusRow() => DefaultStyleKeyProperty.OverrideMetadata(typeof(StatusRow), new FrameworkPropertyMetadata(typeof(StatusRow)));
 
     public string Title { get => (string)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
     public string Value { get => (string)GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
-    public bool IsGood { get => (bool)GetValue(IsGoodProperty); set => SetValue(IsGoodProperty, value); }
+    public StatusTone Tone { get => (StatusTone)GetValue(ToneProperty); set => SetValue(ToneProperty, value); }
 }
 
 /// <summary>Segoe Fluent Icons simge adları (Mac'teki SF Symbols karşılıkları).</summary>

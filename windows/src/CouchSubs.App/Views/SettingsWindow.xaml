@@ -16,11 +16,13 @@
                 <c:Card Title="{t:T 'On the TV'}">
                     <StackPanel>
                         <TextBlock Text="{t:T 'Text size'}" Margin="0,0,0,8" />
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <RadioButton x:Name="Small" Content="{t:T 'Small'}" GroupName="size" Margin="0,0,20,0" Checked="OnSize" Tag="36" />
-                            <RadioButton x:Name="Medium" Content="{t:T 'Medium'}" GroupName="size" Margin="0,0,20,0" Checked="OnSize" Tag="46" />
-                            <RadioButton x:Name="Large" Content="{t:T 'Large'}" GroupName="size" Checked="OnSize" Tag="58" />
-                        </StackPanel>
+                        <Border Style="{StaticResource SegmentGroup}" Margin="0,0,0,16">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="Small" Content="{t:T 'Small'}" GroupName="size" Style="{StaticResource SegmentButton}" Checked="OnSize" Tag="36" />
+                                <RadioButton x:Name="Medium" Content="{t:T 'Medium'}" GroupName="size" Style="{StaticResource SegmentButton}" Checked="OnSize" Tag="46" />
+                                <RadioButton x:Name="Large" Content="{t:T 'Large'}" GroupName="size" Style="{StaticResource SegmentButton}" Checked="OnSize" Tag="58" />
+                            </StackPanel>
+                        </Border>
                         <TextBlock Text="{t:T 'Position on screen'}" Margin="0,0,0,8" />
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -40,7 +42,7 @@
                     </StackPanel>
                 </c:Card>
 
-                <c:Card Title="{t:T 'Language'}" Margin="0,16,0,0">
+                <c:Card x:Name="LanguageCard" Title="{t:T 'Language'}" Margin="0,16,0,0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{t:T 'Game language'}" VerticalAlignment="Center" Margin="0,0,16,0" />
                         <ComboBox x:Name="GameLanguage" SelectionChanged="OnLanguage" />

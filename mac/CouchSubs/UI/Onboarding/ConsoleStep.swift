@@ -31,7 +31,7 @@ struct ConsoleStep: View {
                 }
                 if consoles.isEmpty && !searching {
                     HintText(text: "No PS5 found. Make sure it is on and on the same network, or enter its IP address.")
-                    TextField("IP address, e.g. 192.168.1.20", text: $manualHost).textFieldStyle(.roundedBorder).font(.csBody)
+                    TextField("IP address, e.g. 192.168.1.20", text: $manualHost).textFieldStyle(CSTextFieldStyle())
                 } else {
                     Picker("PS5", selection: $selected) {
                         ForEach(consoles, id: \.host) { Text(verbatim: "\($0.name) — \($0.host)").tag(Optional($0.host)) }
@@ -41,10 +41,12 @@ struct ConsoleStep: View {
                     .font(.csBody)
                 }
                 }
-                TextField("8-digit code", text: $pin)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.csCode)
-                    .frame(maxWidth: 240)
+                VStack(alignment: .leading, spacing: Theme.space("s")) {
+                    Text("8-digit code").font(.csCallout).foregroundStyle(Color.csSecondary)
+                    TextField("", text: $pin)
+                        .textFieldStyle(CSTextFieldStyle(font: .csCode, height: 52))
+                        .frame(maxWidth: 240)
+                }
                 HStack(spacing: Theme.space("m")) {
                     Button("Connect") { Task { await register() } }
                         .buttonStyle(.primary)

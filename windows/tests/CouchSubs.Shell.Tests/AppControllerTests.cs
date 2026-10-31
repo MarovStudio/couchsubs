@@ -374,3 +374,29 @@ public class AppControllerRunTests
     public void TurkishStatusTextComesFromSharedCatalog() =>
         Assert.Equal("Bağlı", AppController.StatusText(SessionState.Streaming, true, Localizer.ForLanguage("tr")));
 }
+
+public class StatusToneTests
+{
+    /// Çeviri başlamamışken "bağlı değil" bir uyarı değildir; nokta gri kalır.
+    [Fact]
+    public void IdleWhenNotRunning()
+    {
+        Assert.Equal(StatusTone.Idle, AppController.Ps5ToneFor(SessionState.Disconnected(DisconnectKind.Stopped), running: false));
+        Assert.Equal(StatusTone.Idle, AppController.TvToneFor(clients: 0, running: false));
+    }
+
+    [Fact]
+    public void WarningWhileRunningButNotConnected()
+    {
+        Assert.Equal(StatusTone.Warning, AppController.Ps5ToneFor(SessionState.Disconnected(DisconnectKind.Network), running: true));
+        Assert.Equal(StatusTone.Warning, AppController.Ps5ToneFor(SessionState.Connecting, running: true));
+        Assert.Equal(StatusTone.Warning, AppController.TvToneFor(clients: 0, running: true));
+    }
+
+    [Fact]
+    public void GoodWhenConnected()
+    {
+        Assert.Equal(StatusTone.Good, AppController.Ps5ToneFor(SessionState.Streaming, running: true));
+        Assert.Equal(StatusTone.Good, AppController.TvToneFor(clients: 1, running: false));
+    }
+}

@@ -77,6 +77,9 @@ public interface IAppServices
     ITranslationModel Translation { get; }
 }
 
+/// <summary>Durum noktasının rengi: bağlı (yeşil), sorun var (turuncu), boşta (gri).</summary>
+public enum StatusTone { Idle, Warning, Good }
+
 public enum OnboardingStep { Welcome, SecondAccount, PsnLogin, Console, Tv, Translation, Test, Done }
 
 public enum AppError { InvalidPin, InvalidLogin, MissingAccount, WrongAccount, RegistrationFailed }

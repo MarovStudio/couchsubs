@@ -347,6 +347,15 @@ final class AppModel {
         }
     }
 
+    /// Çeviri başlamamışken bağlı olmamak bir sorun değildir; nokta gri kalır.
+    static func ps5Tone(_ state: SessionState, running: Bool) -> StatusTone {
+        state == .streaming ? .good : running ? .warning : .idle
+    }
+
+    static func tvTone(clients: Int, running: Bool) -> StatusTone {
+        clients > 0 ? .good : running ? .warning : .idle
+    }
+
     /// PS5 durumunun kullanıcıya gösterilecek metni.
     static func statusText(_ state: SessionState, running: Bool) -> String {
         switch state {

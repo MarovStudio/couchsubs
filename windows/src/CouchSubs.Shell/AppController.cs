@@ -81,13 +81,13 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public bool HasAccount => accountId is not null;
     public RegisteredConsole? Console => console;
     public LgTv? Tv => tv;
-    public bool IsRunning { get => isRunning; private set => Set(ref isRunning, value, [nameof(Ps5StatusText)]); }
+    public bool IsRunning { get => isRunning; private set => Set(ref isRunning, value, [nameof(Ps5StatusText), nameof(Ps5Tone), nameof(TvTone)]); }
     public bool IsStarting { get => isStarting; private set => Set(ref isStarting, value); }
-    public SessionState SessionState { get => sessionState; private set => Set(ref sessionState, value, [nameof(Ps5StatusText), nameof(Ps5Good)]); }
+    public SessionState SessionState { get => sessionState; private set => Set(ref sessionState, value, [nameof(Ps5StatusText), nameof(Ps5Tone)]); }
     public string Ps5StatusText => StatusText(sessionState, isRunning, text);
-    public bool Ps5Good => sessionState.Phase == SessionPhase.Streaming;
-    public int TvClients { get => tvClients; private set => Set(ref tvClients, value, [nameof(TvGood), nameof(TvStatusText)]); }
-    public bool TvGood => tvClients > 0;
+    public StatusTone Ps5Tone => Ps5ToneFor(sessionState, isRunning);
+    public int TvClients { get => tvClients; private set => Set(ref tvClients, value, [nameof(TvTone), nameof(TvStatusText)]); }
+    public StatusTone TvTone => TvToneFor(tvClients, isRunning);
     public string TvStatusText => tvClients > 0 ? text["Connected"] : text["Waiting for the TV app"];
     public string LastSource { get => lastSource; private set => Set(ref lastSource, value); }
     public string LastTranslation { get => lastTranslation; private set => Set(ref lastTranslation, value); }
@@ -98,6 +98,9 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public string? ActiveSourceLanguage { get; private set; }
     /// <summary>Sunucunun gerçekten dinlediği port (8787 doluysa rastgele bir port).</summary>
     public int ServerPort { get; private set; } = DefaultServerPort;
+
+    /// <summary>Bu oyun dilinden hedef dile çeviri modeli var mı (ayarlarda listelenecek diller).</summary>
+    public bool SupportsLanguage(string source) => services.Translation.IsSupported(source, settings.TargetLanguage);
 
     public bool ModelInstalled => services.Translation.IsInstalled(settings.SourceLanguage, settings.TargetLanguage);
     public bool ModelDownloading { get => modelDownloading; private set => Set(ref modelDownloading, value); }
@@ -295,6 +298,13 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         session?.ReconnectNow();
         keeper?.Reconnect();
     }
+
+    /// <summary>Çeviri başlamamışken bağlı olmamak bir sorun değildir; nokta gri kalır.</summary>
+    public static StatusTone Ps5ToneFor(SessionState state, bool running) =>
+        state.Phase == SessionPhase.Streaming ? StatusTone.Good : running ? StatusTone.Warning : StatusTone.Idle;
+
+    public static StatusTone TvToneFor(int clients, bool running) =>
+        clients > 0 ? StatusTone.Good : running ? StatusTone.Warning : StatusTone.Idle;
 
     /// <summary>PS5 durumunun kullanıcıya gösterilecek metni.</summary>
     public static string StatusText(SessionState state, bool running, Localizer text)

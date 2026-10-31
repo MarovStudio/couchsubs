@@ -9,7 +9,7 @@ namespace CouchSubs.App.Views;
 
 public partial class AboutWindow : Window
 {
-    private AboutWindow()
+    internal AboutWindow()
     {
         InitializeComponent();
         Version.Text = Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "";

@@ -41,8 +41,18 @@ public static class ScreenRenderer
                 Save(() => new OnboardingView(controller), 640, 720, Path.Combine(folder, $"adim-{(int)step + 1}-{step}-{suffix}.png"));
             }
             Save(() => new MainView(Demo(OnboardingStep.Done)), 640, 720, Path.Combine(folder, $"ana-{suffix}.png"));
+            Save(() => Detach(new SettingsWindow(Demo(OnboardingStep.Done))), 600, 720, Path.Combine(folder, $"ayarlar-{suffix}.png"));
+            Save(() => Detach(new AboutWindow()), 460, 640, Path.Combine(folder, $"hakkinda-{suffix}.png"));
         }
         app.Shutdown();
+    }
+
+    /// <summary>Pencerenin içeriğini başka bir pencerede çizebilmek için kendi penceresinden ayırır.</summary>
+    private static FrameworkElement Detach(Window window)
+    {
+        var content = (FrameworkElement)window.Content;
+        window.Content = null;
+        return content;
     }
 
     private static AppController Demo(OnboardingStep step)
@@ -109,7 +119,7 @@ public static class ScreenRenderer
 
     private sealed class DemoTranslation : ITranslationModel
     {
-        public bool IsSupported(string source, string target) => true;
+        public bool IsSupported(string source, string target) => source == "en";
         public bool IsInstalled(string source, string target) => true;
         public Task DownloadAsync(string source, string target, IProgress<double> progress, CancellationToken cancellationToken) => Task.CompletedTask;
         public ITextTranslator Create(string source, string target) => throw new NotSupportedException();

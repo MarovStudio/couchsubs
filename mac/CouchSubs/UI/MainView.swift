@@ -13,6 +13,7 @@ struct MainView: View {
         (AppModel.statusText(model.sessionState, running: model.isRunning), model.sessionState == .streaming)
     }
 
+
     var body: some View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: Theme.space("xl")) {
@@ -34,16 +35,15 @@ struct MainView: View {
                 Label(model.isRunning ? "Stop translating" : "Start translating",
                       systemImage: model.isRunning ? "stop.fill" : "play.fill")
                     .font(.csHeadline)
-                    .padding(.vertical, Theme.space("xs"))
             }
-            .buttonStyle(CSButtonStyle(kind: model.isRunning ? .danger : .primary, fullWidth: true))
+            .buttonStyle(CSButtonStyle(kind: model.isRunning ? .danger : .primary, fullWidth: true, height: "primaryActionHeight"))
             .disabled(model.isStarting)
 
             Card {
-                StatusRow(title: "PS5", value: ps5Status.0, isGood: ps5Status.1)
+                StatusRow(title: "PS5", value: ps5Status.0, tone: AppModel.ps5Tone(model.sessionState, running: model.isRunning))
                 Divider().overlay(Color.csBorder)
                 StatusRow(title: "TV", value: model.tvClients > 0 ? String(localized: "Connected") : String(localized: "Waiting for the TV app"),
-                          isGood: model.tvClients > 0)
+                          tone: AppModel.tvTone(clients: model.tvClients, running: model.isRunning))
             }
 
             if model.translatorStatus != .ready {

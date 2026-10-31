@@ -9,7 +9,11 @@
             <!-- Başlık: logo, ad, ayarlar -->
             <Grid Margin="0,0,0,24">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="/Assets/logo.png" Width="44" Height="44" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Grid Width="44" Height="44">
+                        <Image Source="/Assets/logo.png" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <!-- Koyu temada logonun kenarı zeminden ayrılsın. -->
+                        <Border BorderBrush="{DynamicResource borderBrush}" BorderThickness="1" CornerRadius="9.9" />
+                    </Grid>
                     <TextBlock Text="CouchSubs" Style="{StaticResource TitleText}" Margin="12,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
                 <Button Style="{StaticResource IconButton}" HorizontalAlignment="Right" ToolTip="{t:T 'Settings'}" Click="OnSettings">
@@ -18,7 +22,7 @@
             </Grid>
 
             <!-- Başlat / Durdur -->
-            <Button x:Name="Toggle" HorizontalAlignment="Stretch" MinHeight="52" Click="OnToggle"
+            <Button x:Name="Toggle" HorizontalAlignment="Stretch" MinHeight="{DynamicResource size.primaryActionHeight}" Click="OnToggle"
                     IsEnabled="{Binding IsStarting, Converter={StaticResource Not}}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock x:Name="ToggleGlyph" Style="{StaticResource GlyphText}" FontSize="16" Margin="0,0,10,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
@@ -29,9 +33,9 @@
             <!-- Durumlar -->
             <c:Card Margin="0,24,0,0">
                 <StackPanel>
-                    <c:StatusRow Title="PS5" Value="{Binding Ps5StatusText}" IsGood="{Binding Ps5Good}" />
+                    <c:StatusRow Title="PS5" Value="{Binding Ps5StatusText}" Tone="{Binding Ps5Tone}" />
                     <Separator />
-                    <c:StatusRow Title="TV" Value="{Binding TvStatusText}" IsGood="{Binding TvGood}" />
+                    <c:StatusRow Title="TV" Value="{Binding TvStatusText}" Tone="{Binding TvTone}" />
                 </StackPanel>
             </c:Card>
 

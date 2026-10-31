@@ -15,15 +15,17 @@ public partial class SettingsWindow : Window
     private readonly AppController controller;
     private bool loading = true;
 
-    private SettingsWindow(AppController controller)
+    internal SettingsWindow(AppController controller)
     {
         this.controller = controller;
         InitializeComponent();
         var settings = controller.Settings;
         (settings.Style.FontSize switch { 36 => Small, 58 => Large, _ => Medium }).IsChecked = true;
         Position.Value = settings.Style.BottomPercent;
-        foreach (var (code, name) in Languages)
+        // Yalnız çeviri modeli olan diller listelenir; tek dil varsa seçim gösterilmez.
+        foreach (var (code, name) in Languages.Where(l => controller.SupportsLanguage(l.Code)))
             GameLanguage.Items.Add(new ComboBoxItem { Content = Localizer.Current[name], Tag = code, IsSelected = code == settings.SourceLanguage });
+        LanguageCard.Visibility = GameLanguage.Items.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
         Region.Region = settings.Region;
         Region.Frame = controller.LastFrame;
         loading = false;

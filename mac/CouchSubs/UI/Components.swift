@@ -17,6 +17,8 @@ struct LogoView: View {
             .frame(width: size * 1024 / 824, height: size * 1024 / 824)
             .frame(width: size, height: size)
             .clipped()
+            // Koyu temada logonun kenarı zeminden ayrılsın.
+            .overlay(RoundedRectangle(cornerRadius: size * 186 / 824, style: .continuous).strokeBorder(Color.csBorder))
             .accessibilityHidden(true)
     }
 }
@@ -26,6 +28,8 @@ struct CSButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, danger }
     var kind: Kind = .secondary
     var fullWidth = false
+    /// Ana ekrandaki büyük düğme için "primaryActionHeight".
+    var height = "buttonHeight"
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -33,7 +37,7 @@ struct CSButtonStyle: ButtonStyle {
             .font(.csButton)
             .foregroundStyle(foreground)
             .padding(.horizontal, Theme.space("xl"))
-            .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Theme.size("buttonHeight"))
+            .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Theme.size(height))
             .background(background, in: RoundedRectangle(cornerRadius: Theme.radius("control")))
             .overlay {
                 if kind == .secondary {
@@ -65,6 +69,22 @@ extension ButtonStyle where Self == CSButtonStyle {
     static var primary: CSButtonStyle { CSButtonStyle(kind: .primary) }
     static var secondary: CSButtonStyle { CSButtonStyle(kind: .secondary) }
     static var danger: CSButtonStyle { CSButtonStyle(kind: .danger) }
+}
+
+/// Kartlarla aynı dilde metin alanı: yüzey zemin, ince çerçeve, yuvarlak köşe.
+struct CSTextFieldStyle: TextFieldStyle {
+    var font: Font = .csBody
+    var height: CGFloat = 40
+
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .textFieldStyle(.plain)
+            .font(font)
+            .padding(.horizontal, Theme.space("m"))
+            .frame(minHeight: height)
+            .background(Color.csSurface, in: RoundedRectangle(cornerRadius: Theme.radius("control")))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius("control")).strokeBorder(Color.csBorder))
+    }
 }
 
 /// Başlıklı ya da başlıksız içerik kartı.
@@ -146,23 +166,36 @@ struct NumberedRow: View {
     }
 }
 
+/// Durum noktasının rengi: bağlı (yeşil), sorun var (turuncu), boşta (gri).
+enum StatusTone: Equatable {
+    case idle, warning, good
+}
+
 /// Renkli durum noktası, adı ve değeri.
 struct StatusRow: View {
     let title: LocalizedStringKey
     let value: String
-    let isGood: Bool
+    let tone: StatusTone
 
     var body: some View {
         HStack(spacing: Theme.space("m")) {
             Circle()
-                .fill(isGood ? Color.csSuccess : Color.csWarning)
+                .fill(dotColor)
                 .frame(width: Theme.size("statusDot"), height: Theme.size("statusDot"))
             Text(title).font(.csBody.weight(.semibold))
             Spacer()
             Text(value)
                 .font(.csBody)
-                .foregroundStyle(isGood ? Color.csText : Color.csSecondary)
+                .foregroundStyle(tone == .good ? Color.csText : Color.csSecondary)
                 .lineLimit(1)
+        }
+    }
+
+    private var dotColor: Color {
+        switch tone {
+        case .good: .csSuccess
+        case .warning: .csWarning
+        case .idle: .csSecondary
         }
     }
 }

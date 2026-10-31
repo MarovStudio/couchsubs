@@ -162,6 +162,38 @@
         </Setter>
     </Style>
 
+    <!-- Bölmeli seçim (Mac'teki segmented denetimin karşılığı): yan yana RadioButton'lar. -->
+    <Style x:Key="SegmentButton" TargetType="RadioButton">
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="{DynamicResource calloutFontSize}" />
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Segment" Background="Transparent" CornerRadius="8" Padding="16,7" Margin="2">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Segment" Property="Background" Value="{DynamicResource accentBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource onAccentBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="SegmentGroup" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource backgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource borderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource radius.control}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+
     <Style TargetType="RadioButton">
         <Setter Property="FontSize" Value="{DynamicResource bodyFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
@@ -173,9 +205,45 @@
         <Setter Property="MinWidth" Value="200" />
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
+    <!-- Kaydırıcı: ince ray, dolu kısım sarı, yuvarlak tutamaç. -->
+    <Style x:Key="SliderThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Ellipse Width="20" Height="20" Fill="{DynamicResource surfaceBrush}" Stroke="{DynamicResource borderBrush}" StrokeThickness="1" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="SliderFill" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style TargetType="Slider">
-        <Setter Property="Foreground" Value="{DynamicResource accentTextBrush}" />
         <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Track x:Name="PART_Track" Height="24">
+                        <Track.DecreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource SliderFill}" Background="{DynamicResource accentBrush}" Command="Slider.DecreaseLarge" />
+                        </Track.DecreaseRepeatButton>
+                        <Track.Thumb>
+                            <Thumb Style="{StaticResource SliderThumb}" />
+                        </Track.Thumb>
+                        <Track.IncreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource SliderFill}" Background="{DynamicResource borderBrush}" Command="Slider.IncreaseLarge" />
+                        </Track.IncreaseRepeatButton>
+                    </Track>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <Style TargetType="Hyperlink">
         <Setter Property="Foreground" Value="{DynamicResource accentTextBrush}" />
@@ -325,15 +393,18 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Ellipse x:Name="Dot" Width="{DynamicResource size.statusDot}" Height="{DynamicResource size.statusDot}"
-                                 Fill="{DynamicResource warningBrush}" VerticalAlignment="Center" />
+                                 Fill="{DynamicResource textSecondaryBrush}" VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1" Text="{TemplateBinding Title}" FontWeight="SemiBold" Margin="12,0,0,0" VerticalAlignment="Center" />
                         <TextBlock x:Name="Value" Grid.Column="2" Text="{TemplateBinding Value}" HorizontalAlignment="Right"
                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Foreground="{DynamicResource textSecondaryBrush}" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsGood" Value="True">
+                        <Trigger Property="Tone" Value="Good">
                             <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource successBrush}" />
                             <Setter TargetName="Value" Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="Tone" Value="Warning">
+                            <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource warningBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -11,16 +11,17 @@
   <div id="subtitle" class="hidden"><div id="subtitle-prev" class="hidden"><span id="subtitle-prev-text"></span></div><span id="subtitle-text"></span></div>
 
   <div id="waiting" class="hidden">
+    <img class="logo" src="largeIcon.png" alt="">
     <div class="waiting-title" data-i18n="waiting"></div>
     <div class="waiting-hint" data-i18n="waitingHint"></div>
   </div>
 
   <div id="panel">
-    <div class="title" data-i18n="panelTitle"></div>
-    <div><b data-i18n="hdmi"></b>: <span id="st-hdmi">-</span> <span id="st-video" class="muted"></span></div>
-    <div><b data-i18n="server"></b>: <span id="st-server">-</span></div>
-    <div><b data-i18n="connection"></b>: <span id="st-conn">-</span></div>
-    <div class="keys" data-i18n="keys"></div>
+    <div class="title"><img class="logo" src="icon.png" alt=""><span data-i18n="panelTitle"></span></div>
+    <div class="row"><span class="label" data-i18n="hdmi"></span><span><span id="st-hdmi">-</span> <span id="st-video" class="muted"></span></span></div>
+    <div class="row"><span class="label" data-i18n="server"></span><span id="st-server">-</span></div>
+    <div class="row"><span class="label" data-i18n="connection"></span><span id="st-conn">-</span></div>
+    <div class="keys" id="keys" data-i18n="keys"></div>
   </div>
 
   <script src="config.js"></script>

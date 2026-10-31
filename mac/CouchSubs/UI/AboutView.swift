@@ -15,8 +15,12 @@ struct AboutView: View {
             Text("Remote Play connection by chiaki-ng (AGPL-3.0). Thanks to its developers.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Color.csSecondary)
-            Link("Source code", destination: AppIdentity.sourceURL)
-            Link("chiaki-ng", destination: URL(string: "https://github.com/chiaki-ng/chiaki-ng")!)
+            HStack(spacing: Theme.space("m")) {
+                Link("Source code", destination: AppIdentity.sourceURL)
+                Text(verbatim: "·").foregroundStyle(Color.csSecondary)
+                Link(destination: URL(string: "https://github.com/chiaki-ng/chiaki-ng")!) { Text(verbatim: "chiaki-ng") }
+            }
+            .foregroundStyle(Color.csAccentText)
             Text("CouchSubs is not affiliated with Sony Interactive Entertainment. PlayStation and PS5 are trademarks of Sony Interactive Entertainment Inc.")
                 .font(.csCaption).foregroundStyle(Color.csSecondary)
                 .multilineTextAlignment(.center)

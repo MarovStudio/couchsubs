@@ -6,7 +6,11 @@
         Title="{t:T 'About CouchSubs'}" Width="460" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource backgroundBrush}">
     <StackPanel Margin="32">
-        <Image Source="/Assets/logo.png" Width="88" Height="88" RenderOptions.BitmapScalingMode="HighQuality" />
+        <Grid Width="88" Height="88">
+                        <Image Source="/Assets/logo.png" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <!-- Koyu temada logonun kenarı zeminden ayrılsın. -->
+                        <Border BorderBrush="{DynamicResource borderBrush}" BorderThickness="1" CornerRadius="19.9" />
+                    </Grid>
         <TextBlock Text="CouchSubs" Style="{StaticResource TitleText}" HorizontalAlignment="Center" Margin="0,12,0,0" />
         <TextBlock x:Name="Version" Style="{StaticResource HintText}" HorizontalAlignment="Center" Margin="0,4,0,12" />
         <TextBlock Text="{t:T 'Free and open source under the GNU AGPL-3.0 license.'}" TextAlignment="Center" />
