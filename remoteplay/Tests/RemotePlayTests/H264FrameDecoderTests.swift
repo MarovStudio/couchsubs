@@ -42,6 +42,15 @@ final class H264FrameDecoderTests: XCTestCase {
         for unit in units { XCTAssertNotNil(decoder.decode(annexB: unit)) }
     }
 
+    /// Uykudan sonra VideoToolbox oturumu geçersizleşebilir; çözücü kendini yeniden kurmalı.
+    func testRecoversFromInvalidatedSession() throws {
+        let decoder = H264FrameDecoder()
+        let keyframe = try accessUnits()[0]
+        XCTAssertNotNil(decoder.decode(annexB: keyframe))
+        decoder.invalidateSessionForTesting()
+        XCTAssertNotNil(decoder.decode(annexB: keyframe))
+    }
+
     func testGarbageDoesNotCrash() {
         let decoder = H264FrameDecoder()
         XCTAssertNil(decoder.decode(annexB: Data([0, 0, 0, 1, 0x65, 0xFF, 0x00, 0x12])))

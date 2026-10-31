@@ -164,7 +164,11 @@
     setStatus('st-conn', t('connecting'), 'muted');
     eventSource = new EventSource(address + '/events');
     eventSource.onopen = function () { setStatus('st-conn', t('connected'), 'ok'); };
-    eventSource.onerror = function () { setStatus('st-conn', t('reconnecting'), 'bad'); };
+    eventSource.onerror = function () {
+      // Uygulamayla bağlantı koptuysa eski altyazı ekranda asılı kalmasın.
+      hideSubtitle();
+      setStatus('st-conn', t('reconnecting'), 'bad');
+    };
     onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration); });
     onEvent('clear', hideSubtitle);
     onEvent('style', applyStyle);

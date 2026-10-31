@@ -8,11 +8,7 @@ struct MainView: View {
     @State private var showSettings = false
 
     private var ps5Status: (String, Bool) {
-        switch model.sessionState {
-        case .streaming: (String(localized: "Connected"), true)
-        case .connecting: (String(localized: "Connecting…"), false)
-        case .disconnected: (model.isRunning ? String(localized: "Reconnecting…") : String(localized: "Not connected"), false)
-        }
+        (AppModel.statusText(model.sessionState, running: model.isRunning), model.sessionState == .streaming)
     }
 
     var body: some View {
@@ -36,6 +32,7 @@ struct MainView: View {
             .buttonStyle(.borderedProminent)
             .tint(model.isRunning ? .red : .accentColor)
             .controlSize(.large)
+            .disabled(model.isStarting)
 
             GroupBox {
                 VStack(spacing: 10) {

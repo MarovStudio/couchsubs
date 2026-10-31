@@ -17,6 +17,8 @@ final class FakeServices: AppServices {
     var tvs = [LGTV(name: "LG TV", host: "192.168.1.153")]
     var registered: RegisteredConsole?
     var launchedServer: String?
+    var streams: [FakeStream] = []
+    var keepers: [FakeKeeper] = []
 
     func discoverConsoles() async -> [ConsoleInfo] { consoles }
     func accountId(fromRedirect url: URL) async throws -> Data { Data(repeating: 1, count: 8) }
@@ -30,6 +32,32 @@ final class FakeServices: AppServices {
         launchedServer = server
         return "tv-key"
     }
+    func makeStream(console: RegisteredConsole, accountId: Data) -> StreamControlling {
+        let stream = FakeStream()
+        streams.append(stream)
+        return stream
+    }
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any]) -> KeeperControlling {
+        let keeper = FakeKeeper()
+        keepers.append(keeper)
+        return keeper
+    }
+}
+
+final class FakeStream: StreamControlling {
+    var onFrame: ((CGImage) -> Void)?
+    var onState: ((SessionState) -> Void)?
+    var started = false
+    func start() { started = true }
+    func stop() { started = false }
+    func reconnectNow() {}
+}
+
+final class FakeKeeper: KeeperControlling {
+    var running = false
+    func start(interval: Duration) { running = true }
+    func stop() { running = false }
+    func reconnect() {}
 }
 
 @MainActor
@@ -103,6 +131,59 @@ final class AppModelTests: XCTestCase {
         try await model.pair(LGTV(name: "LG TV", host: "192.168.1.153")); model.advance()
         XCTAssertEqual(model.step, .test); model.advance()
         XCTAssertEqual(model.step, .done)
+    }
+}
+
+@MainActor
+final class AppModelRunTests: XCTestCase {
+    private func readyModel(_ services: FakeServices) -> AppModel {
+        let store = MemoryStore()
+        store.save(Data(repeating: 1, count: 8), for: StoreKey.accountId)
+        store.save(RegisteredConsole(host: "192.168.1.253", name: "PS5", registKey: Data(repeating: 0x31, count: 16), morning: Data(repeating: 2, count: 16)), for: StoreKey.console)
+        store.save(LGTV(name: "LG TV", host: "127.0.0.1"), for: StoreKey.tv)
+        store.save("tv-key", for: StoreKey.tvKey)
+        return AppModel(services: services, store: store)
+    }
+
+    func testDoubleStartCreatesOneSession() async {
+        let services = FakeServices()
+        let model = readyModel(services)
+        async let first: Void = model.start()
+        async let second: Void = model.start()
+        _ = await (first, second)
+        XCTAssertEqual(services.streams.count, 1)
+        XCTAssertEqual(services.keepers.count, 1)
+        XCTAssertTrue(model.isRunning)
+        model.stop()
+    }
+
+    func testRunningPreventsIdleSleep() async {
+        let model = readyModel(FakeServices())
+        await model.start()
+        XCTAssertTrue(model.isPreventingSleep)
+        model.stop()
+        XCTAssertFalse(model.isPreventingSleep)
+    }
+
+    func testDisconnectClearsSubtitleOnTV() async throws {
+        let services = FakeServices()
+        let model = readyModel(services)
+        await model.start()
+        defer { model.stop() }
+        let (bytes, _) = try await URLSession.shared.bytes(from: URL(string: "http://127.0.0.1:\(model.serverPort)/events")!)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        services.streams[0].onState?(.disconnected(.network))
+        var sawClear = false
+        for try await line in bytes.lines where line == "event: clear" { sawClear = true; break }
+        XCTAssertTrue(sawClear)
+    }
+
+    func testDisconnectReasonsAreExplained() {
+        XCTAssertEqual(AppModel.statusText(.disconnected(.consoleAsleep), running: true), String(localized: "Turn on your PS5"))
+        XCTAssertEqual(AppModel.statusText(.disconnected(.inUse), running: true), String(localized: "Remote Play is in use on another device"))
+        XCTAssertEqual(AppModel.statusText(.disconnected(.refused), running: true), String(localized: "The PS5 refused the connection. Set up the PS5 again."))
+        XCTAssertEqual(AppModel.statusText(.disconnected(.network), running: true), String(localized: "Reconnecting…"))
+        XCTAssertEqual(AppModel.statusText(.disconnected(.stopped), running: false), String(localized: "Not connected"))
     }
 }
 

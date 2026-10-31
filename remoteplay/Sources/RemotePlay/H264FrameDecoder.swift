@@ -59,7 +59,7 @@ final class H264FrameDecoder {
             pps = newPPS
             makeSession()
         }
-        guard let session, let format, !slices.isEmpty else { return nil }
+        guard session != nil, format != nil, !slices.isEmpty else { return nil }
 
         // VideoToolbox başlangıç kodu değil, 4 baytlık uzunluk önekli birimler bekler.
         var avcc = Data()
@@ -68,16 +68,29 @@ final class H264FrameDecoder {
             avcc.append(Data(bytes: &length, count: 4))
             avcc.append(slice)
         }
-        guard let sample = makeSampleBuffer(avcc, format: format) else { return nil }
-
-        var output: CVPixelBuffer?
-        let status = VTDecompressionSessionDecodeFrame(session, sampleBuffer: sample, flags: [], infoFlagsOut: nil) { status, _, imageBuffer, _, _ in
-            if status == noErr { output = imageBuffer }
+        var (status, output) = decodeFrame(avcc)
+        if status == kVTInvalidSessionErr {
+            // Uykudan sonra oturum geçersizleşebilir; aynı parametrelerle yeniden kurup bir kez daha dene.
+            makeSession()
+            (status, output) = decodeFrame(avcc)
         }
         guard status == noErr, makeImage, let pixelBuffer = output else { return nil }
         var image: CGImage?
         VTCreateCGImageFromCVPixelBuffer(pixelBuffer, options: nil, imageOut: &image)
         return image
+    }
+
+    private func decodeFrame(_ avcc: Data) -> (OSStatus, CVPixelBuffer?) {
+        guard let session, let format, let sample = makeSampleBuffer(avcc, format: format) else { return (kVTInvalidSessionErr, nil) }
+        var output: CVPixelBuffer?
+        let status = VTDecompressionSessionDecodeFrame(session, sampleBuffer: sample, flags: [], infoFlagsOut: nil) { status, _, imageBuffer, _, _ in
+            if status == noErr { output = imageBuffer }
+        }
+        return (status, output)
+    }
+
+    func invalidateSessionForTesting() {
+        if let session { VTDecompressionSessionInvalidate(session) }
     }
 
     private func makeSession() {

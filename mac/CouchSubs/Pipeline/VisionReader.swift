@@ -3,7 +3,7 @@
 import CoreGraphics
 import Vision
 
-protocol TextReader {
+protocol TextReader: Sendable {
     func read(_ image: CGImage) throws -> String
 }
 

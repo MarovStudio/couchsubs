@@ -42,7 +42,28 @@ protocol AppServices: AnyObject {
     func discoverTVs() async -> [LGTV]
     /// TV ile eşleşir, TV uygulamasını sunucu adresiyle başlatır ve client-key'i döner.
     func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> String
+    func makeStream(console: RegisteredConsole, accountId: Data) -> StreamControlling
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any]) -> KeeperControlling
 }
+
+/// PS5 bağlantısı (gerçekte `StreamSession`).
+protocol StreamControlling: AnyObject {
+    var onFrame: ((CGImage) -> Void)? { get set }
+    var onState: ((SessionState) -> Void)? { get set }
+    func start()
+    func stop()
+    func reconnectNow()
+}
+
+/// TV uygulamasını açık tutan görevli (gerçekte `TVKeeper`).
+protocol KeeperControlling: AnyObject {
+    func start(interval: Duration)
+    func stop()
+    func reconnect()
+}
+
+extension StreamSession: StreamControlling {}
+extension TVKeeper: KeeperControlling {}
 
 final class LiveServices: AppServices {
     func discoverConsoles() async -> [ConsoleInfo] { await Console.discover() }
@@ -64,6 +85,18 @@ final class LiveServices: AppServices {
         try await client.launch(appId: AppIdentity.tvAppId, params: ["server": server])
         client.close()
         return newKey
+    }
+
+    func makeStream(console: RegisteredConsole, accountId: Data) -> StreamControlling {
+        StreamSession(console: console, accountId: accountId)
+    }
+
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any]) -> KeeperControlling {
+        TVKeeper(connect: {
+            let client = SSAPClient(tv: tv, clientKey: key)
+            _ = try await client.connect()
+            return client
+        }, appId: AppIdentity.tvAppId, params: params)
     }
 }
 
@@ -96,7 +129,10 @@ final class AppModel {
 
     // Çalışma durumu
     var isRunning = false
-    var sessionState: SessionState = .disconnected(reason: "")
+    var isStarting = false
+    var sessionState: SessionState = .disconnected(.stopped)
+    /// Çeviri sürerken Mac'in boşta uykuya geçmesi engellenir (kullanıcı TV'de oynuyor, Mac'e dokunmuyor).
+    var isPreventingSleep: Bool { sleepActivity != nil }
     var tvClients = 0
     var lastSource = ""
     var lastTranslation = ""
@@ -110,9 +146,9 @@ final class AppModel {
     private var serverStarted = false
     /// Sunucunun gerçekten dinlediği port (8787 doluysa rastgele bir port).
     private(set) var serverPort: UInt16 = AppIdentity.serverPort
-    private var session: StreamSession?
-    private var keeper: TVKeeper?
-    private var keeperClient: SSAPClient?
+    private var session: StreamControlling?
+    private var keeper: KeeperControlling?
+    private var sleepActivity: NSObjectProtocol?
     private var pipeline: SubtitlePipeline?
     private var processing = false
     private var wakeObserver: NSObjectProtocol?
@@ -199,7 +235,11 @@ final class AppModel {
     // MARK: - Çeviri
 
     func start() async {
-        guard !isRunning, let console, let accountId, let tv else { return }
+        // Düğmeye iki kez basılması ya da beklerken tekrar çağrılması ikinci bir oturum açmaz.
+        guard !isRunning, !isStarting, let console, let accountId, let tv else { return }
+        isStarting = true
+        defer { isStarting = false }
+
         translatorStatus = await Translator.status(source: settings.sourceLanguage, target: settings.targetLanguage)
         try? await startServer()
         server.sendStyle(settings.style)
@@ -213,27 +253,26 @@ final class AppModel {
         }
         self.pipeline = pipeline
 
-        let session = StreamSession(console: console, accountId: accountId)
-        session.onState = { [weak self] state in Task { @MainActor in self?.sessionState = state } }
+        let session = services.makeStream(console: console, accountId: accountId)
+        session.onState = { [weak self] state in Task { @MainActor in self?.sessionStateChanged(state) } }
         session.onFrame = { [weak self] frame in Task { @MainActor in await self?.handle(frame) } }
         session.start()
         self.session = session
 
-        // TV uygulamasını başlat ve TV başka girişe geçerse geri getir.
-        let client = SSAPClient(tv: tv, clientKey: store.load(String.self, for: StoreKey.tvKey))
-        let params = ["server": serverAddress(for: tv)]
-        if (try? await client.connect()) != nil {
-            try? await client.launch(appId: AppIdentity.tvAppId, params: params)
-            let keeper = TVKeeper(control: client, appId: AppIdentity.tvAppId, params: params)
-            keeper.start()
-            self.keeper = keeper
-            keeperClient = client
-        }
+        // TV uygulamasını başlat ve açık tut; TV kapalıysa açıldığında bağlanır.
+        let keeper = services.makeKeeper(tv: tv, key: store.load(String.self, for: StoreKey.tvKey), params: ["server": serverAddress(for: tv)])
+        keeper.start(interval: .seconds(5))
+        self.keeper = keeper
 
-        // Mac uykudan uyanınca bağlantıyı hemen yenile.
+        // Mac uykudan uyanınca bağlantıları hemen yenile.
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.session?.reconnectNow() }
+            Task { @MainActor in
+                self?.session?.reconnectNow()
+                self?.keeper?.reconnect()
+            }
         }
+        sleepActivity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled],
+                                                              reason: "Translating game subtitles")
         isRunning = true
     }
 
@@ -242,13 +281,39 @@ final class AppModel {
         session = nil
         keeper?.stop()
         keeper = nil
-        keeperClient?.close()
-        keeperClient = nil
         pipeline?.reset()
         pipeline = nil
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
         wakeObserver = nil
+        if let sleepActivity { ProcessInfo.processInfo.endActivity(sleepActivity) }
+        sleepActivity = nil
         isRunning = false
+        sessionState = .disconnected(.stopped)
+    }
+
+    private func sessionStateChanged(_ state: SessionState) {
+        sessionState = state
+        // Bağlantı koptuysa TV'de eski altyazı kalmasın.
+        if case .disconnected = state {
+            pipeline?.reset()
+            server.clear()
+        }
+    }
+
+    /// PS5 durumunun kullanıcıya gösterilecek metni.
+    static func statusText(_ state: SessionState, running: Bool) -> String {
+        switch state {
+        case .streaming: return String(localized: "Connected")
+        case .connecting: return String(localized: "Connecting…")
+        case .disconnected(let reason):
+            guard running else { return String(localized: "Not connected") }
+            switch reason {
+            case .consoleAsleep: return String(localized: "Turn on your PS5")
+            case .inUse: return String(localized: "Remote Play is in use on another device")
+            case .refused: return String(localized: "The PS5 refused the connection. Set up the PS5 again.")
+            default: return String(localized: "Reconnecting…")
+            }
+        }
     }
 
     private func handle(_ frame: CGImage) async {

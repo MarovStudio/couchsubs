@@ -31,7 +31,11 @@ final class SubtitlePipeline {
     }
 
     func process(_ frame: CGImage, region: CropRegion) async {
-        let text = (try? reader.read(RegionCropper.crop(frame, to: region))) ?? ""
+        // Yazı tanıma uzun sürebilir; arayüz takılmasın diye ana iş parçacığının dışında yapılır.
+        let reader = self.reader
+        let text = await Task.detached(priority: .userInitiated) {
+            (try? reader.read(RegionCropper.crop(frame, to: region))) ?? ""
+        }.value
         switch stabilizer.feed(text) {
         case .none:
             break

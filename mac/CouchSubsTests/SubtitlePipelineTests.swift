@@ -5,10 +5,14 @@ import ImageIO
 import XCTest
 @testable import CouchSubs
 
-private final class FakeReader: TextReader {
+private final class FakeReader: TextReader, @unchecked Sendable {
     var texts: [String]
+    var readOnMainThread: [Bool] = []
     init(_ texts: [String]) { self.texts = texts }
-    func read(_ image: CGImage) throws -> String { texts.isEmpty ? "" : texts.removeFirst() }
+    func read(_ image: CGImage) throws -> String {
+        readOnMainThread.append(Thread.isMainThread)
+        return texts.isEmpty ? "" : texts.removeFirst()
+    }
 }
 
 private final class FakeTranslator: TextTranslator {
@@ -41,6 +45,13 @@ final class SubtitlePipelineTests: XCTestCase {
         for _ in 0..<3 { await pipeline.process(frame, region: CropRegion()) }
         XCTAssertEqual(sender.sent, ["TR: Hold the gate"])
         XCTAssertEqual(pipeline.lastPair?.source, "Hold the gate")
+    }
+
+    func testTextRecognitionRunsOffTheMainThread() async {
+        let reader = FakeReader(["Hold the gate"])
+        let pipeline = SubtitlePipeline(reader: reader, translator: FakeTranslator(), server: FakeSender())
+        await pipeline.process(frame, region: CropRegion())
+        XCTAssertEqual(reader.readOnMainThread, [false])
     }
 
     func testMissingLanguagePackSendsNothing() async {
