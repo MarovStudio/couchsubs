@@ -1,13 +1,19 @@
-﻿using System.Configuration;
-using System.Data;
+// SPDX-License-Identifier: AGPL-3.0-only
+
 using System.Windows;
+using CouchSubs.App.Theme;
 
 namespace CouchSubs.App;
 
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
 public partial class App : Application
 {
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+        ThemeManager.Apply(Resources);
+        ThemeManager.Follow(Resources);
+        var window = new ShellWindow();
+        MainWindow = window;
+        window.Show();
+    }
 }
-
