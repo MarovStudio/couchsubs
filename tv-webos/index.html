@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="tr">
+<html>
 <head>
   <meta charset="utf-8">
-  <title>PS5 Altyazı</title>
+  <title>CouchSubs</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -10,17 +10,21 @@
 
   <div id="subtitle" class="hidden"><span id="subtitle-text"></span></div>
 
+  <div id="waiting" class="hidden">
+    <div class="waiting-title" data-i18n="waiting"></div>
+    <div class="waiting-hint" data-i18n="waitingHint"></div>
+  </div>
+
   <div id="panel">
-    <div class="title">PS5 Altyazı — test</div>
-    <div><b>HDMI:</b> <span id="st-hdmi">-</span> <span id="st-video" class="muted"></span></div>
-    <div><b>Sunucu:</b> <span id="st-server">-</span></div>
-    <div><b>Bağlantı:</b> <span id="st-conn">-</span></div>
-    <div class="keys">
-      1–4: HDMI girişi · 0: konsolu otomatik bul · Kırmızı: yerel test altyazısı · Yeşil: bu panel · Sarı: yazı boyutu
-    </div>
+    <div class="title" data-i18n="panelTitle"></div>
+    <div><b data-i18n="hdmi"></b>: <span id="st-hdmi">-</span> <span id="st-video" class="muted"></span></div>
+    <div><b data-i18n="server"></b>: <span id="st-server">-</span></div>
+    <div><b data-i18n="connection"></b>: <span id="st-conn">-</span></div>
+    <div class="keys" data-i18n="keys"></div>
   </div>
 
   <script src="config.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

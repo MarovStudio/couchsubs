@@ -1,19 +1,19 @@
-// PS5 Altyazı test uygulaması (webOS).
-// HDMI girişini tam ekran gösterir, üstüne yerel sunucudan gelen altyazıyı basar.
+// SPDX-License-Identifier: AGPL-3.0-only
+// CouchSubs TV uygulaması (webOS).
+// HDMI girişini tam ekran gösterir, üstüne CouchSubs uygulamasından gelen altyazıyı basar.
 // Eski webOS tarayıcıları için ES5 ile yazıldı.
 (function () {
   'use strict';
 
-  var config = window.ALTYAZI_CONFIG || {};
-  var SERVER = config.server || 'http://192.168.1.2:8787';
-  var KEY = { RED: 403, GREEN: 404, YELLOW: 405 };
-  var SIZES = ['size-s', '', 'size-l'];
+  var t = window.t;
+  var config = window.COUCHSUBS_CONFIG || {};
+  var KEY = { RED: 403, GREEN: 404 };
 
+  var server = null;
+  var eventSource = null;
   // Kumandayla seçilen port kayıtlıysa o kullanılır, yoksa PS5 otomatik aranır.
   var savedPort = Number(load('hdmi'));
-  var hdmiPort = savedPort || config.hdmi || 1;
-  var sizeIndex = Number(load('size'));
-  if (isNaN(sizeIndex) || sizeIndex < 0 || sizeIndex > 2) sizeIndex = 1;
+  var hdmiPort = savedPort || 1;
 
   var hideTimer = null;
   var panelTimer = null;
@@ -21,17 +21,42 @@
   function $(id) { return document.getElementById(id); }
 
   function load(key) {
-    try { return window.localStorage.getItem('altyazi.' + key); } catch (e) { return null; }
+    try { return window.localStorage.getItem('couchsubs.' + key); } catch (e) { return null; }
   }
 
   function save(key, value) {
-    try { window.localStorage.setItem('altyazi.' + key, String(value)); } catch (e) {}
+    try { window.localStorage.setItem('couchsubs.' + key, String(value)); } catch (e) {}
   }
 
   function setStatus(id, text, cls) {
     var el = $(id);
     el.textContent = text;
     el.className = cls || '';
+  }
+
+  // --- Başlatma parametreleri ---
+
+  function parseParams(raw) {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
+  }
+
+  function launchParams() {
+    return parseParams(window.PalmSystem && window.PalmSystem.launchParams);
+  }
+
+  // Parametrelerdeki sunucu ve HDMI tercihini uygular; sunucu değiştiyse yeniden bağlanır.
+  function applyParams(params) {
+    if (params.hdmi >= 1 && params.hdmi <= 4) {
+      hdmiPort = Number(params.hdmi);
+      save('hdmi', hdmiPort);
+      showHdmi(hdmiPort);
+    }
+    if (params.server && params.server !== server) {
+      save('server', params.server);
+      connect(params.server);
+    }
   }
 
   // --- HDMI görüntüsü ---
@@ -48,11 +73,11 @@
     video.appendChild(source);
 
     setStatus('st-hdmi', String(port));
-    setStatus('st-video', '(yükleniyor)', 'muted');
-    video.addEventListener('loadeddata', function () { setStatus('st-video', '(görüntü geldi)', 'ok'); });
-    video.addEventListener('playing', function () { setStatus('st-video', '(oynatılıyor)', 'ok'); });
-    video.addEventListener('error', function () { setStatus('st-video', '(hata: giriş açılamadı)', 'bad'); });
-    source.addEventListener('error', function () { setStatus('st-video', '(hata: kaynak desteklenmiyor)', 'bad'); });
+    setStatus('st-video', t('loading'), 'muted');
+    video.addEventListener('loadeddata', function () { setStatus('st-video', t('videoReady'), 'ok'); });
+    video.addEventListener('playing', function () { setStatus('st-video', t('playing'), 'ok'); });
+    video.addEventListener('error', function () { setStatus('st-video', t('inputError'), 'bad'); });
+    source.addEventListener('error', function () { setStatus('st-video', t('sourceError'), 'bad'); });
 
     host.appendChild(video);
   }
@@ -86,6 +111,17 @@
     }
   }
 
+  function autoSelectConsole(onNotFound) {
+    findConsolePort(function (port, label) {
+      if (!port) return onNotFound && onNotFound();
+      if (port !== hdmiPort) {
+        hdmiPort = port;
+        showHdmi(port);
+      }
+      setStatus('st-hdmi', port + ' — ' + label + ' (' + t('auto') + ')');
+    });
+  }
+
   // --- Altyazı ---
 
   function showSubtitle(text, duration) {
@@ -93,35 +129,45 @@
     $('subtitle').className = '';
     clearTimeout(hideTimer);
     var ms = duration || Math.min(8000, 2000 + text.length * 60);
-    hideTimer = setTimeout(function () { $('subtitle').className = 'hidden'; }, ms);
+    hideTimer = setTimeout(hideSubtitle, ms);
   }
 
-  function applySize() {
-    document.body.className = SIZES[sizeIndex];
+  function hideSubtitle() {
+    clearTimeout(hideTimer);
+    $('subtitle').className = 'hidden';
+  }
+
+  function applyStyle(style) {
+    if (style.fontSize) $('subtitle-text').style.fontSize = style.fontSize + 'px';
+    if (style.bottomPercent >= 0) $('subtitle').style.bottom = style.bottomPercent + '%';
   }
 
   // --- Sunucu bağlantısı (Server-Sent Events) ---
 
-  function connect() {
-    setStatus('st-server', SERVER);
+  function onEvent(name, handler) {
+    eventSource.addEventListener(name, function (e) {
+      var data;
+      try { data = JSON.parse(e.data); } catch (err) { return; }
+      handler(data);
+    });
+  }
+
+  function connect(address) {
+    if (eventSource) eventSource.close();
+    server = address;
+    $('waiting').className = 'hidden';
+    setStatus('st-server', address);
     if (!window.EventSource) {
-      setStatus('st-conn', 'Bu TV EventSource desteklemiyor', 'bad');
+      setStatus('st-conn', t('noEventSource'), 'bad');
       return;
     }
-    setStatus('st-conn', 'bağlanıyor…', 'muted');
-    var es = new EventSource(SERVER + '/events');
-    es.onopen = function () { setStatus('st-conn', 'bağlı', 'ok'); };
-    es.onerror = function () { setStatus('st-conn', 'bağlantı yok, yeniden deneniyor…', 'bad'); };
-    es.addEventListener('subtitle', function (e) {
-      try {
-        var data = JSON.parse(e.data);
-        if (data.text) showSubtitle(data.text, data.duration);
-      } catch (err) {}
-    });
-    es.addEventListener('clear', function () {
-      clearTimeout(hideTimer);
-      $('subtitle').className = 'hidden';
-    });
+    setStatus('st-conn', t('connecting'), 'muted');
+    eventSource = new EventSource(address + '/events');
+    eventSource.onopen = function () { setStatus('st-conn', t('connected'), 'ok'); };
+    eventSource.onerror = function () { setStatus('st-conn', t('reconnecting'), 'bad'); };
+    onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration); });
+    onEvent('clear', hideSubtitle);
+    onEvent('style', applyStyle);
   }
 
   // --- Panel ve kumanda ---
@@ -142,11 +188,8 @@
     var code = e.keyCode;
     if (code === 48) { // 0: elle seçimi unut, konsolu yeniden ara
       save('hdmi', '');
-      findConsolePort(function (port, label) {
-        if (!port) return setStatus('st-hdmi', hdmiPort + ' (konsol bulunamadı)', 'bad');
-        hdmiPort = port;
-        showHdmi(port);
-        setStatus('st-hdmi', port + ' — ' + label + ' (otomatik)');
+      autoSelectConsole(function () {
+        setStatus('st-hdmi', hdmiPort + ' (' + t('consoleNotFound') + ')', 'bad');
       });
       showPanel(true);
     } else if (code >= 49 && code <= 52) { // 1–4
@@ -155,29 +198,26 @@
       showHdmi(hdmiPort);
       showPanel(true);
     } else if (code === KEY.RED) {
-      showSubtitle('Yerel test: bu yazı oyunun üstünde görünüyor mu?', 4000);
+      showSubtitle(t('localTest'), 4000);
     } else if (code === KEY.GREEN) {
       togglePanel();
-    } else if (code === KEY.YELLOW) {
-      sizeIndex = (sizeIndex + 1) % SIZES.length;
-      save('size', sizeIndex);
-      applySize();
-      showSubtitle('Yazı boyutu örneği', 2500);
     }
   });
 
-  applySize();
+  // Uygulama zaten açıkken yeniden başlatılırsa (ör. CouchSubs onu öne getirdiğinde) parametreler burada gelir.
+  document.addEventListener('webOSRelaunch', function (e) {
+    applyParams(parseParams(e.detail));
+  });
+
+  window.applyI18n();
   showHdmi(hdmiPort);
-  if (!savedPort) {
-    findConsolePort(function (port, label) {
-      if (!port) return;
-      if (port !== hdmiPort) {
-        hdmiPort = port;
-        showHdmi(port);
-      }
-      setStatus('st-hdmi', port + ' — ' + label + ' (otomatik)');
-    });
+  if (!savedPort) autoSelectConsole();
+
+  var initial = launchParams();
+  var address = initial.server || load('server') || config.server;
+  applyParams(initial);
+  if (!server) {
+    if (address) connect(address); else $('waiting').className = '';
   }
-  connect();
   showPanel(true);
 })();

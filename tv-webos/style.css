@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
 html, body {
   margin: 0;
   width: 100%;
@@ -40,8 +41,6 @@ html, body {
   text-shadow: 0 2px 4px #000;
 }
 
-body.size-s #subtitle-text { font-size: 36px; }
-body.size-l #subtitle-text { font-size: 58px; }
 
 #panel {
   position: absolute;
@@ -62,3 +61,21 @@ body.size-l #subtitle-text { font-size: 58px; }
 .muted { color: #aaa; }
 .ok { color: #6fdc8c; }
 .bad { color: #ff7b72; }
+
+#waiting {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  -webkit-transform: translate(-50%, -50%);
+  z-index: 15;
+  max-width: 1200px;
+  padding: 40px 56px;
+  border-radius: 16px;
+  background: rgba(20, 20, 20, 0.88);
+  text-align: center;
+}
+
+#waiting.hidden { display: none; }
+#waiting .waiting-title { font-size: 40px; font-weight: 700; line-height: 1.35; }
+#waiting .waiting-hint { margin-top: 14px; font-size: 28px; color: #bbb; }
