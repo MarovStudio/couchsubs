@@ -22,6 +22,8 @@ public static class ScreenRenderer
     public static void Run(Application app, string folder)
     {
         Directory.CreateDirectory(folder);
+        // Açılan ilk pencere kendiliğinden ana pencere sayılır; kapanınca uygulama da kapanmasın.
+        app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         var log = Path.Combine(folder, "errors.txt");
         // Bir ekranın hatası diğerlerini durdurmasın; hatalar dosyaya yazılır.
         app.DispatcherUnhandledException += (_, e) =>
