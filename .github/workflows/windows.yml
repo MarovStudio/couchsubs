@@ -152,3 +152,18 @@ jobs:
           name: couchsubs-windows
           path: publish/CouchSubs
           if-no-files-found: error
+
+      # Ekranların görünümü: uygulama bütün ekranları açık ve koyu temada PNG'ye döker.
+      - name: Ekran görüntüleri
+        shell: pwsh
+        run: |
+          $p = Start-Process publish/CouchSubs/CouchSubs.exe -ArgumentList "--render-screens", "$PWD/screens" -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "ekran görüntüsü aracı zamanında bitmedi" }
+          $count = (Get-ChildItem screens -Filter *.png).Count
+          if ($count -lt 16) { throw "beklenen 16 ekran görüntüsü, bulunan: $count" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couchsubs-screens
+          path: screens
+          if-no-files-found: error
