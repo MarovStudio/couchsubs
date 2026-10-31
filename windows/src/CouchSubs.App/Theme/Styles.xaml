@@ -13,11 +13,11 @@
     <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
-    <!-- Yazı -->
+    <!-- Yazı. Ana yazı rengi burada değil pencerede verilir (TextElement.Foreground): genel TextBlock
+         stilinde verilirse düğmelerin içindeki yazının rengini ezer (koyu temada sarı üstüne açık yazı). -->
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
         <Setter Property="FontSize" Value="{DynamicResource bodyFontSize}" />
-        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
     </Style>

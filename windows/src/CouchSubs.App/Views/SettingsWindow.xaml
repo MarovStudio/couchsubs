@@ -5,7 +5,7 @@
         xmlns:c="clr-namespace:CouchSubs.App.Controls"
         xmlns:t="clr-namespace:CouchSubs.App.Theme"
         Title="{t:T 'Settings'}" Width="600" Height="720" ResizeMode="NoResize" ShowInTaskbar="False"
-        WindowStartupLocation="CenterOwner" Background="{DynamicResource backgroundBrush}">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource backgroundBrush}" Foreground="{DynamicResource textPrimaryBrush}">
     <DockPanel>
         <TextBlock DockPanel.Dock="Top" Text="{t:T 'Settings'}" Style="{StaticResource TitleText}" Margin="32,24,32,12" />
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource surfaceBrush}" BorderBrush="{DynamicResource borderBrush}" BorderThickness="0,1,0,0" Padding="32,16">
