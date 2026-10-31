@@ -12,6 +12,9 @@ settings:
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_IDENTITY: "-"
     ENABLE_HARDENED_RUNTIME: YES
+    # libchiaki ve bağımlılıkları yalnız Apple Silicon için derleniyor.
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: NO
 packages:
   CouchSubsCore:
     path: ../core
@@ -30,6 +33,8 @@ targets:
       path: CouchSubs/Info.plist
       properties:
         CFBundleDisplayName: CouchSubs
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.utilities
         NSLocalNetworkUsageDescription: CouchSubs finds your PS5 and TV on the local network to send translated subtitles.
         NSHumanReadableCopyright: AGPL-3.0. Uses chiaki-ng (AGPL-3.0).

@@ -19,10 +19,38 @@ PS5 ──HDMI──▶ TV app (HDMI full screen + subtitle layer)
    (second PSN account)   reads → translates → sends
 ```
 
+- `mac/` — macOS app (SwiftUI): setup assistant, text recognition (Vision), on-device translation (Translation)
 - `core/` — platform-independent logic (subtitle stabilizer, local subtitle server, LG TV pairing)
+- `remoteplay/` — Remote Play connection on top of chiaki-ng's `libchiaki` (PS5 discovery, pairing, H.264 decoding)
 - `tv-webos/` — LG webOS TV app
 - `prototip/` — the original prototype (kept for reference)
-- `docs/` — design and plans
+- `docs/` — design, plans and the TV setup guide
+
+## Gereksinimler / Requirements
+
+- Mac with Apple Silicon, macOS 26 or later
+- PS5 and LG TV (webOS 4+) on the same network as the Mac
+- A free second PlayStation Network account — Remote Play with your own account would turn off your
+  controller; with a second account you keep playing undisturbed
+- English and Turkish downloaded in System Settings › General › Language & Region › Translation Languages
+
+## Kurulum / Setup
+
+1. TV app: [docs/tv-kurulum.md](docs/tv-kurulum.md) (TR) · [docs/tv-setup.md](docs/tv-setup.md) (EN)
+2. Mac app: download `CouchSubs-<version>-macos.zip`, open it and follow the setup assistant. Unsigned
+   beta builds need **System Settings › Privacy & Security › Open Anyway** the first time.
+
+## Derleme / Building
+
+```bash
+brew install cmake ninja pkg-config protobuf openssl@3 json-c libevent miniupnpc xcodegen
+git submodule update --init third-party/chiaki-ng
+./scripts/build-chiaki-macos.sh     # libchiaki → third-party/build/CChiaki.xcframework
+./scripts/package-mac.sh            # → dist/CouchSubs-<version>-macos.zip
+```
+
+Tests: `swift test` in `core/` and `remoteplay/`, `xcodebuild test -project mac/CouchSubs.xcodeproj -scheme CouchSubs`
+(after `xcodegen generate` in `mac/`).
 
 ## Lisans / License
 
