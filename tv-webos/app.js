@@ -7,13 +7,15 @@
 
   var t = window.t;
   var config = window.COUCHSUBS_CONFIG || {};
-  var KEY = { RED: 403, GREEN: 404 };
+  var KEY = { RED: 403, GREEN: 404, UP: 38, DOWN: 40 };
 
   var server = null;
   var eventSource = null;
   // Kumandayla seçilen port kayıtlıysa o kullanılır, yoksa PS5 otomatik aranır.
   var savedPort = Number(load('hdmi'));
   var hdmiPort = savedPort || 1;
+
+  var bottomPercent = 7;
 
   var hideTimer = null;
   var panelTimer = null;
@@ -140,9 +142,27 @@
     $('subtitle').className = 'hidden';
   }
 
+  // Konum hem CouchSubs uygulamasından hem kumandanın oklarıyla ayarlanır. Kumandayla
+  // seçilen konum, uygulamadaki ayar değişene kadar korunur (son değiştiren geçerlidir).
+  function setBottom(percent) {
+    bottomPercent = Math.max(0, Math.min(85, percent));
+    $('subtitle').style.bottom = bottomPercent + '%';
+  }
+
   function applyStyle(style) {
     if (style.fontSize) $('subtitle-text').style.fontSize = style.fontSize + 'px';
-    if (style.bottomPercent >= 0) $('subtitle').style.bottom = style.bottomPercent + '%';
+    if (style.bottomPercent >= 0 && String(style.bottomPercent) !== load('appBottom')) {
+      save('appBottom', style.bottomPercent);
+      save('bottom', '');
+      setBottom(style.bottomPercent);
+    }
+  }
+
+  function nudgeSubtitle(step) {
+    setBottom(bottomPercent + step);
+    save('bottom', bottomPercent);
+    // Nereye gittiği görülsün diye yazı yoksa örnek gösterilir.
+    if ($('subtitle').className === 'hidden') showSubtitle(t('positionPreview'), 2500);
   }
 
   // --- Sunucu bağlantısı (Server-Sent Events) ---
@@ -208,6 +228,9 @@
       showSubtitle(t('localTest'), 4000);
     } else if (code === KEY.GREEN) {
       togglePanel();
+    } else if (code === KEY.UP || code === KEY.DOWN) {
+      nudgeSubtitle(code === KEY.UP ? 3 : -3);
+      e.preventDefault();
     }
   });
 
@@ -217,6 +240,8 @@
   });
 
   window.applyI18n();
+  var savedBottom = load('bottom') || load('appBottom');
+  if (savedBottom) setBottom(Number(savedBottom));
   showHdmi(hdmiPort);
   if (!savedPort) autoSelectConsole();
 

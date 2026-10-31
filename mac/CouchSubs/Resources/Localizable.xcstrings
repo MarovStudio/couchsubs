@@ -385,22 +385,6 @@
         }
       }
     },
-    "Distance from bottom": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Distance from bottom"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alttan uzaklık"
-          }
-        }
-      }
-    },
     "Do you see it on the TV?": {
       "localizations": {
         "en": {
@@ -813,6 +797,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "PlayStation Network"
+          }
+        }
+      }
+    },
+    "Position on screen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position on screen"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekrandaki konum"
           }
         }
       }
@@ -1565,6 +1565,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Evet, görüyorum"
+          }
+        }
+      }
+    },
+    "You can also move subtitles with the ▲ and ▼ buttons on the TV remote.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also move subtitles with the ▲ and ▼ buttons on the TV remote."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altyazıyı TV kumandasının ▲ ve ▼ tuşlarıyla da taşıyabilirsiniz."
           }
         }
       }

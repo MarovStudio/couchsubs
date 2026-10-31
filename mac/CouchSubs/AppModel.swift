@@ -300,6 +300,11 @@ final class AppModel {
             self?.lastSource = source
             self?.lastTranslation = translation
         }
+        // Dil paketi bu arada indirilmiş olabilir; her çeviri sonucu durumu günceller.
+        pipeline.onTranslationResult = { [weak self] error in
+            self?.translatorStatus = Self.translatorStatus(after: error)
+        }
+        pipeline.warmUp()
         self.pipeline = pipeline
         activeLanguages = (settings.sourceLanguage, settings.targetLanguage)
     }
@@ -363,13 +368,7 @@ final class AppModel {
         // Önceki kare hâlâ işleniyorsa bu kare atlanır; okuma kareleri biriktirmez.
         guard !processing, let pipeline else { return }
         processing = true
-        let before = pipeline.lastPair?.source
         await pipeline.process(frame, region: settings.region)
-        if let error = pipeline.lastError {
-            translatorStatus = Self.translatorStatus(after: error)
-        } else if pipeline.lastPair?.source != before {
-            translatorStatus = .ready   // dil paketi bu arada indirilmiş olabilir
-        }
         processing = false
     }
 

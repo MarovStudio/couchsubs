@@ -23,8 +23,9 @@
       connected: 'bağlı',
       reconnecting: 'bağlantı yok, yeniden deneniyor…',
       none: '—',
-      keys: '1–4: HDMI girişi · 0: konsolu otomatik bul · Kırmızı: test altyazısı · Yeşil: bu panel',
-      localTest: 'Test: bu yazı oyunun üstünde görünüyor mu?'
+      keys: '1–4: HDMI girişi · 0: konsolu otomatik bul · ▲▼: altyazıyı yukarı/aşağı taşı · Kırmızı: test altyazısı · Yeşil: bu panel',
+      localTest: 'Test: bu yazı oyunun üstünde görünüyor mu?',
+      positionPreview: 'Altyazı burada görünecek'
     },
     en: {
       waiting: 'Open the CouchSubs app on your computer or phone.',
@@ -45,8 +46,9 @@
       connected: 'connected',
       reconnecting: 'disconnected, retrying…',
       none: '—',
-      keys: '1–4: HDMI input · 0: find console automatically · Red: test subtitle · Green: this panel',
-      localTest: 'Test: is this text shown on top of the game?'
+      keys: '1–4: HDMI input · 0: find console automatically · ▲▼: move subtitles up/down · Red: test subtitle · Green: this panel',
+      localTest: 'Test: is this text shown on top of the game?',
+      positionPreview: 'Subtitles will appear here'
     }
   };
 

@@ -118,7 +118,7 @@ public final class StreamSession: @unchecked Sendable {
     private let decodeQueue = DispatchQueue(label: "couchsubs.decode")
     private let logger = ChiakiLogger()
     private var decoder = H264FrameDecoder()
-    private var throttle = FrameThrottle(minInterval: 0.25)
+    private var throttle = FrameThrottle(minInterval: 0.1)
     private var policy = ReconnectPolicy()
     /// Yalnız `queue` üzerinde okunup yazılır.
     private var box: ChiakiSessionBox?
@@ -312,7 +312,8 @@ public final class StreamSession: @unchecked Sendable {
         queue.asyncAfter(deadline: .now() + .seconds(delay)) { [weak self] in self?.connect(current) }
     }
 
-    /// Her kare çözülür (sonraki kareler öncekilere dayanır); görüntü saniyede en çok 4 kez üretilir.
+    /// Her kare çözülür (sonraki kareler öncekilere dayanır); görüntü saniyede en çok 10 kez üretilir.
+    /// Okuma meşgulken gelen kareler zaten atlanır; sık kare, altyazının erken ve eksiksiz yakalanmasını sağlar.
     fileprivate func ingest(_ sample: Data) {
         decodeQueue.async { [weak self] in
             guard let self else { return }

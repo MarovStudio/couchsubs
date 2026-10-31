@@ -24,10 +24,19 @@ struct SettingsView: View {
                         Text("Large").tag(58)
                     }
                     .pickerStyle(.segmented)
+                    // Sürüklerken TV'de örnek altyazı görünür; böylece yeri doğrudan ekranda ayarlanır.
                     Slider(value: Binding(get: { Double(model.settings.style.bottomPercent) },
-                                          set: { model.settings.style.bottomPercent = Int($0) }), in: 2...40) {
-                        Text("Distance from bottom")
+                                          set: { model.settings.style.bottomPercent = Int($0) }), in: 0...85, step: 1) {
+                        Text("Position on screen")
+                    } minimumValueLabel: {
+                        Text("Bottom")
+                    } maximumValueLabel: {
+                        Text("Top")
+                    } onEditingChanged: { editing in
+                        if editing { model.sendTestSubtitle() }
                     }
+                    Text("You can also move subtitles with the ▲ and ▼ buttons on the TV remote.")
+                        .font(.callout).foregroundStyle(.secondary)
                     Button("Send test subtitle") { model.sendTestSubtitle() }
                 }
                 Section("Language") {
