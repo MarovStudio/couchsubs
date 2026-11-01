@@ -41,7 +41,7 @@ Download `com.couchsubs.tv_…_all.ipk` from [Releases](https://github.com/yorul
 and run, in the folder you downloaded it to:
 
 ```bash
-ares-install -d tv com.couchsubs.tv_0.5.0_all.ipk
+ares-install -d tv com.couchsubs.tv_0.6.0_all.ipk
 ```
 
 (From source: `ares-package tv-webos -o dist`, then `ares-install -d tv dist/com.couchsubs.tv_*.ipk`.)

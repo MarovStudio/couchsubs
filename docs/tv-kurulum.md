@@ -41,7 +41,7 @@ ares-setup-device --modify tv --info "{'privatekey':'tv_webos','passphrase':'PAS
 `com.couchsubs.tv_…_all.ipk` dosyasını indirin ve indirdiğiniz klasörde çalıştırın:
 
 ```bash
-ares-install -d tv com.couchsubs.tv_0.5.0_all.ipk
+ares-install -d tv com.couchsubs.tv_0.6.0_all.ipk
 ```
 
 (Kaynak koddan kuruyorsanız: `ares-package tv-webos -o dist` ve `ares-install -d tv dist/com.couchsubs.tv_*.ipk`.)
