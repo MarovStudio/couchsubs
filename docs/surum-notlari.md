@@ -1,4 +1,4 @@
-İlk deneme sürümü. PS5 oyunlarının İngilizce altyazısını okuyup Türkçesini LG TV'de oyunun üstünde gösterir.
+İlk herkese açık deneme sürümü. PS5 oyunlarının İngilizce altyazısını okuyup Türkçesini LG TV'de oyunun üstünde gösterir.
 
 **İndirme**
 
