@@ -15,17 +15,19 @@ You only do this once.
 
 Developer mode expires after a while; extend it from the Developer Mode app.
 
-## 2. On the Mac
+## 2. On your computer
+
+Install Node.js from [nodejs.org](https://nodejs.org) (or `brew install node` on a Mac). Then, in Terminal
+(PowerShell on Windows):
 
 ```bash
-brew install node
 npm install -g @webos-tools/cli
 ares-setup-device --add tv --info "{'host':'TV_IP','port':'9922','username':'prisoner'}"
 ares-novacom --device tv --getkey
 ```
 
 The last command asks for the Passphrase. If you get "Failed to get ssh private key", the Key Server has
-closed: turn it on again and run the command right away. If the timing doesn't work, download the key
+closed: turn it on again and run the command right away. If the timing doesn't work, on a Mac you can download the key
 directly and enter the Passphrase afterwards:
 
 ```bash
@@ -35,9 +37,13 @@ ares-setup-device --modify tv --info "{'privatekey':'tv_webos','passphrase':'PAS
 
 ## 3. Install the TV app
 
+Download `com.couchsubs.tv_…_all.ipk` from [Releases](https://github.com/yorulmazsinan/couchsubs/releases/latest)
+and run, in the folder you downloaded it to:
+
 ```bash
-ares-package tv-webos -o dist
-ares-install -d tv dist/com.couchsubs.tv_*.ipk
+ares-install -d tv com.couchsubs.tv_0.5.0_all.ipk
 ```
 
-Then open CouchSubs on the Mac; the setup assistant finds the TV and launches the app for you.
+(From source: `ares-package tv-webos -o dist`, then `ares-install -d tv dist/com.couchsubs.tv_*.ipk`.)
+
+Then open CouchSubs on your computer; the setup assistant finds the TV and launches the app for you.

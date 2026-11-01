@@ -15,17 +15,19 @@ yaparsınız. Mağaza sürümü çıkınca bu adımlara gerek kalmayacak.
 
 Geliştirici modu belirli bir süre sonra kapanır; Developer Mode uygulamasından süreyi uzatabilirsiniz.
 
-## 2. Mac'te
+## 2. Bilgisayarda
+
+[nodejs.org](https://nodejs.org) adresinden Node.js'i kurun (Mac'te `brew install node` de olur). Sonra
+Terminal'de (Windows'ta PowerShell'de):
 
 ```bash
-brew install node
 npm install -g @webos-tools/cli
 ares-setup-device --add tv --info "{'host':'TV_IP_ADRESI','port':'9922','username':'prisoner'}"
 ares-novacom --device tv --getkey
 ```
 
 Son komut Passphrase'i sorar. "Failed to get ssh private key" hatası alırsanız Key Server kapanmıştır:
-TV'de tekrar açıp komutu hemen çalıştırın. Zamanlama tutmazsa anahtarı doğrudan indirip
+TV'de tekrar açıp komutu hemen çalıştırın. Zamanlama tutmazsa Mac'te anahtarı doğrudan indirip
 Passphrase'i sonra girebilirsiniz:
 
 ```bash
@@ -35,9 +37,13 @@ ares-setup-device --modify tv --info "{'privatekey':'tv_webos','passphrase':'PAS
 
 ## 3. TV uygulamasını kurun
 
+[Sürümler](https://github.com/yorulmazsinan/couchsubs/releases/latest) sayfasından
+`com.couchsubs.tv_…_all.ipk` dosyasını indirin ve indirdiğiniz klasörde çalıştırın:
+
 ```bash
-ares-package tv-webos -o dist
-ares-install -d tv dist/com.couchsubs.tv_*.ipk
+ares-install -d tv com.couchsubs.tv_0.5.0_all.ipk
 ```
 
-Ardından Mac'te CouchSubs'ı açın; kurulum sihirbazı TV'yi bulur ve uygulamayı kendisi başlatır.
+(Kaynak koddan kuruyorsanız: `ares-package tv-webos -o dist` ve `ares-install -d tv dist/com.couchsubs.tv_*.ipk`.)
+
+Ardından bilgisayarda CouchSubs'ı açın; kurulum sihirbazı TV'yi bulur ve uygulamayı kendisi başlatır.

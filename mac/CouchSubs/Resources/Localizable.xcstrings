@@ -1713,6 +1713,22 @@
         }
       }
     },
+    "Translation model: OPUS-MT, University of Helsinki (CC BY 4.0).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation model: OPUS-MT, University of Helsinki (CC BY 4.0)."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çeviri modeli: OPUS-MT, Helsinki Üniversitesi (CC BY 4.0)."
+          }
+        }
+      }
+    },
     "Try again": {
       "localizations": {
         "en": {

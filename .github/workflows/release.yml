@@ -1,0 +1,123 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Sürüm: v* etiketi gönderilince Mac, Windows ve TV paketlerini derler ve GitHub sürümü olarak yayınlar.
+# Etikette "-" varsa (ör. v0.1.0-beta.1) ön sürüm olarak işaretlenir.
+#
+# Mac imzası ve Apple onayı isteğe bağlıdır; şu depo sırları tanımlıysa yapılır:
+#   MAC_CERTIFICATE_P12       Developer ID Application sertifikası (.p12, base64)
+#   MAC_CERTIFICATE_PASSWORD  .p12 dosyasının parolası
+#   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD   notarytool için (uygulamaya özel parola)
+# Sırlar yoksa Mac paketi imzasız çıkar.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    uses: ./.github/workflows/windows.yml
+
+  mac:
+    runs-on: macos-26
+    env:
+      HAS_SIGNING: ${{ secrets.MAC_CERTIFICATE_P12 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: chiaki-ng
+        run: git submodule update --init --depth 1 third-party/chiaki-ng
+
+      - name: Araçlar
+        run: |
+          brew install cmake ninja pkg-config protobuf openssl@3 json-c libevent miniupnpc xcodegen
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+          xcodebuild -version
+
+      - name: İmza sertifikası
+        if: env.HAS_SIGNING == 'true'
+        env:
+          MAC_CERTIFICATE_P12: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          KC="$RUNNER_TEMP/imza.keychain-db"
+          KCPW="$(openssl rand -hex 16)"
+          security create-keychain -p "$KCPW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KCPW" "$KC"
+          echo "$MAC_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MAC_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          rm "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KCPW" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          ID="$(security find-identity -v -p codesigning "$KC" | grep -o '"Developer ID Application: .*"' | head -1 | tr -d '"')"
+          [ -n "$ID" ] || { echo "Developer ID Application sertifikası bulunamadı"; exit 1; }
+          xcrun notarytool store-credentials couchsubs --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --keychain "$KC"
+          {
+            echo "DEVELOPER_ID=$ID"
+            echo "NOTARY_PROFILE=couchsubs"
+            echo "NOTARY_KEYCHAIN=$KC"
+          } >> "$GITHUB_ENV"
+
+      - name: Paketle
+        run: ./scripts/package-mac.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couchsubs-mac
+          path: dist/*.zip
+          if-no-files-found: error
+
+  tv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Paketle
+        run: |
+          npm install -g @webos-tools/cli
+          ares-package tv-webos -o dist
+          ls dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couchsubs-tv
+          path: dist/*.ipk
+          if-no-files-found: error
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [windows, mac, tv]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Dosyaları hazırla
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${VERSION%%-*}"
+          mkdir -p out
+          cp LICENSE THIRD-PARTY-NOTICES.md artifacts/couchsubs-windows/
+          (cd artifacts/couchsubs-windows && zip -qr "$GITHUB_WORKSPACE/out/CouchSubs-$VERSION-windows-x64.zip" .)
+          cp artifacts/couchsubs-mac/*.zip artifacts/couchsubs-tv/*.ipk out/
+          (cd out && sha256sum * > SHA256SUMS.txt)
+          ls -l out
+
+      - name: Sürümü yayınla
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FLAGS=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && FLAGS+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" out/* --title "CouchSubs ${GITHUB_REF_NAME#v}" \
+            --notes-file docs/surum-notlari.md "${FLAGS[@]}"
