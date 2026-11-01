@@ -48,6 +48,8 @@ if [[ -n "$DEVELOPER_ID" && -n "$NOTARY_PROFILE" ]]; then
   spctl --assess --type execute --verbose "$APP"
   rm -f "$ZIP" && ditto -c -k --keepParent "$APP" "$ZIP"
   echo "İmzalandı ve onaylandı."
+elif [[ -n "$DEVELOPER_ID" ]]; then
+  echo "Uyarı: imzalı ama Apple onaysız. İlk açılışta Sistem Ayarları › Gizlilik ve Güvenlik › Yine de Aç gerekir."
 else
   echo "Uyarı: imzasız paket. İlk açılışta Sistem Ayarları › Gizlilik ve Güvenlik › Yine de Aç gerekir."
 fi
