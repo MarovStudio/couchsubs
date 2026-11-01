@@ -1,7 +1,7 @@
 {
   "id": "com.couchsubs.tv",
-  "version": "0.5.0",
-  "vendor": "CouchSubs",
+  "version": "0.6.0",
+  "vendor": "Enmera",
   "type": "web",
   "main": "index.html",
   "title": "CouchSubs",
@@ -9,5 +9,6 @@
   "largeIcon": "largeIcon.png",
   "bgColor": "#000000",
   "resolution": "1920x1080",
-  "requiredACG": []
+  "requiredACG": [],
+  "disableBackHistoryAPI": true
 }

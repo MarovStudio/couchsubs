@@ -7,7 +7,7 @@
 
   var t = window.t;
   var config = window.COUCHSUBS_CONFIG || {};
-  var KEY = { RED: 403, GREEN: 404, UP: 38, DOWN: 40 };
+  var KEY = { RED: 403, GREEN: 404, BLUE: 406, UP: 38, DOWN: 40, OK: 13, BACK: 461 };
 
   var server = null;
   var eventSource = null;
@@ -203,6 +203,7 @@
   }
 
   function connect(address) {
+    if (demoRunning()) stopDemo();
     if (eventSource) eventSource.close();
     server = address;
     $('waiting').className = 'hidden';
@@ -222,6 +223,54 @@
     onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration); });
     onEvent('clear', hideSubtitle);
     onEvent('style', applyStyle);
+  }
+
+  // --- Demo ---
+  // Mağaza incelemesi ve ilk kez açanlar için: PS5 ve bilgisayar olmadan örnek altyazılar gösterilir.
+
+  var DEMO_LINES = [
+    'Buraya ayıracak vaktimiz yok.',
+    'MİRA: Kapı daha fazla dayanmayacak!',
+    'Yakın dur. İlerideki yol tehlikeli.',
+    'Bekle! Sen de kimsin?',
+    'Bu iş henüz bitmedi.'
+  ];
+  var DEMO_LINE_MS = 3200;
+  var DEMO_GAP_MS = 700;
+  var demoTimer = null;
+  var demoIndex = 0;
+
+  function demoRunning() { return demoTimer !== null; }
+
+  function nextDemoLine() {
+    showSubtitle(DEMO_LINES[demoIndex], DEMO_LINE_MS);
+    demoIndex = (demoIndex + 1) % DEMO_LINES.length;
+    demoTimer = setTimeout(nextDemoLine, DEMO_LINE_MS + DEMO_GAP_MS);
+  }
+
+  function startDemo() {
+    if (demoRunning()) return;
+    $('waiting').className = 'hidden';
+    hidePanel();
+    $('demo-badge').className = '';
+    demoIndex = 0;
+    nextDemoLine();
+  }
+
+  function stopDemo() {
+    clearTimeout(demoTimer);
+    demoTimer = null;
+    hideSubtitle();
+    $('demo-badge').className = 'hidden';
+    // Uygulamaya bağlı değilse bekleme ekranına dönülür.
+    if (!server) $('waiting').className = '';
+  }
+
+  // Geri tuşu: önce demo ya da panel kapanır; giriş ekranında TV'nin ana ekranına dönülür.
+  function goBack() {
+    if (demoRunning()) return stopDemo();
+    if ($('panel').className !== 'hidden') return hidePanel();
+    if (window.PalmSystem && window.PalmSystem.platformBack) window.PalmSystem.platformBack();
   }
 
   // --- Panel ve kumanda ---
@@ -272,6 +321,13 @@
       showSubtitle(t('localTest'), 4000);
     } else if (code === KEY.GREEN) {
       togglePanel();
+    } else if (code === KEY.BLUE) {
+      if (demoRunning()) stopDemo(); else startDemo();
+    } else if (code === KEY.OK && $('waiting').className !== 'hidden') {
+      startDemo();
+    } else if (code === KEY.BACK) {
+      goBack();
+      e.preventDefault();
     } else if (code === KEY.UP || code === KEY.DOWN) {
       nudgeSubtitle(code === KEY.UP ? 3 : -3);
       e.preventDefault();
