@@ -30,9 +30,14 @@ jobs:
       - name: chiaki-ng
         run: git submodule update --init --depth 1 third-party/chiaki-ng
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Araçlar
         run: |
           brew install cmake ninja pkg-config protobuf openssl@3 json-c libevent miniupnpc xcodegen
+          npm install -g @webos-tools/cli
           echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
           xcodebuild -version
 
