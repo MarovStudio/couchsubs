@@ -15,8 +15,18 @@
                         <TextBlock Text="TV" Style="{StaticResource HeadlineText}" VerticalAlignment="Center" />
                         <Button x:Name="Search" Content="{t:T 'Search again'}" HorizontalAlignment="Right" Click="OnSearch" />
                     </Grid>
-                    <TextBlock x:Name="NotFound" Style="{StaticResource HintText}" Text="{t:T 'No LG TV found. Make sure the TV is on and on the same network.'}" />
+                    <TextBlock x:Name="NotFound" Style="{StaticResource HintText}" Text="{t:T 'No LG or Samsung TV found. Make sure the TV is on and on the same network.'}" />
                     <StackPanel x:Name="Tvs" />
+                </StackPanel>
+            </c:Card>
+            <c:Card Margin="0,16,0,0">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Text="Android TV / Google TV" VerticalAlignment="Center" />
+                        <Button Content="{t:T 'Select'}" HorizontalAlignment="Right" Click="OnAndroidTv" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource HintText}" Margin="0,8,0,0"
+                               Text="{t:T 'Vestel, Arçelik, Beko, Grundig, Philips and other TVs running Android TV.'}" />
                 </StackPanel>
             </c:Card>
             <TextBlock x:Name="Waiting" Style="{StaticResource HintText}" Margin="0,16,0,0" Visibility="Collapsed"
@@ -25,6 +35,12 @@
                        Text="{t:T 'If Windows asks whether CouchSubs may use the network, allow it for private networks.'}" />
             <TextBlock x:Name="Error" Style="{StaticResource ErrorText}" Margin="0,12,0,0" />
             <s:TvAppCard Margin="0,16,0,0" />
+            <c:Card x:Name="ManualInstall" Title="{t:T 'CouchSubs TV app'}" Margin="0,16,0,0" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Text="{t:T 'Install the CouchSubs TV app on this TV using the guide and open it. It finds this computer by itself.'}" />
+                    <Button Content="{t:T 'Open the guide'}" HorizontalAlignment="Left" Margin="0,8,0,0" Click="OnGuide" />
+                </StackPanel>
+            </c:Card>
         </StackPanel>
     </c:StepLayout>
 </UserControl>

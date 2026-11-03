@@ -35,6 +35,14 @@ final class KeychainStore: AppStore {
     func remove(_ key: String) { SecureStore.remove(key) }
 }
 
+/// Hiçbir şey kalıcı olmaz.
+final class EphemeralStore: AppStore {
+    private var values: [String: Data] = [:]
+    func save<T: Encodable>(_ value: T, for key: String) { values[key] = try? JSONEncoder().encode(value) }
+    func load<T: Decodable>(_ type: T.Type, for key: String) -> T? { values[key].flatMap { try? JSONDecoder().decode(type, from: $0) } }
+    func remove(_ key: String) { values[key] = nil }
+}
+
 /// Dış dünyayla (PS5, PSN, TV) konuşan her şey; testlerde sahtesi kullanılır.
 protocol AppServices: AnyObject {
     func discoverConsoles() async -> [ConsoleInfo]
@@ -52,6 +60,13 @@ protocol AppServices: AnyObject {
     func fetchDevKey(host: String, passphrase: String) async throws -> String
     func installedTVAppVersion(host: String, devKey: String) async throws -> String?
     func installTVApp(host: String, devKey: String) async throws
+}
+
+/// Denetlenemeyen TV'ler için: TV uygulaması kendisi bağlanır.
+final class IdleKeeper: KeeperControlling {
+    func start(interval: Duration) {}
+    func stop() {}
+    func reconnect() {}
 }
 
 struct TVPairing: Equatable {
@@ -91,9 +106,26 @@ final class LiveServices: AppServices {
         try await Registration.register(host: host, accountId: accountId, pin: pin)
     }
 
-    func discoverTVs() async -> [LGTV] { await LGDiscovery.search() }
+    func discoverTVs() async -> [LGTV] {
+        async let lg = LGDiscovery.search()
+        async let samsung = SamsungDiscovery.search()
+        return await lg + samsung
+    }
 
     func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> TVPairing {
+        switch tv.brand {
+        case .androidTV:
+            // Bilgisayar bu TV'yi denetlemez; TV uygulaması bilgisayarı kendisi bulur.
+            return TVPairing(key: "", launched: true)
+        case .samsung:
+            let client = SamsungClient(tv: tv, token: key)
+            defer { client.close() }
+            let token = try await client.connect()
+            try? await client.launch(appId: AppIdentity.samsungAppId, params: ["server": server])
+            return TVPairing(key: token, launched: true)
+        case .lg:
+            break
+        }
         let client = SSAPClient(tv: tv, clientKey: key)
         defer { client.close() }
         let newKey = try await client.connect()
@@ -106,6 +138,24 @@ final class LiveServices: AppServices {
     }
 
     func makeKeeper(tv: LGTV, key: String?, params: [String: Any], onMoved: @escaping (LGTV) -> Void) -> KeeperControlling {
+        switch tv.brand {
+        case .androidTV:
+            return IdleKeeper()
+        case .samsung:
+            let locator = TVLocator(tv: tv, connect: { tv in
+                let client = SamsungClient(tv: tv, token: key)
+                do {
+                    _ = try await client.connect()
+                } catch {
+                    client.close()
+                    throw error
+                }
+                return client
+            }, search: { await SamsungDiscovery.search() }, onMoved: onMoved)
+            return TVKeeper(connect: { try await locator.connect() }, appId: AppIdentity.samsungAppId, params: params)
+        case .lg:
+            break
+        }
         let locator = TVLocator(tv: tv, connect: { tv in
             let client = SSAPClient(tv: tv, clientKey: key)
             do {
@@ -321,7 +371,7 @@ final class AppModel {
     /// Geliştirici modu açık TV'de uygulamayı eksikse kurar, eskiyse günceller.
     /// Anahtar yoksa ve uygulama çalışıyorsa kullanıcıdan bir şey istenmez.
     func refreshTVApp() async {
-        guard let tv, let bundled = services.bundledTVAppVersion else { return }
+        guard let tv, tv.brand == .lg, let bundled = services.bundledTVAppVersion else { return }
         guard await services.isDevModeOn(host: tv.host) else {
             tvApp = tvAppMissing ? .devModeOff : .unknown
             return

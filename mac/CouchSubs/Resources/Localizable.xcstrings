@@ -753,6 +753,22 @@
         }
       }
     },
+    "Install the CouchSubs TV app on this TV using the guide and open it. It finds this computer by itself.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install the CouchSubs TV app on this TV using the guide and open it. It finds this computer by itself."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs TV uygulamasını rehberdeki gibi bu TV'ye kurup açın. Uygulama bu bilgisayarı kendisi bulur."
+          }
+        }
+      }
+    },
     "Japanese": {
       "localizations": {
         "en": {
@@ -897,18 +913,18 @@
         }
       }
     },
-    "No LG TV found. Make sure the TV is on and on the same network.": {
+    "No LG or Samsung TV found. Make sure the TV is on and on the same network.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No LG TV found. Make sure the TV is on and on the same network."
+            "value": "No LG or Samsung TV found. Make sure the TV is on and on the same network."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "LG TV bulunamadı. TV'nin açık ve aynı ağda olduğundan emin olun."
+            "value": "LG ya da Samsung TV bulunamadı. TV'nin açık ve aynı ağda olduğundan emin olun."
           }
         }
       }
@@ -1053,6 +1069,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "TV'de Developer Mode uygulamasını açın, Key Server'ı açın ve uygulamayı ekranda bırakın. Gösterdiği Passphrase'i buraya yazın."
+          }
+        }
+      }
+    },
+    "Open the guide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the guide"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rehberi aç"
           }
         }
       }
@@ -1213,6 +1245,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yeniden ara"
+          }
+        }
+      }
+    },
+    "Select": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seç"
           }
         }
       }
@@ -2029,6 +2077,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "PS5'inizi açın"
+          }
+        }
+      }
+    },
+    "Vestel, Arçelik, Beko, Grundig, Philips and other TVs running Android TV.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vestel, Arçelik, Beko, Grundig, Philips and other TVs running Android TV."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Android TV kullanan Vestel, Arçelik, Beko, Grundig, Philips ve diğer TV'ler."
           }
         }
       }

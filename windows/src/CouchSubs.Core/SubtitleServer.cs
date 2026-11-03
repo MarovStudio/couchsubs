@@ -124,6 +124,8 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
 
             if (method == "OPTIONS") await RespondAndClose(tcp, "204 No Content");
             else if (method == "GET" && path == "/events") await OpenStream(tcp);
+            // TV uygulaması ağdaki bilgisayarı bu yanıtla tanır.
+            else if (method == "GET" && path == "/hello") await RespondAndClose(tcp, "200 OK", "{\"app\":\"couchsubs\"}");
             else await RespondAndClose(tcp, "404 Not Found");
         }
         catch
@@ -149,9 +151,9 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
         return null;
     }
 
-    private static async Task RespondAndClose(TcpClient tcp, string status)
+    private static async Task RespondAndClose(TcpClient tcp, string status, string body = "")
     {
-        var head = $"HTTP/1.1 {status}\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        var head = $"HTTP/1.1 {status}\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n{body}";
         await tcp.GetStream().WriteAsync(Encoding.ASCII.GetBytes(head));
         tcp.Dispose();
     }

@@ -37,7 +37,8 @@ public final class TVLocator: @unchecked Sendable {
     }
 
     /// Bulunanlar içinde kayıtlı TV'nin yeni adresi. Birden çok tanımadığı TV varsa tahmin etmez.
-    static func moved(_ saved: LGTV, among found: [LGTV]) -> LGTV? {
+    static func moved(_ saved: LGTV, among all: [LGTV]) -> LGTV? {
+        let found = all.filter { $0.brand == saved.brand }
         guard !found.contains(where: { $0.host == saved.host }) else { return nil }
         let sameName = found.filter { $0.name == saved.name }
         if sameName.count == 1 { return sameName[0] }

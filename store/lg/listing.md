@@ -4,7 +4,7 @@
 |---|---|
 | Uygulama adı | CouchSubs |
 | Uygulama kimliği | `com.couchsubs.tv` |
-| Paket | `com.couchsubs.tv_0.6.1_all.ipk` (`ares-package tv-webos -o dist -n`) |
+| Paket | `com.couchsubs.tv_0.7.0_all.ipk` (`ares-package tv-webos -o dist -n`) |
 | Satıcı | Enmera |
 | Fiyat | Ücretsiz |
 | Gizlilik politikası | https://github.com/yorulmazsinan/couchsubs/blob/main/PRIVACY.md |

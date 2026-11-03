@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// CouchSubs TV uygulaması (webOS).
+// CouchSubs TV uygulaması (webOS ve Tizen ortak).
 // HDMI girişini tam ekran gösterir, üstüne CouchSubs uygulamasından gelen altyazıyı basar.
-// Eski webOS tarayıcıları için ES5 ile yazıldı.
+// TV'ye özgü işler platform.js'tedir. Eski TV tarayıcıları için ES5 ile yazıldı.
 (function () {
   'use strict';
 
   var t = window.t;
   var config = window.COUCHSUBS_CONFIG || {};
-  var KEY = { RED: 403, GREEN: 404, BLUE: 406, UP: 38, DOWN: 40, OK: 13, BACK: 461 };
+  var platform = window.COUCHSUBS_PLATFORM;
+  var KEY = { RED: 403, GREEN: 404, BLUE: 406, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, OK: 13, BACK: platform.backKey };
 
   var server = null;
   var eventSource = null;
@@ -49,10 +50,6 @@
     try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
   }
 
-  function launchParams() {
-    return parseParams(window.PalmSystem && window.PalmSystem.launchParams);
-  }
-
   // Parametrelerdeki sunucu ve HDMI tercihini uygular; sunucu değiştiyse yeniden bağlanır.
   function applyParams(params) {
     if (params.hdmi >= 1 && params.hdmi <= 4) {
@@ -69,60 +66,21 @@
   // --- HDMI görüntüsü ---
 
   function showHdmi(port) {
-    var host = $('video-host');
-    host.innerHTML = '';
-
-    var video = document.createElement('video');
-    video.autoplay = true;
-    var source = document.createElement('source');
-    source.setAttribute('type', 'service/webos-external');
-    source.setAttribute('src', 'ext://hdmi:' + port);
-    video.appendChild(source);
-
     setStatus('st-hdmi', String(port));
-    setStatus('st-video', t('loading'), 'muted');
-    video.addEventListener('loadeddata', function () { setStatus('st-video', t('videoReady'), 'ok'); });
-    video.addEventListener('playing', function () { setStatus('st-video', t('playing'), 'ok'); });
-    video.addEventListener('error', function () { setStatus('st-video', t('inputError'), 'bad'); });
-    source.addEventListener('error', function () { setStatus('st-video', t('sourceError'), 'bad'); });
-
-    host.appendChild(video);
-  }
-
-  // TV'nin giriş listesinden oyun konsolunun bağlı olduğu HDMI portunu bulur.
-  // Bulamazsa callback'i null ile çağırır.
-  function findConsolePort(callback) {
-    var done = false;
-    function finish(port, label) {
-      if (done) return;
-      done = true;
-      callback(port, label);
-    }
-    try {
-      var bridge = new PalmServiceBridge();
-      bridge.onservicecallback = function (msg) {
-        var devices;
-        try { devices = JSON.parse(msg).devices || []; } catch (e) { return finish(null); }
-        var hdmi = devices.filter(function (d) { return /^HDMI_/.test(d.id); });
-        // Konsol dinlenme modundayken giriş etkin görünmez ama etiketi kalır; etkin olan tercih edilir.
-        var consoles = hdmi.filter(function (d) {
-          return d.spdSourceDeviceInfo === 'GAME' || /playstation|ps5/i.test((d.label || '') + ' ' + (d.spdProductDescription || ''));
-        });
-        var pick = consoles.filter(function (d) { return d.activate; })[0] || consoles[0] ||
-          hdmi.filter(function (d) { return d.activate; })[0];
-        finish(pick ? pick.port : null, pick ? pick.label : null);
-      };
-      bridge.call('luna://com.webos.service.eim/getAllInputStatus', '{}');
-      // Köprü nesnesi çöpe gitmesin diye geri çağrı gelene kadar tutulur.
-      window.__eimBridge = bridge;
-      setTimeout(function () { finish(null); }, 3000);
-    } catch (e) {
-      finish(null);
-    }
+    var statuses = {
+      loading: ['loading', 'muted'],
+      ready: ['videoReady', 'ok'],
+      playing: ['playing', 'ok'],
+      inputError: ['inputError', 'bad'],
+      sourceError: ['sourceError', 'bad']
+    };
+    platform.showHdmi(port, $('video-host'), function (kind) {
+      setStatus('st-video', t(statuses[kind][0]), statuses[kind][1]);
+    });
   }
 
   function autoSelectConsole(onNotFound) {
-    findConsolePort(function (port, label) {
+    platform.findConsolePort(function (port, label) {
       if (!port) return onNotFound && onNotFound();
       if (port !== hdmiPort) {
         hdmiPort = port;
@@ -214,15 +172,91 @@
     }
     setStatus('st-conn', t('connecting'), 'muted');
     eventSource = new EventSource(address + '/events');
-    eventSource.onopen = function () { setStatus('st-conn', t('connected'), 'ok'); };
+    eventSource.onopen = function () {
+      clearTimeout(scanTimer);
+      setStatus('st-conn', t('connected'), 'ok');
+    };
     eventSource.onerror = function () {
       // Uygulamayla bağlantı koptuysa eski altyazı ekranda asılı kalmasın.
       hideSubtitle();
       setStatus('st-conn', t('reconnecting'), 'bad');
+      // Bilgisayarın adresi değişmiş olabilir.
+      scheduleScan();
     };
     onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration); });
     onEvent('clear', hideSubtitle);
     onEvent('style', applyStyle);
+  }
+
+  // --- Bilgisayarı ağda bulma ---
+  // Bilgisayar TV uygulamasını açamıyorsa adres gelmez. Adresini söyleyebilen TV'lerde uygulama aynı ağı tarar.
+
+  var SERVER_PORT = 8787;
+  var SCAN_PARALLEL = 24;
+  var SCAN_TIMEOUT_MS = 1200;
+  var SCAN_PAUSE_MS = 30000;
+  var scanTimer = null;
+  var scanning = false;
+
+  function scheduleScan() {
+    if (!platform.localAddress || scanning) return;
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(scanForServer, SCAN_PAUSE_MS);
+  }
+
+  function probe(address, done) {
+    var request = new XMLHttpRequest();
+    var finished = false;
+    function finish(ok) {
+      if (finished) return;
+      finished = true;
+      done(ok);
+    }
+    request.onload = function () { finish(request.status === 200 && request.responseText.indexOf('couchsubs') >= 0); };
+    request.onerror = function () { finish(false); };
+    request.ontimeout = function () { finish(false); };
+    try {
+      request.open('GET', address + '/hello');
+      request.timeout = SCAN_TIMEOUT_MS;
+      request.send();
+    } catch (e) {
+      finish(false);
+    }
+  }
+
+  function scanForServer() {
+    if (scanning || !platform.localAddress) return;
+    platform.localAddress(function (ip) {
+      var match = /^(\d+\.\d+\.\d+)\.\d+$/.exec(ip || '');
+      if (!match) return scheduleScan();
+      scanning = true;
+      var next = 1, active = 0, found = false;
+      function pump() {
+        while (!found && active < SCAN_PARALLEL && next <= 254) {
+          active++;
+          tryAddress('http://' + match[1] + '.' + (next++) + ':' + SERVER_PORT);
+        }
+        if (!found && !active && next > 254) {
+          scanning = false;
+          scheduleScan();
+        }
+      }
+      function tryAddress(address) {
+        probe(address, function (ok) {
+          active--;
+          if (found) return;
+          if (!ok) return pump();
+          found = true;
+          scanning = false;
+          // Aynı bilgisayarsa EventSource zaten kendisi yeniden bağlanır.
+          if (address !== server) {
+            save('server', address);
+            connect(address);
+          }
+        });
+      }
+      pump();
+    });
   }
 
   // --- Demo ---
@@ -270,7 +304,7 @@
   function goBack() {
     if (demoRunning()) return stopDemo();
     if ($('panel').className !== 'hidden') return hidePanel();
-    if (window.PalmSystem && window.PalmSystem.platformBack) window.PalmSystem.platformBack();
+    platform.exit();
   }
 
   // --- Panel ve kumanda ---
@@ -309,6 +343,14 @@
     if ($('panel').className === 'hidden') showPanel(false); else hidePanel();
   }
 
+  // Sayı tuşu olmayan kumandalar için: panel açıkken sol ve sağ HDMI girişini değiştirir.
+  function stepHdmi(step) {
+    hdmiPort = (hdmiPort + step + 3) % 4 + 1;
+    save('hdmi', hdmiPort);
+    showHdmi(hdmiPort);
+    showPanel(true);
+  }
+
   document.addEventListener('keydown', function (e) {
     var code = e.keyCode;
     if (code === 48) { // 0: elle seçimi unut, konsolu yeniden ara
@@ -330,6 +372,10 @@
       if (demoRunning()) stopDemo(); else startDemo();
     } else if (code === KEY.OK && $('waiting').className !== 'hidden') {
       startDemo();
+    } else if (code === KEY.OK && !demoRunning()) {
+      togglePanel();
+    } else if ((code === KEY.LEFT || code === KEY.RIGHT) && $('panel').className !== 'hidden') {
+      stepHdmi(code === KEY.RIGHT ? 1 : -1);
     } else if (code === KEY.BACK) {
       goBack();
       e.preventDefault();
@@ -340,10 +386,9 @@
   });
 
   // Uygulama zaten açıkken yeniden başlatılırsa (ör. CouchSubs onu öne getirdiğinde) parametreler burada gelir.
-  document.addEventListener('webOSRelaunch', function (e) {
-    applyParams(parseParams(e.detail));
-  });
+  platform.onRelaunch(function (raw) { applyParams(parseParams(raw)); });
 
+  platform.init();
   window.applyI18n();
   formatKeys();
   var savedBottom = load('bottom') || load('appBottom');
@@ -351,12 +396,13 @@
   showHdmi(hdmiPort);
   if (!savedPort) autoSelectConsole();
 
-  var initial = launchParams();
+  var initial = parseParams(platform.launchParams());
   var address = initial.server || load('server') || config.server;
   applyParams(initial);
   if (!server) {
     if (address) connect(address); else $('waiting').className = '';
   }
+  if (!server) scanForServer();
   // Bekleme ekranı açıksa panel kendiliğinden açılmaz; yeşil tuşla açılabilir.
   if (server) showPanel(true); else hidePanel();
 })();

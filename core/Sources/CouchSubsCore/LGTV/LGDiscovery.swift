@@ -8,7 +8,7 @@ public enum LGDiscovery {
     static let searchTarget = "urn:lge-com:service:webos-second-screen:1"
 
     public static func search(timeout: Duration = .seconds(3)) async -> [LGTV] {
-        let hosts = await Task.detached { collectResponses(timeout: timeout) }.value
+        let hosts = await Task.detached { collectHosts(searchTarget: searchTarget, timeout: timeout) }.value
         var tvs: [LGTV] = []
         for host in Set(hosts).sorted() {
             tvs.append(LGTV(name: await friendlyName(host: host) ?? "LG TV", host: host))
@@ -17,7 +17,7 @@ public enum LGDiscovery {
     }
 
     /// SSDP yanıtından TV'nin adresini çıkarır; LG'nin ikinci ekran servisi değilse nil.
-    static func host(fromSSDPResponse response: String) -> String? {
+    static func host(fromSSDPResponse response: String, searchTarget: String = searchTarget) -> String? {
         var location: String?
         var isLG = false
         for line in response.components(separatedBy: "\r\n") {
@@ -33,7 +33,7 @@ public enum LGDiscovery {
         return url.host
     }
 
-    private static func collectResponses(timeout: Duration) -> [String] {
+    static func collectHosts(searchTarget: String, timeout: Duration) -> [String] {
         let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
         guard fd >= 0 else { return [] }
         defer { close(fd) }
@@ -63,7 +63,7 @@ public enum LGDiscovery {
         while ContinuousClock.now < end {
             let count = recv(fd, &buffer, buffer.count, 0)
             guard count > 0 else { continue }
-            if let host = host(fromSSDPResponse: String(decoding: buffer[0..<count], as: UTF8.self)) { hosts.append(host) }
+            if let host = host(fromSSDPResponse: String(decoding: buffer[0..<count], as: UTF8.self), searchTarget: searchTarget) { hosts.append(host) }
         }
         return hosts
     }

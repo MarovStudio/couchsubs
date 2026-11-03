@@ -1,41 +1,46 @@
-# Installing the CouchSubs TV app on an LG TV
+# Installing the CouchSubs TV app
 
-Until the CouchSubs TV app is available in the LG Content Store, it is installed in developer mode. You
-turn developer mode on; CouchSubs on your Mac or Windows PC installs the TV app and keeps it up to date.
+The TV apps are not in the stores yet, so you turn on developer mode on your TV. It is free and does not harm the TV.
 
-## 1. Developer mode on the TV
+| TV | Status | Guide |
+|---|---|---|
+| **LG** (webOS 4+) | Tested on a real TV. CouchSubs installs the TV app itself | [LG](#lg-tv) |
+| **Samsung** (Tizen) | Not tested on a real TV yet. Needs your own Samsung certificate | [Samsung](#samsung-tv) |
+| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips and others) | Not tested on a real TV yet | [Android TV](#android-tv--google-tv) |
+| **Linux models of Vestel, Arçelik, Beko and Grundig, Philips Saphi and Titan OS** | Not supported: we found no way to install apps on them | |
 
-1. Create a free LG developer account at [webostv.developer.lge.com](https://webostv.developer.lge.com)
-   (**Sign In › Create Account**).
-2. Install and open the **Developer Mode** app from the LG Content Store on the TV.
-3. Sign in with your email address and password.
-4. Turn on **Dev Mode Status**; the TV restarts.
-5. Open the Developer Mode app again, turn on **Key Server** and **leave the app open on screen** (it turns
-   off when you switch away). The TV's IP address and a **Passphrase** are shown.
+The computer and the TV must be on the same home network.
 
-Developer mode expires after a while; extend it from the Developer Mode app.
+## LG TV
 
-## 2. On your computer
+1. Create a free account at [webostv.developer.lge.com](https://webostv.developer.lge.com) (**SIGN IN › Create Account**).
+2. On the TV, install **Developer Mode** from the LG Content Store and sign in with that account.
+3. Turn on **Dev Mode Status**. The TV restarts.
+4. Open CouchSubs on your computer. In the TV step, pick your TV, press **Connect** and accept the prompt on the TV.
+5. Open the Developer Mode app again, turn on **Key Server** and keep the app on screen.
+6. Type the 6-character, case-sensitive **Passphrase** shown at the bottom left of the TV into CouchSubs and press **Install on the TV**.
 
-1. Open CouchSubs. In the TV step, pick your TV, press **Connect** and accept the prompt on the TV.
-2. When a passphrase is requested, open the Developer Mode app on the TV, turn on **Key Server** and keep
-   the app on screen.
-3. Type the **Passphrase** shown on the TV and press **Install on the TV**.
+CouchSubs installs later versions by itself. **Remain Session** in the Developer Mode app shows the time left (1000 hours
+at most). Press **EXTEND** before it runs out: when it expires, developer mode turns off and the TV app is removed.
 
-The passphrase is asked once. CouchSubs installs later versions by itself when you start translating. After
-setup the same card is also in **Settings**. If you turn developer mode off and on again, the TV creates a new
-key and the passphrase is asked once more.
+## Samsung TV
 
-## Manual install
+Samsung requires apps to be signed for each TV, so CouchSubs cannot install it for you. Not tested on a real TV yet.
 
-If the automatic install does not work, install [Node.js](https://nodejs.org) and run this in Terminal (PowerShell on Windows):
+1. In the TV's **Apps** screen enter `12345`, turn **Developer mode** on, enter your computer's IP address and restart the TV.
+2. Install [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html)
+   with the Samsung Certificate Extension. Add the TV in **Device Manager** and create a **Samsung** certificate profile in
+   **Certificate Manager**, adding the TV's DUID to the distributor certificate.
+3. Unzip `CouchSubs-samsung-kaynak.zip` from [Releases](https://github.com/yorulmazsinan/couchsubs/releases), then run
+   `tizen package -t wgt -s PROFILE -- FOLDER` and `tizen install -n FOLDER/CouchSubs.wgt -t TV_NAME`.
+4. In the TV step of CouchSubs, pick your Samsung TV and press **Connect**. If the app does not open, open it on the TV; it finds your computer by itself.
 
-```bash
-npm install -g @webos-tools/cli
-ares-setup-device --add tv --info "{'host':'TV_IP_ADDRESS','port':'9922','username':'prisoner'}"
-ares-novacom --device tv --getkey
-ares-install -d tv com.couchsubs.tv_0.6.1_all.ipk
-```
+## Android TV / Google TV
 
-Download the package from the [releases](https://github.com/yorulmazsinan/couchsubs/releases/latest) page.
-If you get "Failed to get ssh private key", Key Server has closed: turn it on again and rerun the command right away.
+Not tested on a real TV yet. Some TVs may not give the HDMI picture to other apps: subtitles appear but the picture stays
+black. Please report your TV model in [Issues](https://github.com/yorulmazsinan/couchsubs/issues).
+
+1. In **Settings › Device Preferences › About** press OK on **Build** 7 times, then allow your file manager under **Unknown sources**.
+2. Copy `CouchSubs-androidtv.apk` from [Releases](https://github.com/yorulmazsinan/couchsubs/releases) to a USB stick and install it with a file manager on the TV.
+3. In the TV step of CouchSubs, select **Android TV / Google TV**, then open CouchSubs on the TV. It finds your computer by itself.
+4. If there is no picture, press OK for the panel and pick the HDMI input with left and right.

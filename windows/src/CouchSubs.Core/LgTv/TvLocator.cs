@@ -42,8 +42,9 @@ public sealed class TvLocator(
     }
 
     /// <summary>Bulunanlar içinde kayıtlı TV'nin yeni adresi. Birden çok tanımadığı TV varsa tahmin etmez.</summary>
-    public static LgTv? Moved(LgTv saved, IReadOnlyList<LgTv> found)
+    public static LgTv? Moved(LgTv saved, IReadOnlyList<LgTv> all)
     {
+        var found = all.Where(tv => tv.Brand == saved.Brand).ToList();
         if (found.Any(tv => tv.Host == saved.Host)) return null;
         var sameName = found.Where(tv => tv.Name == saved.Name).ToList();
         if (sameName.Count == 1) return sameName[0];

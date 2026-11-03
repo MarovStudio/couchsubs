@@ -70,6 +70,16 @@ final class SubtitleServerTests: XCTestCase {
         try await waitUntil { server.connectedClients == 0 }
     }
 
+    func testHelloIdentifiesTheApp() async throws {
+        let server = SubtitleServer(port: 0)
+        let port = try await server.start()
+        defer { server.stop() }
+        let (data, response) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/hello")!)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+        XCTAssertEqual((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Access-Control-Allow-Origin"), "*")
+        XCTAssertEqual(String(decoding: data, as: UTF8.self), #"{"app":"couchsubs"}"#)
+    }
+
     func testUnknownPathIs404() async throws {
         let server = SubtitleServer(port: 0)
         let port = try await server.start()

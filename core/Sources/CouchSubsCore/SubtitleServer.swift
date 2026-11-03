@@ -133,13 +133,16 @@ public final class SubtitleServer: @unchecked Sendable {
             respondAndClose(connection, status: "204 No Content")
         } else if method == "GET" && path == "/events" {
             openStream(connection)
+        } else if method == "GET" && path == "/hello" {
+            // TV uygulaması ağdaki bilgisayarı bu yanıtla tanır.
+            respondAndClose(connection, status: "200 OK", body: #"{"app":"couchsubs"}"#)
         } else {
             respondAndClose(connection, status: "404 Not Found")
         }
     }
 
-    private func respondAndClose(_ connection: NWConnection, status: String) {
-        let head = "HTTP/1.1 \(status)\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    private func respondAndClose(_ connection: NWConnection, status: String, body: String = "") {
+        let head = "HTTP/1.1 \(status)\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
         connection.send(content: Data(head.utf8), completion: .contentProcessed { _ in connection.cancel() })
     }
 

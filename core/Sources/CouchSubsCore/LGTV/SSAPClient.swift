@@ -2,13 +2,29 @@
 
 import Foundation
 
+public enum TVBrand: String, Codable, Sendable {
+    case lg, samsung
+    /// Android TV: bilgisayar TV'yi denetlemez, TV uygulaması bilgisayarı kendisi bulur.
+    case androidTV
+}
+
 public struct LGTV: Codable, Hashable, Sendable {
     public let name: String
     public let host: String
+    public let brand: TVBrand
 
-    public init(name: String, host: String) {
+    public init(name: String, host: String, brand: TVBrand = .lg) {
         self.name = name
         self.host = host
+        self.brand = brand
+    }
+
+    /// Eski kayıtlarda marka yoktur; hepsi LG'dir.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        host = try container.decode(String.self, forKey: .host)
+        brand = try container.decodeIfPresent(TVBrand.self, forKey: .brand) ?? .lg
     }
 }
 

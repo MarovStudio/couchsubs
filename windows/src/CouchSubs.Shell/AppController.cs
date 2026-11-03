@@ -213,7 +213,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     /// </summary>
     public async Task RefreshTvAppAsync()
     {
-        if (tv is not { } target || services.BundledTvAppVersion is not { } bundled) return;
+        if (tv is not { Brand: TvBrand.Lg } target || services.BundledTvAppVersion is not { } bundled) return;
         if (!await services.IsDevModeOnAsync(target.Host))
         {
             TvApp = tvAppMissing ? new TvAppState(TvAppKind.DevModeOff) : TvAppState.Unknown;

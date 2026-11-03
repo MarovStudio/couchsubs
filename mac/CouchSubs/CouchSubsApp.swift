@@ -4,7 +4,12 @@ import SwiftUI
 
 @main
 struct CouchSubsApp: App {
-    @State private var model = AppModel()
+    @State private var model = Self.makeModel()
+
+    /// Testler uygulamanın içinde çalışır. Gerçek Anahtarlığa dokunmazlar: imza farklı olunca macOS parola sorar ve test takılır.
+    private static func makeModel() -> AppModel {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil ? AppModel() : AppModel(store: EphemeralStore())
+    }
 
     var body: some Scene {
         WindowGroup {

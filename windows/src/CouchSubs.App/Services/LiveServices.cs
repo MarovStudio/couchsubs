@@ -26,10 +26,25 @@ public sealed class LiveServices : IAppServices
 
     public Task<RegisteredConsole> RegisterAsync(string host, byte[] accountId, uint pin) => Registration.RegisterAsync(host, accountId, pin);
 
-    public Task<IReadOnlyList<LgTv>> DiscoverTvsAsync() => LgDiscovery.SearchAsync();
+    public async Task<IReadOnlyList<LgTv>> DiscoverTvsAsync()
+    {
+        var lg = LgDiscovery.SearchAsync();
+        var samsung = SamsungDiscovery.SearchAsync();
+        return [.. await lg, .. await samsung];
+    }
 
     public async Task<TvPairing> PairTvAsync(LgTv tv, string? key, string server)
     {
+        // Bilgisayar Android TV'yi denetlemez; TV uygulaması bilgisayarı kendisi bulur.
+        if (tv.Brand == TvBrand.AndroidTv) return new TvPairing("", true);
+        if (tv.Brand == TvBrand.Samsung)
+        {
+            using var samsung = new SamsungClient(tv, key);
+            var token = await samsung.ConnectAsync();
+            try { await samsung.LaunchAsync(SamsungClient.AppId, new Dictionary<string, string> { ["server"] = server }); }
+            catch (Exception) { /* TV uygulaması bilgisayarı kendisi de bulabilir */ }
+            return new TvPairing(token, true);
+        }
         using var client = new SsapClient(tv, key);
         var newKey = await client.ConnectAsync();
         try
@@ -47,6 +62,25 @@ public sealed class LiveServices : IAppServices
 
     public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved)
     {
+        if (tv.Brand == TvBrand.AndroidTv) return new IdleKeeper();
+        if (tv.Brand == TvBrand.Samsung)
+        {
+            var samsungLocator = new TvLocator(tv, async target =>
+            {
+                var client = new SamsungClient(target, key);
+                try
+                {
+                    await client.ConnectAsync();
+                    return client;
+                }
+                catch
+                {
+                    client.Dispose();
+                    throw;
+                }
+            }, () => SamsungDiscovery.SearchAsync(), onMoved);
+            return new Keeper(new TvKeeper(samsungLocator.ConnectAsync, SamsungClient.AppId, parameters));
+        }
         var locator = new TvLocator(tv, async target =>
         {
             var client = new SsapClient(target, key);
@@ -114,6 +148,14 @@ public sealed class LiveServices : IAppServices
     }
 
     public ITextReader? MakeReader(string language) => WindowsOcrReader.Create(language);
+
+    /// <summary>Denetlenemeyen TV'ler için: TV uygulaması kendisi bağlanır.</summary>
+    private sealed class IdleKeeper : IKeeper
+    {
+        public void Start(TimeSpan interval) { }
+        public void Stop() { }
+        public void Reconnect() { }
+    }
 
     private sealed class Keeper(TvKeeper keeper) : IKeeper
     {

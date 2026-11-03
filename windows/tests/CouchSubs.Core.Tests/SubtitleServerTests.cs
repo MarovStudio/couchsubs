@@ -93,6 +93,15 @@ public class SubtitleServerTests
     }
 
     [Fact]
+    public async Task HelloIdentifiesTheApp()
+    {
+        using var server = new SubtitleServer(0);
+        var port = await server.StartAsync();
+        using var http = new HttpClient();
+        Assert.Equal("{\"app\":\"couchsubs\"}", await http.GetStringAsync($"http://127.0.0.1:{port}/hello"));
+    }
+
+    [Fact]
     public async Task UnknownPathIs404()
     {
         using var server = new SubtitleServer(0);

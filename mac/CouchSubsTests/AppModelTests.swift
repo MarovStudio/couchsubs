@@ -407,6 +407,16 @@ final class TVAppInstallTests: XCTestCase {
         XCTAssertEqual(model.tvApp, .unknown)
     }
 
+    func testOtherBrandsAreNotInstalledThroughLGDeveloperMode() async throws {
+        let services = FakeServices()
+        services.appOnTV = nil
+        services.devMode = true
+        let model = model(services)
+        try await model.pair(LGTV(name: "Samsung", host: "192.168.1.20", brand: .samsung))
+        XCTAssertEqual(model.tvApp, .unknown)
+        XCTAssertEqual(services.installs, 0)
+    }
+
     func testMovedTVIsSaved() {
         let store = MemoryStore()
         let model = model(FakeServices(), store: store)

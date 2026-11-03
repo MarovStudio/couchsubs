@@ -6,7 +6,16 @@ using System.Text;
 
 namespace CouchSubs.Core.LgTv;
 
-public sealed record LgTv(string Name, string Host);
+public enum TvBrand
+{
+    Lg,
+    Samsung,
+    /// <summary>Android TV: bilgisayar TV'yi denetlemez, TV uygulaması bilgisayarı kendisi bulur.</summary>
+    AndroidTv,
+}
+
+/// <param name="Brand">Eski kayıtlarda marka yoktur; hepsi LG'dir.</param>
+public sealed record LgTv(string Name, string Host, TvBrand Brand = TvBrand.Lg);
 
 /// <summary>Yerel ağdaki LG webOS TV'leri SSDP ile bulur.</summary>
 public static class LgDiscovery
@@ -16,7 +25,7 @@ public static class LgDiscovery
 
     public static async Task<IReadOnlyList<LgTv>> SearchAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
-        var hosts = await CollectResponses(timeout ?? TimeSpan.FromSeconds(3), cancellationToken);
+        var hosts = await CollectResponses(SearchTarget, timeout ?? TimeSpan.FromSeconds(3), cancellationToken);
         var tvs = new List<LgTv>();
         foreach (var host in hosts.Distinct().Order(StringComparer.Ordinal))
             tvs.Add(new LgTv(await FriendlyName(host) ?? "LG TV", host));
@@ -24,7 +33,7 @@ public static class LgDiscovery
     }
 
     /// <summary>SSDP yanıtından TV'nin adresini çıkarır; LG'nin ikinci ekran servisi değilse null.</summary>
-    public static string? HostFromSsdpResponse(string response)
+    public static string? HostFromSsdpResponse(string response, string searchTarget = SearchTarget)
     {
         string? location = null;
         var isLg = false;
@@ -35,17 +44,17 @@ public static class LgDiscovery
             var name = line[..colon].Trim().ToUpperInvariant();
             var value = line[(colon + 1)..].Trim();
             if (name == "LOCATION") location = value;
-            else if (name is "ST" or "NT") isLg = isLg || value == SearchTarget;
+            else if (name is "ST" or "NT") isLg = isLg || value == searchTarget;
         }
         return isLg && Uri.TryCreate(location, UriKind.Absolute, out var url) ? url.Host : null;
     }
 
-    private static async Task<List<string>> CollectResponses(TimeSpan timeout, CancellationToken cancellationToken)
+    internal static async Task<List<string>> CollectResponses(string searchTarget, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var hosts = new List<string>();
         using var udp = new UdpClient(AddressFamily.InterNetwork);
         var request = Encoding.ASCII.GetBytes(
-            $"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: {SearchTarget}\r\n\r\n");
+            $"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: {searchTarget}\r\n\r\n");
         var target = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
         for (var i = 0; i < 2; i++) await udp.SendAsync(request, target, cancellationToken);
 
@@ -56,7 +65,7 @@ public static class LgDiscovery
             while (true)
             {
                 var result = await udp.ReceiveAsync(deadline.Token);
-                if (HostFromSsdpResponse(Encoding.UTF8.GetString(result.Buffer)) is { } host) hosts.Add(host);
+                if (HostFromSsdpResponse(Encoding.UTF8.GetString(result.Buffer), searchTarget) is { } host) hosts.Add(host);
             }
         }
         catch (OperationCanceledException) { }

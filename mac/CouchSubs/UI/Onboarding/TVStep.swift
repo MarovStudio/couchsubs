@@ -25,7 +25,7 @@ struct TVStep: View {
                         Button("Search again") { Task { await search() } }.buttonStyle(.secondary).disabled(searching)
                     }
                     if tvs.isEmpty && !searching {
-                        HintText(text: "No LG TV found. Make sure the TV is on and on the same network.")
+                        HintText(text: "No LG or Samsung TV found. Make sure the TV is on and on the same network.")
                     }
                     ForEach(tvs, id: \.host) { tv in
                         HStack {
@@ -35,6 +35,15 @@ struct TVStep: View {
                         }
                     }
                 }
+                Card {
+                    HStack {
+                        Text(verbatim: "Android TV / Google TV")
+                        Spacer()
+                        Button("Select") { Task { await pair(LGTV(name: "Android TV", host: "", brand: .androidTV)) } }
+                            .buttonStyle(.secondary).disabled(working)
+                    }
+                    HintText(text: "Vestel, Arçelik, Beko, Grundig, Philips and other TVs running Android TV.")
+                }
                 if working {
                     HStack(spacing: Theme.space("s")) {
                         ProgressView().controlSize(.small)
@@ -43,6 +52,12 @@ struct TVStep: View {
                 }
                 ErrorText(error: error)
                 TVAppCard()
+                if let tv = model.tv, tv.brand != .lg {
+                    Card(title: "CouchSubs TV app") {
+                        Text("Install the CouchSubs TV app on this TV using the guide and open it. It finds this computer by itself.")
+                        Link("Open the guide", destination: AppIdentity.tvGuideURL)
+                    }
+                }
             }
         }
         .task { await search() }

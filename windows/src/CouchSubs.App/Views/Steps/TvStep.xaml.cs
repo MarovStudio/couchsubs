@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using CouchSubs.Core;
@@ -26,6 +27,7 @@ public partial class TvStep : UserControl
     {
         Done.Text = Controller.Tv?.Name ?? "";
         Done.Visibility = Controller.Tv is null ? Visibility.Collapsed : Visibility.Visible;
+        ManualInstall.Visibility = Controller.Tv is null or { Brand: TvBrand.Lg } ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private async Task SearchAsync()
@@ -70,4 +72,9 @@ public partial class TvStep : UserControl
     }
 
     private async void OnSearch(object sender, RoutedEventArgs e) => await SearchAsync();
+
+    private async void OnAndroidTv(object sender, RoutedEventArgs e) => await PairAsync(new LgTv("Android TV", "", TvBrand.AndroidTv));
+
+    private void OnGuide(object sender, RoutedEventArgs e) =>
+        Process.Start(new ProcessStartInfo("https://github.com/yorulmazsinan/couchsubs/blob/main/docs/tv-kurulum.md") { UseShellExecute = true });
 }

@@ -518,6 +518,16 @@ public class TvAppInstallTests
     }
 
     [Fact]
+    public async Task OtherBrandsAreNotInstalledThroughLgDeveloperMode()
+    {
+        var services = new FakeServices { AppOnTv = null, DevMode = true };
+        var controller = Make(services);
+        await controller.PairAsync(new LgTv("Samsung", "192.168.1.20", TvBrand.Samsung));
+        Assert.Equal(TvAppKind.Unknown, controller.TvApp.Kind);
+        Assert.Equal(0, services.Installs);
+    }
+
+    [Fact]
     public void MovedTvIsSaved()
     {
         var store = new MemoryStore();
