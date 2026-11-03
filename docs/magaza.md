@@ -20,7 +20,9 @@ konsolları için", sonunda da Sony ile bağlantısızlık notu yer alır.
 2. Gönderimden önce Seller Lounge Q&A'dan yazılı soru sorulur: HDMI görüntüsü belgelenmemiş
    `ext://hdmi` kaynağıyla gösteriliyor ve LG bunun için resmi API sunmuyor. Bu yöntemin mağaza
    uygulamasında kabul edilip edilmediği sorulur. Gerekirse webOS Partner Zone'a başvurulur.
-3. Olumlu cevap gelirse gönderimde şunlar verilir:
+   Soru metni: `store/lg/question.md`.
+3. Olumlu cevap gelirse gönderimde şunlar verilir (görseller ve metinler `store/lg/` altında,
+   Self-Checklist şablonu Seller Lounge'dan alınır):
    - IPK (`release.yml` üretir)
    - Simge: 400×400
    - Ekran görüntüleri: 1 ana + 2–5 ek, 1280×720
