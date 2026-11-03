@@ -5,7 +5,7 @@
 
   var TEXTS = {
     tr: {
-      waiting: 'Bilgisayarınızda veya telefonunuzda CouchSubs uygulamasını açın.',
+      waiting: 'Bilgisayarınızda CouchSubs uygulamasını açın.',
       waitingHint: 'Uygulama bu TV\'yi bulup altyazıları buraya gönderecek.',
       panelTitle: 'CouchSubs',
       hdmi: 'HDMI',
@@ -31,7 +31,7 @@
       demoHint: 'Örnek: oyunun İngilizce altyazısı Türkçe olarak burada görünür. Çıkmak için Geri.'
     },
     en: {
-      waiting: 'Open the CouchSubs app on your computer or phone.',
+      waiting: 'Open the CouchSubs app on your computer.',
       waitingHint: 'The app will find this TV and send subtitles here.',
       panelTitle: 'CouchSubs',
       hdmi: 'HDMI',

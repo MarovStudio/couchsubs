@@ -250,8 +250,8 @@
 
   function startDemo() {
     if (demoRunning()) return;
-    $('waiting').className = 'hidden';
     hidePanel();
+    $('waiting').className = 'hidden';
     $('demo-badge').className = '';
     demoIndex = 0;
     nextDemoLine();
@@ -292,13 +292,18 @@
     }
   }
 
+  // Panel açıkken bekleme kutusu kapanır: ikisi üst üste binince yazılar okunmuyor.
   function showPanel(autoHide) {
+    $('waiting').className = 'hidden';
     $('panel').className = '';
     clearTimeout(panelTimer);
     if (autoHide) panelTimer = setTimeout(hidePanel, 8000);
   }
 
-  function hidePanel() { $('panel').className = 'hidden'; }
+  function hidePanel() {
+    $('panel').className = 'hidden';
+    if (!server && !demoRunning()) $('waiting').className = '';
+  }
 
   function togglePanel() {
     if ($('panel').className === 'hidden') showPanel(false); else hidePanel();
@@ -352,6 +357,6 @@
   if (!server) {
     if (address) connect(address); else $('waiting').className = '';
   }
-  // Bekleme ekranı açıksa panel kendiliğinden açılmaz (üst üste binerdi); yeşil tuşla açılabilir.
+  // Bekleme ekranı açıksa panel kendiliğinden açılmaz; yeşil tuşla açılabilir.
   if (server) showPanel(true); else hidePanel();
 })();
