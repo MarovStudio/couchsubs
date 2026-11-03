@@ -2,14 +2,25 @@
 
 # CouchSubs
 
-PS5 oyunlarındaki İngilizce altyazıyı anlık okur, Türkçeye çevirir ve TV'de oyun görüntüsünün üstünde
+**Türkçe dil desteği olmayan PS5 oyunlarını Türkçe altyazıyla oynayın.**
+
+CouchSubs, oyundaki İngilizce altyazıyı anlık okur, Türkçeye çevirir ve TV'de oyun görüntüsünün üstünde
 gösterir. Oyunu her zamanki gibi TV'de, kendi kolunuzla oynarsınız. Yazı tanıma ve çeviri bilgisayarınızda
-yapılır; altyazılar internete gönderilmez.
+yapılır; altyazılar internete gönderilmez. Ücretsiz ve açık kaynaklıdır.
 
 *English below.*
 
-> **Beta.** Uygulama deneme aşamasındadır. Sorunları [Issues](https://github.com/yorulmazsinan/couchsubs/issues)
-> sayfasından bildirebilirsiniz.
+> **Beta.** Uygulama deneme aşamasındadır ve denemeniz bize çok yardımcı olur. Sorunları ve önerileri
+> [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından bildirebilirsiniz.
+
+## Durum
+
+| | |
+|---|---|
+| Mac + LG TV | Gerçek PS5 ve TV ile denendi, çalışıyor |
+| Windows + LG TV | Hazır ama henüz gerçek bilgisayarda denenmedi; ilk deneyenlerin geri bildirimini bekliyoruz |
+| Samsung TV | Henüz yok, hazırlanıyor |
+| LG mağazası | Henüz yok; şimdilik geliştirici moduyla kurulur |
 
 ## Nasıl çalışır
 
@@ -36,15 +47,27 @@ Samsung TV desteği hazırlanıyor.
 
 ## Kurulum
 
-1. **TV uygulaması:** [docs/tv-kurulum.md](docs/tv-kurulum.md). LG mağazasında yayınlanana kadar TV
-   geliştirici modu ile bir kez kurulur.
+1. **TV uygulaması:** [docs/tv-kurulum.md](docs/tv-kurulum.md). LG mağazasında yayınlanana kadar TV'de
+   geliştirici modunu açarsınız, uygulamayı CouchSubs kendisi kurar.
 2. **Bilgisayar uygulaması:** [Sürümler](https://github.com/yorulmazsinan/couchsubs/releases/latest)
    sayfasından indirin.
    - **Mac:** `CouchSubs-…-macos.zip` dosyasını açın, CouchSubs'ı **Uygulamalar** klasörüne taşıyıp açın.
+     Uygulama Apple onaylıdır.
    - **Windows:** `CouchSubs-…-windows-x64.zip` dosyasını bir klasöre çıkarın ve `CouchSubs.exe`'yi
      açın. "Windows bilgisayarınızı korudu" uyarısı çıkarsa **Ek bilgi › Yine de çalıştır**'a basın.
      Güvenlik duvarı sorarsa **Özel ağlar**'a izin verin (TV altyazıları bu bağlantıdan alır).
 3. Kurulum sihirbazı gerisini adım adım anlatır: ikinci hesapla giriş, PS5 eşleme, TV eşleme ve deneme.
+
+**TV uygulaması nasıl kurulur?** TV'de LG'nin ücretsiz Developer Mode uygulamasıyla geliştirici modunu açarsınız.
+CouchSubs, TV'nin ekranında gösterdiği parolayı bir kez ister, uygulamayı TV'ye kendisi kurar ve yeni sürümleri
+kendisi günceller.
+
+**Bilmeniz gerekenler**
+
+- LG, geliştirici modunu en çok 1000 saatlik oturumla açar. Süre dolmadan TV'deki Developer Mode uygulamasından
+  uzatın; süre dolarsa TV uygulaması silinir ve yeniden kurmanız gerekir.
+- Altyazı, oyunda altyazı açıksa okunabilir. Bölgeyi **Ayarlar › Altyazı alanı**'ndan oyuna göre ayarlayabilirsiniz.
+- Çeviri makine çevirisidir; bazı cümleler kusurlu olabilir.
 
 ## Gizlilik
 
@@ -74,8 +97,10 @@ Yerel kütüphane (libchiaki + FFmpeg) MSYS2 ile derlenir; adımlar `.github/wor
 
 ```bash
 npm install -g @webos-tools/cli
-ares-package tv-webos -o dist
+./scripts/package-tv.sh             # → dist/tv-app/com.couchsubs.tv_<sürüm>_all.ipk
 ```
+
+Mac ve Windows paketleri bu dosyayı içerir, bu yüzden Mac paketinden önce de bu araç kurulu olmalıdır.
 
 Sürümler `v*` etiketiyle `.github/workflows/release.yml` tarafından derlenip yayınlanır.
 
@@ -112,8 +137,12 @@ and translation run on your computer, and subtitles are never sent to the intern
 PlayStation Network account, and either a Mac with Apple Silicon on macOS 26+ or a 64-bit Windows 10 (2004)
 or 11 PC.
 
-**Setup:** install the TV app ([docs/tv-setup.md](docs/tv-setup.md)), download the Mac or Windows app from
-[Releases](https://github.com/yorulmazsinan/couchsubs/releases/latest) and follow the setup assistant.
+**Status:** beta. Mac with an LG TV is tested on real hardware. Windows has not been tested on a real PC yet,
+and Samsung TVs are not supported yet.
+
+**Setup:** turn on Developer Mode on the TV ([docs/tv-setup.md](docs/tv-setup.md)), download the Mac or Windows app from
+[Releases](https://github.com/yorulmazsinan/couchsubs/releases/latest) and follow the setup assistant. It installs the
+TV app for you after asking once for the passphrase shown on the TV.
 On Windows, if SmartScreen appears, choose **More info › Run anyway**.
 
 Licensed under the [GNU AGPL-3.0](LICENSE); third-party components are listed in
