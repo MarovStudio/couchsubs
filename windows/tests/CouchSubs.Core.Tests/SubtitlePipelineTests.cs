@@ -130,7 +130,7 @@ public class SubtitlePipelineTests
         Assert.Equal(["TR: Hold the gate"], sender.Sent);
     }
 
-    /// Kareler saniyede ~15 kez okunur; tek tük okunamayan kare altyazıyı TV'den silmemeli.
+    /// Kareler saniyede ~20 kez okunur; tek tük okunamayan kare altyazıyı TV'den silmemeli.
     [Fact]
     public async Task ShortReadingGapDoesNotClearTheTv()
     {
@@ -142,11 +142,11 @@ public class SubtitlePipelineTests
     }
 
     [Fact]
-    public async Task SubtitleGoneForFourFramesClearsTheTv()
+    public async Task SubtitleGoneForSixFramesClearsTheTv()
     {
         var sender = new FakeSender();
-        var pipeline = new SubtitlePipeline(new FakeReader("Hold the gate", "Hold the gate", "", "", "", ""), new FakeTranslator(), sender);
-        await Run(pipeline, 6);
+        var pipeline = new SubtitlePipeline(new FakeReader("Hold the gate", "Hold the gate", "", "", "", "", "", ""), new FakeTranslator(), sender);
+        await Run(pipeline, 8);
         Assert.Equal(1, sender.Clears);
     }
 
@@ -198,8 +198,8 @@ public class SubtitlePipelineTests
     {
         var sender = new FakeSender();
         var translator = new GatedTranslator();
-        var pipeline = new SubtitlePipeline(new FakeReader("Hold the gate.", "", "", "", ""), translator, sender);
-        await Run(pipeline, 5, waitEach: false);
+        var pipeline = new SubtitlePipeline(new FakeReader("Hold the gate.", "", "", "", "", "", ""), translator, sender);
+        await Run(pipeline, 7, waitEach: false);
         Assert.Equal(1, sender.Clears);
         translator.Open();
         await pipeline.WaitForTranslationsAsync();

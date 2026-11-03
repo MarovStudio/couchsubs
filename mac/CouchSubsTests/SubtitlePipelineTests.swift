@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import CoreGraphics
+import CouchSubsCore
 import ImageIO
 import XCTest
 @testable import CouchSubs
@@ -102,7 +103,7 @@ final class SubtitlePipelineTests: XCTestCase {
         XCTAssertEqual(sender.sent, ["TR: Hold the gate"])
     }
 
-    /// Kareler saniyede ~10 kez okunur; tek tük okunamayan kare altyazıyı TV'den silmemeli.
+    /// Kareler saniyede ~20 kez okunur; tek tük okunamayan kare altyazıyı TV'den silmemeli.
     func testShortReadingGapDoesNotClearTheTV() async {
         let sender = FakeSender()
         let pipeline = SubtitlePipeline(reader: FakeReader(["Hold the gate", "Hold the gate", "", "", "Hold the gate"]),
@@ -112,12 +113,33 @@ final class SubtitlePipelineTests: XCTestCase {
         XCTAssertEqual(sender.sent, ["TR: Hold the gate"])
     }
 
-    func testSubtitleGoneForFourFramesClearsTheTV() async {
+    func testSubtitleGoneForSixFramesClearsTheTV() async {
         let sender = FakeSender()
-        let pipeline = SubtitlePipeline(reader: FakeReader(["Hold the gate", "Hold the gate", "", "", "", ""]),
+        let pipeline = SubtitlePipeline(reader: FakeReader(["Hold the gate", "Hold the gate", "", "", "", "", "", ""]),
                                         translator: FakeTranslator(), server: sender)
-        for _ in 0..<6 { await pipeline.process(frame, region: CropRegion()); await pipeline.waitForTranslations() }
+        for _ in 0..<8 { await pipeline.process(frame, region: CropRegion()); await pipeline.waitForTranslations() }
         XCTAssertEqual(sender.clears, 1)
+    }
+
+    /// Bölge değişmiyorsa yazı tanıma çalışmaz; işlemci boşa harcanmaz.
+    func testUnchangedRegionIsNotReadAgain() async {
+        let reader = FakeReader(Array(repeating: "Hold the gate", count: 8))
+        let pipeline = SubtitlePipeline(reader: reader, translator: FakeTranslator(), server: FakeSender(), scheduler: ReadScheduler())
+        for _ in 0..<5 { await pipeline.process(frame, region: CropRegion()); await pipeline.waitForTranslations() }
+        XCTAssertEqual(reader.readOnMainThread.count, 1)
+    }
+
+    func testSignatureNoticesAChangedRegion() throws {
+        func image(_ gray: CGFloat) -> CGImage {
+            let context = CGContext(data: nil, width: 640, height: 120, bitsPerComponent: 8, bytesPerRow: 0,
+                                    space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)!
+            context.setFillColor(gray: gray, alpha: 1)
+            context.fill(CGRect(x: 0, y: 0, width: 640, height: 120))
+            return context.makeImage()!
+        }
+        XCTAssertEqual(RegionCropper.signature(of: image(0.2)), RegionCropper.signature(of: image(0.2)))
+        XCTAssertNotEqual(RegionCropper.signature(of: image(0.2)), RegionCropper.signature(of: image(0.8)))
+        XCTAssertEqual(RegionCropper.signature(of: image(0.2)).count, 64 * 12)
     }
 
     /// Çeviri sürerken okuma durmamalı; yoksa kısa satırlar kaçar.
@@ -160,8 +182,8 @@ final class SubtitlePipelineTests: XCTestCase {
     func testTranslationArrivingAfterLineLeftIsShownBriefly() async {
         let sender = FakeSender()
         let translator = GatedTranslator()
-        let pipeline = SubtitlePipeline(reader: FakeReader(["Hold the gate.", "", "", "", ""]), translator: translator, server: sender)
-        for _ in 0..<5 { await pipeline.process(frame, region: CropRegion()) }
+        let pipeline = SubtitlePipeline(reader: FakeReader(["Hold the gate.", "", "", "", "", "", ""]), translator: translator, server: sender)
+        for _ in 0..<7 { await pipeline.process(frame, region: CropRegion()) }
         XCTAssertEqual(sender.clears, 1)
         translator.open()
         await pipeline.waitForTranslations()

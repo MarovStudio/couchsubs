@@ -1,7 +1,7 @@
 # Installing the CouchSubs TV app on an LG TV
 
-Until the CouchSubs TV app is available in the LG Content Store, it is installed in developer mode.
-You only do this once.
+Until the CouchSubs TV app is available in the LG Content Store, it is installed in developer mode. You
+turn developer mode on; CouchSubs on your Mac or Windows PC installs the TV app and keeps it up to date.
 
 ## 1. Developer mode on the TV
 
@@ -17,33 +17,25 @@ Developer mode expires after a while; extend it from the Developer Mode app.
 
 ## 2. On your computer
 
-Install Node.js from [nodejs.org](https://nodejs.org) (or `brew install node` on a Mac). Then, in Terminal
-(PowerShell on Windows):
+1. Open CouchSubs. In the TV step, pick your TV, press **Connect** and accept the prompt on the TV.
+2. When a passphrase is requested, open the Developer Mode app on the TV, turn on **Key Server** and keep
+   the app on screen.
+3. Type the **Passphrase** shown on the TV and press **Install on the TV**.
+
+The passphrase is asked once. CouchSubs installs later versions by itself when you start translating. After
+setup the same card is also in **Settings**. If you turn developer mode off and on again, the TV creates a new
+key and the passphrase is asked once more.
+
+## Manual install
+
+If the automatic install does not work, install [Node.js](https://nodejs.org) and run this in Terminal (PowerShell on Windows):
 
 ```bash
 npm install -g @webos-tools/cli
-ares-setup-device --add tv --info "{'host':'TV_IP','port':'9922','username':'prisoner'}"
+ares-setup-device --add tv --info "{'host':'TV_IP_ADDRESS','port':'9922','username':'prisoner'}"
 ares-novacom --device tv --getkey
+ares-install -d tv com.couchsubs.tv_0.6.1_all.ipk
 ```
 
-The last command asks for the Passphrase. If you get "Failed to get ssh private key", the Key Server has
-closed: turn it on again and run the command right away. If the timing doesn't work, on a Mac you can download the key
-directly and enter the Passphrase afterwards:
-
-```bash
-curl -o ~/.ssh/tv_webos http://TV_IP:9991/webos_rsa && chmod 600 ~/.ssh/tv_webos
-ares-setup-device --modify tv --info "{'privatekey':'tv_webos','passphrase':'PASSPHRASE'}"
-```
-
-## 3. Install the TV app
-
-Download `com.couchsubs.tv_…_all.ipk` from [Releases](https://github.com/yorulmazsinan/couchsubs/releases/latest)
-and run, in the folder you downloaded it to:
-
-```bash
-ares-install -d tv com.couchsubs.tv_0.6.0_all.ipk
-```
-
-(From source: `ares-package tv-webos -o dist`, then `ares-install -d tv dist/com.couchsubs.tv_*.ipk`.)
-
-Then open CouchSubs on your computer; the setup assistant finds the TV and launches the app for you.
+Download the package from the [releases](https://github.com/yorulmazsinan/couchsubs/releases/latest) page.
+If you get "Failed to get ssh private key", Key Server has closed: turn it on again and rerun the command right away.

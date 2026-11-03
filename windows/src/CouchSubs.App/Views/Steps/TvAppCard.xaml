@@ -1,0 +1,31 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<UserControl x:Class="CouchSubs.App.Views.Steps.TvAppCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:CouchSubs.App.Controls"
+             xmlns:t="clr-namespace:CouchSubs.App.Theme"
+             Visibility="Collapsed">
+    <c:Card Title="{t:T 'CouchSubs TV app'}">
+        <StackPanel>
+            <TextBlock x:Name="Status" TextWrapping="Wrap" />
+            <StackPanel x:Name="Steps" Visibility="Collapsed" Margin="0,8,0,0">
+                <TextBlock Style="{StaticResource HintText}" Text="{t:T '1. Create a free account at webostv.developer.lge.com.'}" />
+                <TextBlock Style="{StaticResource HintText}" Text="{t:T '2. On the TV, install Developer Mode from the LG Content Store and sign in.'}" />
+                <TextBlock Style="{StaticResource HintText}" Text="{t:T '3. Turn on Dev Mode Status. The TV restarts and this screen continues by itself.'}" />
+            </StackPanel>
+            <StackPanel x:Name="PassphraseArea" Visibility="Collapsed" Margin="0,8,0,0">
+                <TextBlock Style="{StaticResource HintText}" Text="{t:T 'Open the Developer Mode app on the TV, turn on Key Server and keep the app on screen. Type the Passphrase it shows.'}" />
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="Passphrase" />
+                    <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Content="{t:T 'Install on the TV'}" Click="OnInstall" />
+                </Grid>
+            </StackPanel>
+            <TextBlock x:Name="Problem" Style="{StaticResource ErrorText}" Margin="0,8,0,0" />
+            <Button x:Name="Retry" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" Content="{t:T 'Try again'}" Click="OnRetry" />
+        </StackPanel>
+    </c:Card>
+</UserControl>

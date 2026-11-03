@@ -31,6 +31,8 @@ public sealed class WindowsOcrReader : ITextReader
 
     public string Read(Frame image) => ReadingFallback.FirstReading(image, Recognize);
 
+    public string Read(Frame image, bool deep) => deep ? Read(image) : Recognize(image);
+
     private string Recognize(Frame image)
     {
         // OCR motoru çok küçük ya da çok büyük görüntüyü reddeder.

@@ -101,10 +101,11 @@ internal sealed class FakeServices : IAppServices
         return Task.FromResult(Registered);
     }
     public Task<IReadOnlyList<LgTv>> DiscoverTvsAsync() => Task.FromResult<IReadOnlyList<LgTv>>(Tvs);
-    public Task<string> PairTvAsync(LgTv tv, string? key, string server)
+    public Task<TvPairing> PairTvAsync(LgTv tv, string? key, string server)
     {
         LaunchedServer = server;
-        return Task.FromResult("tv-key");
+        PairCount++;
+        return Task.FromResult(new TvPairing("tv-key", AppOnTv is not null));
     }
     public IStreamSession MakeStream(RegisteredConsole console, byte[] accountId)
     {
@@ -112,11 +113,36 @@ internal sealed class FakeServices : IAppServices
         Streams.Add(stream);
         return stream;
     }
-    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters)
+    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved)
     {
         var keeper = new FakeKeeper();
         Keepers.Add(keeper);
         return keeper;
+    }
+    public string? AppOnTv { get; set; } = "0.6.1";
+    public bool DevMode { get; set; }
+    public bool KeyServer { get; set; } = true;
+    public bool RefuseKey { get; set; }
+    public int Installs { get; private set; }
+    public int PairCount { get; private set; }
+    public string? BundledTvAppVersion { get; set; } = "0.6.1";
+    public Task<bool> IsDevModeOnAsync(string host) => Task.FromResult(DevMode);
+    public Task<string> FetchDevKeyAsync(string host, string passphrase)
+    {
+        if (!KeyServer) throw new DevModeException(DevModeError.KeyServerOff);
+        if (passphrase != "ABC123") throw new DevModeException(DevModeError.WrongPassphrase);
+        return Task.FromResult("dev-key");
+    }
+    public Task<string?> InstalledTvAppVersionAsync(string host, string devKey)
+    {
+        if (RefuseKey) throw new DevModeException(DevModeError.KeyRefused);
+        return Task.FromResult(AppOnTv);
+    }
+    public Task InstallTvAppAsync(string host, string devKey)
+    {
+        Installs++;
+        AppOnTv = BundledTvAppVersion;
+        return Task.CompletedTask;
     }
     public ITextReader? MakeReader(string language)
     {
@@ -398,5 +424,107 @@ public class StatusToneTests
     {
         Assert.Equal(StatusTone.Good, AppController.Ps5ToneFor(SessionState.Streaming, running: true));
         Assert.Equal(StatusTone.Good, AppController.TvToneFor(clients: 1, running: false));
+    }
+}
+
+public class TvAppInstallTests
+{
+    private static readonly LgTv Tv = new("LG TV", "192.168.1.153");
+
+    private static AppController Make(FakeServices services, MemoryStore? store = null) =>
+        new(services, store ?? new MemoryStore(), new MemorySettings(), new FakeSleep(), Localizer.ForLanguage("en"), action => action());
+
+    [Fact]
+    public async Task MissingAppWithDevModeOffShowsTheSteps()
+    {
+        var services = new FakeServices { AppOnTv = null };
+        var controller = Make(services);
+        await controller.PairAsync(Tv);
+        Assert.Equal(TvAppKind.DevModeOff, controller.TvApp.Kind);
+        Assert.NotNull(controller.Tv);
+    }
+
+    [Fact]
+    public async Task PassphraseInstallsAndOpensTheApp()
+    {
+        var services = new FakeServices { AppOnTv = null, DevMode = true };
+        var store = new MemoryStore();
+        var controller = Make(services, store);
+        await controller.PairAsync(Tv);
+        Assert.Equal(TvAppKind.NeedsPassphrase, controller.TvApp.Kind);
+        var pairs = services.PairCount;
+        await controller.InstallTvAppAsync(" ABC123 ");
+        Assert.Equal(new TvAppState(TvAppKind.UpToDate, "0.6.1"), controller.TvApp);
+        Assert.Equal(1, services.Installs);
+        Assert.Equal("dev-key", store.Load<string>(StoreKeys.TvDevKey));
+        Assert.Equal(pairs + 1, services.PairCount);
+    }
+
+    [Fact]
+    public async Task WrongPassphraseAndClosedKeyServerAreExplained()
+    {
+        var services = new FakeServices { AppOnTv = null, DevMode = true };
+        var controller = Make(services);
+        await controller.PairAsync(Tv);
+        await controller.InstallTvAppAsync("WRONG");
+        Assert.Equal(DevModeError.WrongPassphrase, controller.TvApp.Error);
+        services.KeyServer = false;
+        await controller.InstallTvAppAsync("ABC123");
+        Assert.Equal(DevModeError.KeyServerOff, controller.TvApp.Error);
+        Assert.Equal(0, services.Installs);
+    }
+
+    [Fact]
+    public async Task OlderAppIsUpdatedWithoutAsking()
+    {
+        var services = new FakeServices { AppOnTv = "0.4.0", DevMode = true };
+        var store = new MemoryStore();
+        store.Save(StoreKeys.TvDevKey, "dev-key");
+        var controller = Make(services, store);
+        await controller.PairAsync(Tv);
+        Assert.Equal(1, services.Installs);
+        Assert.Equal(TvAppKind.UpToDate, controller.TvApp.Kind);
+    }
+
+    [Fact]
+    public async Task CurrentAppIsNotReinstalled()
+    {
+        var services = new FakeServices { DevMode = true };
+        var store = new MemoryStore();
+        store.Save(StoreKeys.TvDevKey, "dev-key");
+        var controller = Make(services, store);
+        await controller.PairAsync(Tv);
+        Assert.Equal(0, services.Installs);
+    }
+
+    [Fact]
+    public async Task RefusedKeyIsForgottenAndPassphraseAskedAgain()
+    {
+        var services = new FakeServices { DevMode = true, RefuseKey = true };
+        var store = new MemoryStore();
+        store.Save(StoreKeys.TvDevKey, "old-key");
+        var controller = Make(services, store);
+        await controller.PairAsync(Tv);
+        Assert.Equal(TvAppKind.NeedsPassphrase, controller.TvApp.Kind);
+        Assert.Null(store.Load<string>(StoreKeys.TvDevKey));
+    }
+
+    [Fact]
+    public async Task WorkingAppWithoutKeyAsksNothing()
+    {
+        var controller = Make(new FakeServices { DevMode = true });
+        await controller.PairAsync(Tv);
+        Assert.Equal(TvAppKind.Unknown, controller.TvApp.Kind);
+    }
+
+    [Fact]
+    public void MovedTvIsSaved()
+    {
+        var store = new MemoryStore();
+        var controller = Make(new FakeServices(), store);
+        var moved = new LgTv("LG TV", "192.168.1.230");
+        controller.TvMoved(moved);
+        Assert.Equal(moved, controller.Tv);
+        Assert.Equal(moved, store.Load<LgTv>(StoreKeys.Tv));
     }
 }

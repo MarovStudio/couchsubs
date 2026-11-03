@@ -12,7 +12,7 @@ struct TVStep: View {
 
     var body: some View {
         StepLayout(symbol: "tv.fill", title: "Connect your TV",
-                   message: "Turn on the TV and open the CouchSubs TV app. When you press Connect, the TV asks for permission once — accept it with the remote.") {
+                   message: "Turn on the TV. When you press Connect, the TV asks for permission once — accept it with the remote. If the CouchSubs TV app is missing, this screen helps you install it.") {
             VStack(alignment: .leading, spacing: Theme.space("l")) {
                 if let tv = model.tv {
                     DoneLabel(text: tv.name)
@@ -42,6 +42,7 @@ struct TVStep: View {
                     }
                 }
                 ErrorText(error: error)
+                TVAppCard()
             }
         }
         .task { await search() }
@@ -56,7 +57,7 @@ struct TVStep: View {
     private func pair(_ tv: LGTV) async {
         working = true
         error = nil
-        do { try await model.pair(tv) } catch { self.error = String(localized: "The TV did not respond. Is the CouchSubs TV app installed?") }
+        do { try await model.pair(tv) } catch { self.error = String(localized: "The TV did not respond. Make sure it is on and on the same network.") }
         working = false
     }
 }

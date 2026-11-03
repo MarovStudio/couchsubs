@@ -120,6 +120,29 @@ final class SSAPClientTests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(begin), 5)
     }
 
+    func testEndpointThatNeverAnswersIsAbandonedQuickly() async throws {
+        // Adres artık başka bir cihazdaysa TCP kabul edilip yanıt gelmeyebilir; yeniden arama gecikmesin.
+        let silent = try NWListener(using: .tcp, on: .any)
+        let queue = DispatchQueue(label: "silent")
+        var held: [NWConnection] = []
+        silent.newConnectionHandler = { connection in queue.async { held.append(connection); connection.start(queue: queue) } }
+        let ready = expectation(description: "dinliyor")
+        silent.stateUpdateHandler = { if case .ready = $0 { ready.fulfill() } }
+        silent.start(queue: queue)
+        await fulfillment(of: [ready], timeout: 3)
+        defer { silent.cancel() }
+
+        let client = SSAPClient(endpoints: [URL(string: "ws://127.0.0.1:\(silent.port!.rawValue)")!], clientKey: "k",
+                                handshakeTimeout: .milliseconds(300))
+        let begin = Date()
+        do {
+            _ = try await client.connect()
+            XCTFail("Yanıtsız adres başarılı olmamalı")
+        } catch {}
+        XCTAssertLessThan(Date().timeIntervalSince(begin), 3)
+        client.close()
+    }
+
     func testFallsBackToNextEndpoint() async throws {
         let tv = try FakeLGTV()
         let port = await tv.start()

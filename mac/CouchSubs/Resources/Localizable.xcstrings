@@ -1,6 +1,54 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "1. Create a free account at webostv.developer.lge.com.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Create a free account at webostv.developer.lge.com."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. webostv.developer.lge.com adresinde ücretsiz hesap açın."
+          }
+        }
+      }
+    },
+    "2. On the TV, install Developer Mode from the LG Content Store and sign in.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. On the TV, install Developer Mode from the LG Content Store and sign in."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. TV'de LG Content Store'dan Developer Mode uygulamasını kurup giriş yapın."
+          }
+        }
+      }
+    },
+    "3. Turn on Dev Mode Status. The TV restarts and this screen continues by itself.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Turn on Dev Mode Status. The TV restarts and this screen continues by itself."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Dev Mode Status'u açın. TV yeniden başlar, bu ekran kendiliğinden devam eder."
+          }
+        }
+      }
+    },
     "8-digit code": {
       "localizations": {
         "en": {
@@ -193,6 +241,22 @@
         }
       }
     },
+    "Checking the TV app…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the TV app…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV uygulaması kontrol ediliyor…"
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "en": {
@@ -321,6 +385,22 @@
         }
       }
     },
+    "CouchSubs TV app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs TV app"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs TV uygulaması"
+          }
+        }
+      }
+    },
     "CouchSubs is not affiliated with Sony Interactive Entertainment. PlayStation and PS5 are trademarks of Sony Interactive Entertainment Inc.": {
       "localizations": {
         "en": {
@@ -413,6 +493,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "playstation.com'da farklı bir e-posta adresiyle ücretsiz bir hesap açın."
+          }
+        }
+      }
+    },
+    "Developer Mode is on. One last step to install the TV app:": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer Mode is on. One last step to install the TV app:"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geliştirici modu açık. TV uygulamasını kurmak için son bir adım kaldı:"
           }
         }
       }
@@ -641,6 +737,22 @@
         }
       }
     },
+    "Install on the TV": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install on the TV"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV'ye kur"
+          }
+        }
+      }
+    },
     "Japanese": {
       "localizations": {
         "en": {
@@ -653,6 +765,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Japonca"
+          }
+        }
+      }
+    },
+    "Key Server is off. Turn it on in the Developer Mode app and keep the app on screen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Server is off. Turn it on in the Developer Mode app and keep the app on screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Server kapalı. Developer Mode uygulamasından açın ve uygulamayı ekranda bırakın."
           }
         }
       }
@@ -913,6 +1041,22 @@
         }
       }
     },
+    "Open the Developer Mode app on the TV, turn on Key Server and keep the app on screen. Type the Passphrase it shows.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the Developer Mode app on the TV, turn on Key Server and keep the app on screen. Type the Passphrase it shows."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV'de Developer Mode uygulamasını açın, Key Server'ı açın ve uygulamayı ekranda bırakın. Gösterdiği Passphrase'i buraya yazın."
+          }
+        }
+      }
+    },
     "PS5": {
       "localizations": {
         "en": {
@@ -925,6 +1069,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "PS5"
+          }
+        }
+      }
+    },
+    "Passphrase": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passphrase"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passphrase"
           }
         }
       }
@@ -1521,18 +1681,82 @@
         }
       }
     },
-    "The TV did not respond. Is the CouchSubs TV app installed?": {
+    "The TV app could not be installed. Check the TV's free space and try again.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The TV did not respond. Is the CouchSubs TV app installed?"
+            "value": "The TV app could not be installed. Check the TV's free space and try again."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "TV yanıt vermedi. CouchSubs TV uygulaması kurulu mu?"
+            "value": "TV uygulaması kurulamadı. TV'deki boş alanı kontrol edip tekrar deneyin."
+          }
+        }
+      }
+    },
+    "The TV app is not installed. CouchSubs can install it once Developer Mode is on.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV app is not installed. CouchSubs can install it once Developer Mode is on."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV uygulaması kurulu değil. Geliştirici modu açılınca CouchSubs kendisi kurar."
+          }
+        }
+      }
+    },
+    "The TV app is ready (version %@).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV app is ready (version %@)."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV uygulaması hazır (sürüm %@)."
+          }
+        }
+      }
+    },
+    "The TV did not respond. Make sure it is on and on the same network.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV did not respond. Make sure it is on and on the same network."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV yanıt vermedi. Açık ve aynı ağda olduğundan emin olun."
+          }
+        }
+      }
+    },
+    "The TV refused the key. Open Key Server and type the passphrase again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV refused the key. Open Key Server and type the passphrase again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV anahtarı kabul etmedi. Key Server'ı açıp passphrase'i yeniden yazın."
           }
         }
       }
@@ -1597,6 +1821,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Model hazır."
+          }
+        }
+      }
+    },
+    "The passphrase is not correct. Check it on the TV screen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The passphrase is not correct. Check it on the TV screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passphrase doğru değil. TV ekranındakiyle karşılaştırın."
           }
         }
       }
@@ -1761,18 +2001,18 @@
         }
       }
     },
-    "Turn on the TV and open the CouchSubs TV app. When you press Connect, the TV asks for permission once — accept it with the remote.": {
+    "Turn on the TV. When you press Connect, the TV asks for permission once — accept it with the remote. If the CouchSubs TV app is missing, this screen helps you install it.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn on the TV and open the CouchSubs TV app. When you press Connect, the TV asks for permission once — accept it with the remote."
+            "value": "Turn on the TV. When you press Connect, the TV asks for permission once — accept it with the remote. If the CouchSubs TV app is missing, this screen helps you install it."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "TV'yi açın ve CouchSubs TV uygulamasını başlatın. Bağlan'a bastığınızda TV bir kez izin ister; kumandayla onaylayın."
+            "value": "TV'yi açın. Bağlan'a bastığınızda TV bir kez izin ister, kumandayla onaylayın. CouchSubs TV uygulaması kurulu değilse bu ekran kurmanıza yardım eder."
           }
         }
       }
@@ -1821,6 +2061,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "CouchSubs'a hoş geldiniz"
+          }
+        }
+      }
+    },
+    "Windows' OpenSSH Client is missing. Add it in Settings › System › Optional features and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows' OpenSSH Client is missing. Add it in Settings › System › Optional features and try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows'un OpenSSH istemcisi eksik. Ayarlar › Sistem › İsteğe bağlı özellikler bölümünden ekleyip tekrar deneyin."
           }
         }
       }

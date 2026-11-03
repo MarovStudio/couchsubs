@@ -11,6 +11,7 @@ enum StoreKey {
     static let console = "console"
     static let tv = "tv"
     static let tvKey = "tvKey"
+    static let tvDevKey = "tvDevKey"
     static let settings = "settings"
 }
 
@@ -40,10 +41,23 @@ protocol AppServices: AnyObject {
     func accountId(fromRedirect url: URL) async throws -> Data
     func register(host: String, accountId: Data, pin: UInt32) async throws -> RegisteredConsole
     func discoverTVs() async -> [LGTV]
-    /// TV ile eşleşir, TV uygulamasını sunucu adresiyle başlatır ve client-key'i döner.
-    func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> String
+    /// TV ile eşleşir ve TV uygulamasını sunucu adresiyle başlatmayı dener.
+    func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> TVPairing
     func makeStream(console: RegisteredConsole, accountId: Data) -> StreamControlling
-    func makeKeeper(tv: LGTV, key: String?, params: [String: Any]) -> KeeperControlling
+    /// `onMoved`: TV ağda yeni bir adreste bulununca çağrılır.
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], onMoved: @escaping (LGTV) -> Void) -> KeeperControlling
+    /// Uygulamayla gelen TV paketinin sürümü (geliştirici derlemesinde paket olmayabilir).
+    var bundledTVAppVersion: String? { get }
+    func isDevModeOn(host: String) async -> Bool
+    func fetchDevKey(host: String, passphrase: String) async throws -> String
+    func installedTVAppVersion(host: String, devKey: String) async throws -> String?
+    func installTVApp(host: String, devKey: String) async throws
+}
+
+struct TVPairing: Equatable {
+    let key: String
+    /// false ise TV uygulaması açılamadı; büyük olasılıkla TV'de kurulu değil.
+    let launched: Bool
 }
 
 /// PS5 bağlantısı (gerçekte `StreamSession`).
@@ -79,24 +93,69 @@ final class LiveServices: AppServices {
 
     func discoverTVs() async -> [LGTV] { await LGDiscovery.search() }
 
-    func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> String {
+    func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> TVPairing {
         let client = SSAPClient(tv: tv, clientKey: key)
+        defer { client.close() }
         let newKey = try await client.connect()
-        try await client.launch(appId: AppIdentity.tvAppId, params: ["server": server])
-        client.close()
-        return newKey
+        let launched = (try? await client.launch(appId: AppIdentity.tvAppId, params: ["server": server])) != nil
+        return TVPairing(key: newKey, launched: launched)
     }
 
     func makeStream(console: RegisteredConsole, accountId: Data) -> StreamControlling {
         StreamSession(console: console, accountId: accountId)
     }
 
-    func makeKeeper(tv: LGTV, key: String?, params: [String: Any]) -> KeeperControlling {
-        TVKeeper(connect: {
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], onMoved: @escaping (LGTV) -> Void) -> KeeperControlling {
+        let locator = TVLocator(tv: tv, connect: { tv in
             let client = SSAPClient(tv: tv, clientKey: key)
-            _ = try await client.connect()
+            do {
+                _ = try await client.connect()
+            } catch {
+                client.close()
+                throw error
+            }
             return client
-        }, appId: AppIdentity.tvAppId, params: params)
+        }, search: { await LGDiscovery.search() }, onMoved: onMoved)
+        return TVKeeper(connect: { try await locator.connect() }, appId: AppIdentity.tvAppId, params: params)
+    }
+
+    // MARK: - TV uygulamasını kurma
+
+    private var bundledTVPackage: URL? {
+        Bundle.main.urls(forResourcesWithExtension: "ipk", subdirectory: "tv-app")?.first
+    }
+
+    var bundledTVAppVersion: String? {
+        bundledTVPackage.flatMap { DevModeInstaller.version(ofPackage: $0.lastPathComponent) }
+    }
+
+    func isDevModeOn(host: String) async -> Bool { await DevModeInstaller.isDevModeOn(host: host) }
+
+    func fetchDevKey(host: String, passphrase: String) async throws -> String {
+        try await DevModeInstaller.fetchKey(host: host, passphrase: passphrase, runner: ProcessRunner())
+    }
+
+    func installedTVAppVersion(host: String, devKey: String) async throws -> String? {
+        try await withKeyFile(devKey) { file in
+            try await DevModeInstaller(host: host, keyFile: file, runner: ProcessRunner()).installedVersion()
+        }
+    }
+
+    func installTVApp(host: String, devKey: String) async throws {
+        guard let package = bundledTVPackage, let version = bundledTVAppVersion else { throw DevModeError.installFailed }
+        try await withKeyFile(devKey) { file in
+            try await DevModeInstaller(host: host, keyFile: file, runner: ProcessRunner()).install(package: package, version: version)
+        }
+    }
+
+    /// ssh anahtarı dosyadan okur; dosya yalnız komut süresince durur.
+    private func withKeyFile<T>(_ key: String, _ body: (URL) async throws -> T) async throws -> T {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        guard FileManager.default.createFile(atPath: file.path, contents: Data(key.utf8), attributes: [.posixPermissions: 0o600]) else {
+            throw DevModeError.installFailed
+        }
+        defer { try? FileManager.default.removeItem(at: file) }
+        return try await body(file)
     }
 }
 
@@ -114,6 +173,19 @@ enum AppError: LocalizedError, Equatable {
     }
 }
 
+/// TV uygulamasının kurulum durumu.
+enum TVAppState: Equatable {
+    /// Bilinmiyor ya da yapılacak bir şey yok (ör. uygulama açılıyor ama anahtar yok).
+    case unknown
+    case working
+    case upToDate(String)
+    /// TV uygulaması açılamadı ve geliştirici modu kapalı.
+    case devModeOff
+    /// Geliştirici modu açık; Key Server parolası gerekiyor. `error` son denemenin sonucu.
+    case needsPassphrase(error: DevModeError?)
+    case failed(DevModeError)
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -125,6 +197,9 @@ final class AppModel {
     var accountId: Data?
     var console: RegisteredConsole?
     var tv: LGTV?
+    var tvApp = TVAppState.unknown
+    /// Son eşleşmede TV uygulaması açılamadı.
+    private var tvAppMissing = false
     var settings: UserSettings {
         didSet {
             // Sıradan tercih; her kaydırıcı hareketinde Anahtarlık'a yazılmasın.
@@ -233,10 +308,71 @@ final class AppModel {
 
     func pair(_ tv: LGTV) async throws {
         try await startServer()
-        let key = try await services.pairTV(tv, key: store.load(String.self, for: StoreKey.tvKey), server: serverAddress(for: tv))
+        let pairing = try await services.pairTV(tv, key: store.load(String.self, for: StoreKey.tvKey), server: serverAddress(for: tv))
         self.tv = tv
         store.save(tv, for: StoreKey.tv)
-        store.save(key, for: StoreKey.tvKey)
+        store.save(pairing.key, for: StoreKey.tvKey)
+        tvAppMissing = !pairing.launched
+        await refreshTVApp()
+    }
+
+    // MARK: - TV uygulamasını kurma
+
+    /// Geliştirici modu açık TV'de uygulamayı eksikse kurar, eskiyse günceller.
+    /// Anahtar yoksa ve uygulama çalışıyorsa kullanıcıdan bir şey istenmez.
+    func refreshTVApp() async {
+        guard let tv, let bundled = services.bundledTVAppVersion else { return }
+        guard await services.isDevModeOn(host: tv.host) else {
+            tvApp = tvAppMissing ? .devModeOff : .unknown
+            return
+        }
+        guard let devKey = store.load(String.self, for: StoreKey.tvDevKey) else {
+            tvApp = tvAppMissing ? .needsPassphrase(error: nil) : .unknown
+            return
+        }
+        await install(tv: tv, devKey: devKey, bundled: bundled)
+    }
+
+    /// Key Server'dan anahtarı alır (TV ekranındaki parolayla) ve uygulamayı kurar.
+    func installTVApp(passphrase: String) async {
+        guard let tv, let bundled = services.bundledTVAppVersion else { return }
+        tvApp = .working
+        do {
+            let devKey = try await services.fetchDevKey(host: tv.host, passphrase: passphrase.trimmingCharacters(in: .whitespacesAndNewlines))
+            store.save(devKey, for: StoreKey.tvDevKey)
+            await install(tv: tv, devKey: devKey, bundled: bundled)
+        } catch {
+            tvApp = .needsPassphrase(error: error as? DevModeError ?? .installFailed)
+        }
+    }
+
+    private func install(tv: LGTV, devKey: String, bundled: String) async {
+        tvApp = .working
+        do {
+            let installed = try await services.installedTVAppVersion(host: tv.host, devKey: devKey)
+            if let installed, !DevModeInstaller.isNewer(bundled, than: installed) {
+                tvApp = .upToDate(installed)
+                return
+            }
+            try await services.installTVApp(host: tv.host, devKey: devKey)
+            tvApp = .upToDate(bundled)
+            tvAppMissing = false
+            await openTVAppAfterInstall(tv)
+        } catch DevModeError.keyRefused {
+            // Geliştirici modu yeniden açılınca TV yeni anahtar üretir; eskisi işe yaramaz.
+            store.remove(StoreKey.tvDevKey)
+            tvApp = .needsPassphrase(error: nil)
+        } catch {
+            tvApp = .failed(error as? DevModeError ?? .installFailed)
+        }
+    }
+
+    private func openTVAppAfterInstall(_ tv: LGTV) async {
+        if let keeper {
+            keeper.reconnect()
+        } else {
+            _ = try? await services.pairTV(tv, key: store.load(String.self, for: StoreKey.tvKey), server: serverAddress(for: tv))
+        }
     }
 
     func sendTestSubtitle() {
@@ -247,10 +383,12 @@ final class AppModel {
     /// Kurulumu baştan başlatır (kayıtlı her şeyi siler).
     func resetSetup() {
         stop()
-        [StoreKey.accountId, StoreKey.console, StoreKey.tv, StoreKey.tvKey].forEach(store.remove)
+        [StoreKey.accountId, StoreKey.console, StoreKey.tv, StoreKey.tvKey, StoreKey.tvDevKey].forEach(store.remove)
         accountId = nil
         console = nil
         tv = nil
+        tvApp = .unknown
+        tvAppMissing = false
         step = .welcome
     }
 
@@ -275,9 +413,12 @@ final class AppModel {
         self.session = session
 
         // TV uygulamasını başlat ve açık tut; TV kapalıysa açıldığında bağlanır.
-        let keeper = services.makeKeeper(tv: tv, key: store.load(String.self, for: StoreKey.tvKey), params: ["server": serverAddress(for: tv)])
+        let keeper = services.makeKeeper(tv: tv, key: store.load(String.self, for: StoreKey.tvKey), params: ["server": serverAddress(for: tv)]) { [weak self] moved in
+            Task { @MainActor in self?.tvMoved(to: moved) }
+        }
         keeper.start(interval: .seconds(5))
         self.keeper = keeper
+        Task { await refreshTVApp() }
 
         // Mac uykudan uyanınca bağlantıları hemen yenile.
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -291,12 +432,17 @@ final class AppModel {
         isRunning = true
     }
 
+    func tvMoved(to moved: LGTV) {
+        tv = moved
+        store.save(moved, for: StoreKey.tv)
+    }
+
     /// Okuma hattını güncel dillerle (yeniden) kurar.
     private func makePipeline() {
         pipeline?.reset()
         let pipeline = SubtitlePipeline(reader: VisionReader(language: settings.sourceLanguage),
                                         translator: Translator(source: settings.sourceLanguage, target: settings.targetLanguage),
-                                        server: server)
+                                        server: server, scheduler: ReadScheduler())
         pipeline.onPair = { [weak self] source, translation in
             self?.lastSource = source
             self?.lastTranslation = translation

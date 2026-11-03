@@ -18,8 +18,9 @@ final class SubtitlePipeline {
     private let reader: TextReader
     private let translator: TextTranslator
     private let server: SubtitleSending
-    /// Kareler saniyede ~15 kez okunur; yaklaşık 0,3 sn boş kalan bölge altyazının kalktığı anlamına gelir.
-    private var stabilizer = SubtitleStabilizer(emptyFramesToClear: 4)
+    /// Kareler saniyede ~20 kez okunur; yaklaşık 0,3 sn boş kalan bölge altyazının kalktığı anlamına gelir.
+    private var stabilizer = SubtitleStabilizer(emptyFramesToClear: 6)
+    private var scheduler: ReadScheduler
     /// Her çeviri isteği sıra numarası alır. Hızlı konuşmada çeviriler sırasız dönebilir:
     /// daha yeni bir satırın çevirisi gösterilmediyse eski satırınki yine gösterilir.
     private var lastRequested = 0
@@ -36,19 +37,32 @@ final class SubtitlePipeline {
     /// Her çeviri denemesinden sonra çağrılır (başarılıysa nil).
     var onTranslationResult: ((TranslatorError?) -> Void)?
 
-    init(reader: TextReader, translator: TextTranslator, server: SubtitleSending) {
+    /// `scheduler`: varsayılanı her kareyi okur; uygulama gereksiz okumaları atlayan planı verir.
+    init(reader: TextReader, translator: TextTranslator, server: SubtitleSending, scheduler: ReadScheduler = .always) {
         self.reader = reader
         self.translator = translator
         self.server = server
+        self.scheduler = scheduler
     }
 
     /// Okuma çeviriyi beklemez; böylece çeviri sürerken gelen satırlar da yakalanır.
     func process(_ frame: CGImage, region: CropRegion) async {
         // Yazı tanıma uzun sürebilir; arayüz takılmasın diye ana iş parçacığının dışında yapılır.
         let reader = self.reader
-        let text = await Task.detached(priority: .userInitiated) {
-            (try? reader.read(RegionCropper.crop(frame, to: region))) ?? ""
+        let (area, signature) = await Task.detached(priority: .userInitiated) {
+            let area = RegionCropper.crop(frame, to: region)
+            return (area, RegionCropper.signature(of: area))
         }.value
+        let text: String
+        switch scheduler.plan(signature: signature) {
+        case .reuse(let last):
+            text = last
+        case .read(let deep):
+            text = await Task.detached(priority: .userInitiated) {
+                (try? reader.read(area, deep: deep)) ?? ""
+            }.value
+            scheduler.record(text)
+        }
         switch stabilizer.feed(text) {
         case .none:
             break
@@ -115,6 +129,7 @@ final class SubtitlePipeline {
     func reset() {
         session += 1
         lineOnScreen = nil
+        scheduler.reset()
         if stabilizer.reset() == .clear { server.clear() }
     }
 }

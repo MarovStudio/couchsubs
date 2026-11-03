@@ -3,11 +3,13 @@
 namespace CouchSubs.Core;
 
 /// <summary>Kare → bölge → yazı tanıma → kararlılık → çeviri → TV.</summary>
-public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator translator, ISubtitleSender sender)
+public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator translator, ISubtitleSender sender, ReadScheduler? scheduler = null)
 {
     private readonly object gate = new();
-    /// <summary>Kareler saniyede ~15 kez okunur; yaklaşık 0,3 sn boş kalan bölge altyazının kalktığı anlamına gelir.</summary>
-    private readonly SubtitleStabilizer stabilizer = new(emptyFramesToClear: 4);
+    /// <summary>Varsayılanı her kareyi okur; uygulama gereksiz okumaları atlayan planı verir.</summary>
+    private readonly ReadScheduler schedule = scheduler ?? ReadScheduler.Always();
+    /// <summary>Kareler saniyede ~20 kez okunur; yaklaşık 0,3 sn boş kalan bölge altyazının kalktığı anlamına gelir.</summary>
+    private readonly SubtitleStabilizer stabilizer = new(emptyFramesToClear: 6);
     private readonly Dictionary<int, Task> translations = [];
     /// <summary>
     /// Her çeviri isteği sıra numarası alır. Hızlı konuşmada çeviriler sırasız dönebilir:
@@ -34,7 +36,16 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         // Yazı tanıma uzun sürebilir; çağıranı (arayüzü) bekletmemek için iş parçacığı havuzunda yapılır.
         var text = await Task.Run(() =>
         {
-            try { return reader.Read(RegionCropper.Crop(frame, region)); }
+            try
+            {
+                var area = RegionCropper.Crop(frame, region);
+                ReadPlan plan;
+                lock (gate) plan = schedule.Plan(RegionCropper.Signature(area));
+                if (plan.Reuse) return plan.Text;
+                var read = reader.Read(area, plan.Deep);
+                lock (gate) schedule.Record(read);
+                return read;
+            }
             catch { return ""; }
         });
 
@@ -126,6 +137,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         {
             session++;
             lineOnScreen = null;
+            schedule.Reset();
             if (stabilizer.Reset() == StabilizerAction.Clear) sender.Clear();
         }
     }

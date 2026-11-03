@@ -28,23 +28,90 @@ public sealed class LiveServices : IAppServices
 
     public Task<IReadOnlyList<LgTv>> DiscoverTvsAsync() => LgDiscovery.SearchAsync();
 
-    public async Task<string> PairTvAsync(LgTv tv, string? key, string server)
+    public async Task<TvPairing> PairTvAsync(LgTv tv, string? key, string server)
     {
         using var client = new SsapClient(tv, key);
         var newKey = await client.ConnectAsync();
-        await client.LaunchAsync(AppController.TvAppId, new Dictionary<string, string> { ["server"] = server });
-        return newKey;
+        try
+        {
+            await client.LaunchAsync(AppController.TvAppId, new Dictionary<string, string> { ["server"] = server });
+            return new TvPairing(newKey, true);
+        }
+        catch (Exception)
+        {
+            return new TvPairing(newKey, false);
+        }
     }
 
     public IStreamSession MakeStream(RegisteredConsole console, byte[] accountId) => new StreamSession(console, accountId);
 
-    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters) =>
-        new Keeper(new TvKeeper(async () =>
+    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved)
+    {
+        var locator = new TvLocator(tv, async target =>
         {
-            var client = new SsapClient(tv, key);
-            await client.ConnectAsync();
-            return client;
-        }, AppController.TvAppId, parameters));
+            var client = new SsapClient(target, key);
+            try
+            {
+                await client.ConnectAsync();
+                return client;
+            }
+            catch
+            {
+                client.Dispose();
+                throw;
+            }
+        }, () => LgDiscovery.SearchAsync(), onMoved);
+        return new Keeper(new TvKeeper(locator.ConnectAsync, AppController.TvAppId, parameters));
+    }
+
+    // --- TV uygulamasını kurma ---
+
+    private static string? BundledTvPackage
+    {
+        get
+        {
+            var folder = Path.Combine(AppContext.BaseDirectory, "tv-app");
+            return Directory.Exists(folder) ? Directory.EnumerateFiles(folder, "*.ipk").FirstOrDefault() : null;
+        }
+    }
+
+    public string? BundledTvAppVersion =>
+        BundledTvPackage is { } package ? DevModeInstaller.VersionOfPackage(Path.GetFileName(package)) : null;
+
+    public Task<bool> IsDevModeOnAsync(string host) => DevModeInstaller.IsDevModeOnAsync(host);
+
+    public Task<string> FetchDevKeyAsync(string host, string passphrase) =>
+        DevModeInstaller.FetchKeyAsync(host, passphrase, new ProcessRunner(), DevModeTools.ForThisSystem());
+
+    public Task<string?> InstalledTvAppVersionAsync(string host, string devKey) =>
+        WithKeyFileAsync(devKey, file => Installer(host, file).InstalledVersionAsync());
+
+    public Task InstallTvAppAsync(string host, string devKey) =>
+        WithKeyFileAsync<object?>(devKey, async file =>
+        {
+            if (BundledTvPackage is not { } package || BundledTvAppVersion is not { } version)
+                throw new DevModeException(DevModeError.InstallFailed);
+            await Installer(host, file).InstallAsync(package, version);
+            return null;
+        });
+
+    private static DevModeInstaller Installer(string host, string keyFile) =>
+        new(host, keyFile, new ProcessRunner(), DevModeTools.ForThisSystem());
+
+    /// <summary>ssh anahtarı dosyadan okur; dosya yalnız komut süresince durur.</summary>
+    private static async Task<T> WithKeyFileAsync<T>(string key, Func<string, Task<T>> body)
+    {
+        var file = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        await File.WriteAllTextAsync(file, key);
+        try
+        {
+            return await body(file);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
 
     public ITextReader? MakeReader(string language) => WindowsOcrReader.Create(language);
 

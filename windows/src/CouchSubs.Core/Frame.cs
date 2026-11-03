@@ -80,12 +80,32 @@ public static class RegionCropper
         var bottom = (int)Math.Ceiling(image.Height * region.Bottom);
         return image.Crop(left, top, right - left, bottom - top);
     }
+
+    /// <summary>Bölgenin küçültülmüş gri kopyası: iki kareyi yazı tanımaya gerek kalmadan karşılaştırmaya yeter.</summary>
+    public static byte[] Signature(Frame image)
+    {
+        const int width = 64, height = 12;
+        var samples = new byte[width * height];
+        if (image.Width == 0 || image.Height == 0) return samples;
+        for (var y = 0; y < height; y++)
+        {
+            var row = (y * image.Height / height) * image.Stride;
+            for (var x = 0; x < width; x++)
+            {
+                var pixel = row + (x * image.Width / width) * 4;
+                samples[y * width + x] = (byte)((image.Pixels[pixel] + image.Pixels[pixel + 1] * 2 + image.Pixels[pixel + 2]) / 4);
+            }
+        }
+        return samples;
+    }
 }
 
 /// <summary>Bir görüntüdeki yazıyı okur (Windows'ta Windows.Media.Ocr).</summary>
 public interface ITextReader
 {
     string Read(Frame image);
+    /// <summary><paramref name="deep"/> false ise boş bölgede büyütülmüş okuma denenmez (işlemciyi çok daha az yorar).</summary>
+    string Read(Frame image, bool deep) => Read(image);
 }
 
 /// <summary>

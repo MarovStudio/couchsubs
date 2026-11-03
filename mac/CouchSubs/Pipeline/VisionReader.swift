@@ -6,6 +6,12 @@ import Vision
 
 protocol TextReader: Sendable {
     func read(_ image: CGImage) throws -> String
+    /// `deep` false ise boş bölgede büyütülmüş okuma denenmez (işlemciyi çok daha az yorar).
+    func read(_ image: CGImage, deep: Bool) throws -> String
+}
+
+extension TextReader {
+    func read(_ image: CGImage, deep: Bool) throws -> String { try read(image) }
 }
 
 /// Apple Vision ile cihaz üstünde yazı tanıma. Satırlar yukarıdan aşağı birleştirilir.
@@ -14,6 +20,10 @@ struct VisionReader: TextReader {
 
     func read(_ image: CGImage) throws -> String {
         try Self.firstReading(of: image, using: recognize)
+    }
+
+    func read(_ image: CGImage, deep: Bool) throws -> String {
+        deep ? try read(image) : try recognize(image)
     }
 
     /// Vision geniş bölgede "Go!" gibi kısa satırları sık sık hiç bulmaz. Bölgede yazı çıkmazsa

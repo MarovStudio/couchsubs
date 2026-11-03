@@ -112,9 +112,14 @@ public static class ScreenRenderer
         public Task<byte[]> AccountIdFromRedirectAsync(Uri redirect) => Task.FromResult(new byte[8]);
         public Task<RegisteredConsole> RegisterAsync(string host, byte[] accountId, uint pin) => throw new NotSupportedException();
         public Task<IReadOnlyList<LgTv>> DiscoverTvsAsync() => Task.FromResult<IReadOnlyList<LgTv>>([new("[LG] webOS TV", "192.168.1.30")]);
-        public Task<string> PairTvAsync(LgTv tv, string? key, string server) => throw new NotSupportedException();
+        public Task<TvPairing> PairTvAsync(LgTv tv, string? key, string server) => throw new NotSupportedException();
         public IStreamSession MakeStream(RegisteredConsole console, byte[] accountId) => throw new NotSupportedException();
-        public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters) => throw new NotSupportedException();
+        public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved) => throw new NotSupportedException();
+        public string? BundledTvAppVersion => null;
+        public Task<bool> IsDevModeOnAsync(string host) => Task.FromResult(false);
+        public Task<string> FetchDevKeyAsync(string host, string passphrase) => throw new NotSupportedException();
+        public Task<string?> InstalledTvAppVersionAsync(string host, string devKey) => throw new NotSupportedException();
+        public Task InstallTvAppAsync(string host, string devKey) => throw new NotSupportedException();
         public ITextReader? MakeReader(string language) => null;
     }
 

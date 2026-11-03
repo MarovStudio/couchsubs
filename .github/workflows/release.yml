@@ -84,12 +84,12 @@ jobs:
       - name: Paketle
         run: |
           npm install -g @webos-tools/cli
-          ares-package tv-webos -o dist
-          ls dist
+          ./scripts/package-tv.sh
+          ls dist/tv-app
       - uses: actions/upload-artifact@v4
         with:
           name: couchsubs-tv
-          path: dist/*.ipk
+          path: dist/tv-app/*.ipk
           if-no-files-found: error
 
   publish:

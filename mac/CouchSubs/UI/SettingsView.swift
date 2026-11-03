@@ -55,6 +55,7 @@ struct SettingsView: View {
                         RegionPicker(region: $model.settings.region, frame: model.lastFrame)
                         HintText(text: "Adjust the frame so it covers where the game shows its subtitles.")
                     }
+                    TVAppCard()
                     Card {
                         HStack(spacing: Theme.space("m")) {
                             Button("About CouchSubs") { model.showAbout = true }.buttonStyle(.secondary)

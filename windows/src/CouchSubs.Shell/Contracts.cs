@@ -12,6 +12,7 @@ public static class StoreKeys
     public const string Console = "console";
     public const string Tv = "tv";
     public const string TvKey = "tvKey";
+    public const string TvDevKey = "tvDevKey";
 }
 
 /// <summary>Kalıcı ayarlar (şifreli depo değil, sıradan ayar dosyası).</summary>
@@ -68,13 +69,31 @@ public interface IAppServices
     Task<byte[]> AccountIdFromRedirectAsync(Uri redirect);
     Task<RegisteredConsole> RegisterAsync(string host, byte[] accountId, uint pin);
     Task<IReadOnlyList<LgTv>> DiscoverTvsAsync();
-    /// <summary>TV ile eşleşir, TV uygulamasını sunucu adresiyle başlatır ve client-key'i döner.</summary>
-    Task<string> PairTvAsync(LgTv tv, string? key, string server);
+    /// <summary>TV ile eşleşir ve TV uygulamasını sunucu adresiyle başlatmayı dener.</summary>
+    Task<TvPairing> PairTvAsync(LgTv tv, string? key, string server);
     IStreamSession MakeStream(RegisteredConsole console, byte[] accountId);
-    IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters);
+    /// <param name="onMoved">TV ağda yeni bir adreste bulununca çağrılır.</param>
+    IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved);
+    /// <summary>Uygulamayla gelen TV paketinin sürümü (geliştirici derlemesinde paket olmayabilir).</summary>
+    string? BundledTvAppVersion { get; }
+    Task<bool> IsDevModeOnAsync(string host);
+    Task<string> FetchDevKeyAsync(string host, string passphrase);
+    Task<string?> InstalledTvAppVersionAsync(string host, string devKey);
+    Task InstallTvAppAsync(string host, string devKey);
     /// <summary>Oyun dili için yazı tanıyıcı; bilgisayarda hiç OCR dili yoksa null.</summary>
     ITextReader? MakeReader(string language);
     ITranslationModel Translation { get; }
+}
+
+/// <param name="Launched">false ise TV uygulaması açılamadı; büyük olasılıkla TV'de kurulu değil.</param>
+public sealed record TvPairing(string Key, bool Launched);
+
+public enum TvAppKind { Unknown, Working, UpToDate, DevModeOff, NeedsPassphrase, Failed }
+
+/// <summary>TV uygulamasının kurulum durumu.</summary>
+public sealed record TvAppState(TvAppKind Kind, string? Version = null, DevModeError? Error = null)
+{
+    public static readonly TvAppState Unknown = new(TvAppKind.Unknown);
 }
 
 /// <summary>Durum noktasının rengi: bağlı (yeşil), sorun var (turuncu), boşta (gri).</summary>

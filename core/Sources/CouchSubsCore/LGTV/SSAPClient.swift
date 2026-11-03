@@ -25,6 +25,7 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
 
     private let endpoints: [URL]
     private let approvalTimeout: Duration
+    private let handshakeTimeout: Duration
     private var clientKey: String?
     private var session: URLSession!
     private var socket: URLSessionWebSocketTask?
@@ -35,10 +36,11 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
         self.init(endpoints: [URL(string: "wss://\(tv.host):3001")!, URL(string: "ws://\(tv.host):3000")!], clientKey: clientKey)
     }
 
-    init(endpoints: [URL], clientKey: String?, approvalTimeout: Duration = .seconds(60)) {
+    init(endpoints: [URL], clientKey: String?, approvalTimeout: Duration = .seconds(60), handshakeTimeout: Duration = .seconds(5)) {
         self.endpoints = endpoints
         self.clientKey = clientKey
         self.approvalTimeout = approvalTimeout
+        self.handshakeTimeout = handshakeTimeout
         super.init()
         session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil)
     }
@@ -49,7 +51,7 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
             let task = session.webSocketTask(with: url)
             task.resume()
             do {
-                try await task.send(.string(String(decoding: SSAPMessages.register(clientKey: clientKey), as: UTF8.self)))
+                try await sendRegistration(on: task)
                 let key = try await waitForRegistration(on: task)
                 socket = task
                 clientKey = key
@@ -82,6 +84,21 @@ public final class SSAPClient: NSObject, TVControlling, URLSessionDelegate, @unc
     }
 
     // MARK: - İç işleyiş
+
+    /// Adres artık başka bir cihazdaysa bağlantı yanıtsız kalabilir; o adreste uzun süre beklenmez.
+    private func sendRegistration(on task: URLSessionWebSocketTask) async throws {
+        let message = String(decoding: SSAPMessages.register(clientKey: clientKey), as: UTF8.self)
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await task.send(.string(message)) }
+            group.addTask { [handshakeTimeout] in
+                try await Task.sleep(for: handshakeTimeout)
+                task.cancel()
+                throw SSAPError.cannotConnect
+            }
+            defer { group.cancelAll() }
+            try await group.next()
+        }
+    }
 
     /// TV'deki izin sorusu yanıtlanana kadar bekler; `approvalTimeout` dolarsa vazgeçer.
     private func waitForRegistration(on task: URLSessionWebSocketTask) async throws -> String {

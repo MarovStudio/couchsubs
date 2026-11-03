@@ -75,7 +75,7 @@ internal sealed class SerialQueue : IDisposable
 public sealed class StreamSession : IStreamSession
 {
     /// <summary>Saniyede en çok bu kadar kare BGRA'ya çevrilir (Mac'teki gibi).</summary>
-    internal const int MaxFps = 15;
+    internal const int MaxFps = 20;
 
     /// <summary>Çözülmüş kare. Oturumun kare iş parçacığında çağrılır; işleyici meşgulken gelen kareler atlanır.</summary>
     public event Action<Frame>? FrameReceived;

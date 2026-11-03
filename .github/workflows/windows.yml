@@ -147,6 +147,12 @@ jobs:
       - name: Testler
         run: dotnet test windows/CouchSubs.Windows.slnx -c Release --no-build -m:1
 
+      - name: TV paketi
+        shell: bash
+        run: |
+          npm install -g @webos-tools/cli
+          ./scripts/package-tv.sh
+
       - name: Yayınla
         run: dotnet publish windows/src/CouchSubs.App -c Release -r win-x64 --self-contained -o publish/CouchSubs
 

@@ -22,6 +22,11 @@
     <Resource Include="Assets\logo.png" />
   </ItemGroup>
 
+  <!-- TV uygulaması paketi (scripts/package-tv.sh üretir); geliştirici modu açık TV'ye kurulur. -->
+  <ItemGroup>
+    <Content Include="..\..\..\dist\tv-app\*.ipk" Link="tv-app\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\CouchSubs.Core\CouchSubs.Core.csproj" />
     <ProjectReference Include="..\CouchSubs.Translation\CouchSubs.Translation.csproj" />

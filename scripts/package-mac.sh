@@ -11,6 +11,8 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 
 [[ -f third-party/build/CChiaki.xcframework/Info.plist ]] || ./scripts/build-chiaki-macos.sh
 
+./scripts/package-tv.sh
+
 BUILD="$PWD/build/mac"
 rm -rf "$BUILD"
 mkdir -p build
@@ -19,12 +21,17 @@ mkdir -p build
 SIGN_ARGS=(CODE_SIGN_IDENTITY="-")
 if [[ -n "$DEVELOPER_ID" ]]; then
   TEAM="${DEVELOPER_ID##*\(}"; TEAM="${TEAM%\)}"
+  # Xcode'un eklediği get-task-allow yetkisi olursa Apple onayı reddedilir.
   SIGN_ARGS=(CODE_SIGN_IDENTITY="$DEVELOPER_ID" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$TEAM"
-             OTHER_CODE_SIGN_FLAGS="--timestamp")
+             OTHER_CODE_SIGN_FLAGS="--timestamp" CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO)
 fi
 
+# XCODE_JOBS: bilgisayar yüklüyken derlemeyi hafifletmek için (verilmezse Xcode kendi seçer).
+JOB_ARGS=()
+[[ -n "$XCODE_JOBS" ]] && JOB_ARGS=(-jobs "$XCODE_JOBS")
+
 xcodebuild -project mac/CouchSubs.xcodeproj -scheme CouchSubs -configuration Release \
-  -derivedDataPath "$BUILD" "${SIGN_ARGS[@]}" build > "$BUILD.log" 2>&1 \
+  -derivedDataPath "$BUILD" "${JOB_ARGS[@]}" "${SIGN_ARGS[@]}" build > "$BUILD.log" 2>&1 \
   || { grep -E "error:" "$BUILD.log" | head -20; echo "Derleme başarısız, ayrıntı: $BUILD.log"; exit 1; }
 
 APP="$BUILD/Build/Products/Release/CouchSubs.app"

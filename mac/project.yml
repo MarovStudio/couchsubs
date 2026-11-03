@@ -29,6 +29,11 @@ targets:
       # Tasarım değerleri: Windows sürümüyle ortak tek kaynak.
       - path: ../design/tokens.json
         buildPhase: resources
+      # TV uygulaması paketi (scripts/package-tv.sh üretir; yoksa kurulum özelliği gizlenir).
+      - path: ../dist/tv-app
+        type: folder
+        optional: true
+        buildPhase: resources
     dependencies:
       - package: CouchSubsCore
       - package: RemotePlay

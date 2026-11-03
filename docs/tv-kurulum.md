@@ -1,7 +1,8 @@
 # CouchSubs TV uygulamasını LG TV'ye kurma
 
-CouchSubs TV uygulaması LG mağazasında yayınlanana kadar TV'ye geliştirici modu ile kurulur. Bunu bir kez
-yaparsınız. Mağaza sürümü çıkınca bu adımlara gerek kalmayacak.
+CouchSubs TV uygulaması LG mağazasında yayınlanana kadar TV'ye geliştirici modu ile kurulur. Geliştirici
+modunu siz açarsınız, uygulamayı Mac ya da Windows'taki CouchSubs kurar ve sonraki sürümlere kendisi
+günceller. Mağaza sürümü çıkınca bu adımlara gerek kalmayacak.
 
 ## 1. TV'de geliştirici modu
 
@@ -17,33 +18,26 @@ Geliştirici modu belirli bir süre sonra kapanır; Developer Mode uygulamasınd
 
 ## 2. Bilgisayarda
 
-[nodejs.org](https://nodejs.org) adresinden Node.js'i kurun (Mac'te `brew install node` de olur). Sonra
-Terminal'de (Windows'ta PowerShell'de):
+1. CouchSubs'ı açın. Kurulumdaki TV adımında TV'nizi seçip **Bağlan**'a basın ve TV'deki izni onaylayın.
+2. Ekranda parola sorulunca TV'de Developer Mode uygulamasını açın, **Key Server**'ı açın ve uygulamayı
+   ekranda bırakın.
+3. TV'de görünen **Passphrase**'i yazıp **TV'ye kur**'a basın.
+
+Parola yalnız bir kez sorulur. Sonraki sürümleri CouchSubs, çeviriyi başlattığınızda kendisi kurar. Kurulumu
+tamamladıysanız aynı kart **Ayarlar**'da da görünür. Geliştirici modunu kapatıp yeniden açarsanız TV yeni
+anahtar üretir ve parola bir kez daha sorulur.
+
+## Elle kurulum
+
+Otomatik kurulum çalışmazsa [Node.js](https://nodejs.org) kurup Terminal'de (Windows'ta PowerShell'de):
 
 ```bash
 npm install -g @webos-tools/cli
 ares-setup-device --add tv --info "{'host':'TV_IP_ADRESI','port':'9922','username':'prisoner'}"
 ares-novacom --device tv --getkey
+ares-install -d tv com.couchsubs.tv_0.6.1_all.ipk
 ```
 
-Son komut Passphrase'i sorar. "Failed to get ssh private key" hatası alırsanız Key Server kapanmıştır:
-TV'de tekrar açıp komutu hemen çalıştırın. Zamanlama tutmazsa Mac'te anahtarı doğrudan indirip
-Passphrase'i sonra girebilirsiniz:
-
-```bash
-curl -o ~/.ssh/tv_webos http://TV_IP_ADRESI:9991/webos_rsa && chmod 600 ~/.ssh/tv_webos
-ares-setup-device --modify tv --info "{'privatekey':'tv_webos','passphrase':'PASSPHRASE'}"
-```
-
-## 3. TV uygulamasını kurun
-
-[Sürümler](https://github.com/yorulmazsinan/couchsubs/releases/latest) sayfasından
-`com.couchsubs.tv_…_all.ipk` dosyasını indirin ve indirdiğiniz klasörde çalıştırın:
-
-```bash
-ares-install -d tv com.couchsubs.tv_0.6.0_all.ipk
-```
-
-(Kaynak koddan kuruyorsanız: `ares-package tv-webos -o dist` ve `ares-install -d tv dist/com.couchsubs.tv_*.ipk`.)
-
-Ardından bilgisayarda CouchSubs'ı açın; kurulum sihirbazı TV'yi bulur ve uygulamayı kendisi başlatır.
+Paketi [Sürümler](https://github.com/yorulmazsinan/couchsubs/releases/latest) sayfasından indirin.
+"Failed to get ssh private key" hatası alırsanız Key Server kapanmıştır: TV'de tekrar açıp komutu hemen
+çalıştırın.

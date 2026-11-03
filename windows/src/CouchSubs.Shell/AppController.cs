@@ -32,6 +32,9 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private byte[]? accountId;
     private RegisteredConsole? console;
     private LgTv? tv;
+    private TvAppState tvApp = TvAppState.Unknown;
+    /// <summary>Son eşleşmede TV uygulaması açılamadı.</summary>
+    private bool tvAppMissing;
     private UserSettings settings;
     private bool isRunning;
     private bool isStarting;
@@ -183,11 +186,109 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public async Task PairAsync(LgTv target)
     {
         await StartServerAsync();
-        var key = await services.PairTvAsync(target, store.Load<string>(StoreKeys.TvKey), ServerAddress(target));
+        var pairing = await services.PairTvAsync(target, store.Load<string>(StoreKeys.TvKey), ServerAddress(target));
         tv = target;
         store.Save(StoreKeys.Tv, target);
-        store.Save(StoreKeys.TvKey, key);
+        store.Save(StoreKeys.TvKey, pairing.Key);
+        tvAppMissing = !pairing.Launched;
         Changed(nameof(Tv), nameof(CanAdvance));
+        await RefreshTvAppAsync();
+    }
+
+    // --- TV uygulamasını kurma ---
+
+    public TvAppState TvApp
+    {
+        get => tvApp;
+        private set
+        {
+            tvApp = value;
+            Changed(nameof(TvApp));
+        }
+    }
+
+    /// <summary>
+    /// Geliştirici modu açık TV'de uygulamayı eksikse kurar, eskiyse günceller.
+    /// Anahtar yoksa ve uygulama çalışıyorsa kullanıcıdan bir şey istenmez.
+    /// </summary>
+    public async Task RefreshTvAppAsync()
+    {
+        if (tv is not { } target || services.BundledTvAppVersion is not { } bundled) return;
+        if (!await services.IsDevModeOnAsync(target.Host))
+        {
+            TvApp = tvAppMissing ? new TvAppState(TvAppKind.DevModeOff) : TvAppState.Unknown;
+            return;
+        }
+        if (store.Load<string>(StoreKeys.TvDevKey) is not { } devKey)
+        {
+            TvApp = tvAppMissing ? new TvAppState(TvAppKind.NeedsPassphrase) : TvAppState.Unknown;
+            return;
+        }
+        await InstallTvAppAsync(target, devKey, bundled);
+    }
+
+    /// <summary>Key Server'dan anahtarı alır (TV ekranındaki parolayla) ve uygulamayı kurar.</summary>
+    public async Task InstallTvAppAsync(string passphrase)
+    {
+        if (tv is not { } target || services.BundledTvAppVersion is not { } bundled) return;
+        TvApp = new TvAppState(TvAppKind.Working);
+        try
+        {
+            var devKey = await services.FetchDevKeyAsync(target.Host, passphrase.Trim());
+            store.Save(StoreKeys.TvDevKey, devKey);
+            await InstallTvAppAsync(target, devKey, bundled);
+        }
+        catch (DevModeException error)
+        {
+            TvApp = new TvAppState(TvAppKind.NeedsPassphrase, Error: error.Error);
+        }
+    }
+
+    private async Task InstallTvAppAsync(LgTv target, string devKey, string bundled)
+    {
+        TvApp = new TvAppState(TvAppKind.Working);
+        try
+        {
+            var installed = await services.InstalledTvAppVersionAsync(target.Host, devKey);
+            if (installed is not null && !DevModeInstaller.IsNewer(bundled, installed))
+            {
+                TvApp = new TvAppState(TvAppKind.UpToDate, installed);
+                return;
+            }
+            await services.InstallTvAppAsync(target.Host, devKey);
+            TvApp = new TvAppState(TvAppKind.UpToDate, bundled);
+            tvAppMissing = false;
+            await OpenTvAppAfterInstallAsync(target);
+        }
+        catch (DevModeException error) when (error.Error == DevModeError.KeyRefused)
+        {
+            // Geliştirici modu yeniden açılınca TV yeni anahtar üretir; eskisi işe yaramaz.
+            store.Remove(StoreKeys.TvDevKey);
+            TvApp = new TvAppState(TvAppKind.NeedsPassphrase);
+        }
+        catch (DevModeException error)
+        {
+            TvApp = new TvAppState(TvAppKind.Failed, Error: error.Error);
+        }
+    }
+
+    private async Task OpenTvAppAfterInstallAsync(LgTv target)
+    {
+        if (keeper is not null)
+        {
+            keeper.Reconnect();
+            return;
+        }
+        try { await services.PairTvAsync(target, store.Load<string>(StoreKeys.TvKey), ServerAddress(target)); }
+        catch (Exception) { /* TV uygulaması kuruldu; açılmadıysa kullanıcı açabilir */ }
+    }
+
+    /// <summary>TV ağda yeni bir adreste bulundu.</summary>
+    public void TvMoved(LgTv moved)
+    {
+        tv = moved;
+        store.Save(StoreKeys.Tv, moved);
+        Changed(nameof(Tv));
     }
 
     public void StartModelDownload()
@@ -235,10 +336,12 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public void ResetSetup()
     {
         Stop();
-        foreach (var key in new[] { StoreKeys.AccountId, StoreKeys.Console, StoreKeys.Tv, StoreKeys.TvKey }) store.Remove(key);
+        foreach (var key in new[] { StoreKeys.AccountId, StoreKeys.Console, StoreKeys.Tv, StoreKeys.TvKey, StoreKeys.TvDevKey }) store.Remove(key);
         accountId = null;
         console = null;
         tv = null;
+        tvAppMissing = false;
+        TvApp = TvAppState.Unknown;
         Step = OnboardingStep.Welcome;
         Changed(nameof(HasAccount), nameof(Console), nameof(Tv));
     }
@@ -264,9 +367,11 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             session = stream;
 
             // TV uygulamasını başlat ve açık tut; TV kapalıysa açıldığında bağlanır.
-            var tvKeeper = services.MakeKeeper(tv, store.Load<string>(StoreKeys.TvKey), new Dictionary<string, string> { ["server"] = ServerAddress(tv) });
+            var tvKeeper = services.MakeKeeper(tv, store.Load<string>(StoreKeys.TvKey), new Dictionary<string, string> { ["server"] = ServerAddress(tv) },
+                moved => post(() => TvMoved(moved)));
             tvKeeper.Start(TimeSpan.FromSeconds(5));
             keeper = tvKeeper;
+            _ = RefreshTvAppAsync();
 
             sleep.Begin();
             IsRunning = true;
@@ -342,7 +447,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         var reader = services.MakeReader(settings.SourceLanguage);
         OcrMissing = reader is null;
         if (reader is null) return;
-        var built = new SubtitlePipeline(reader, MakeTranslator(), server);
+        var built = new SubtitlePipeline(reader, MakeTranslator(), server, new ReadScheduler());
         built.PairShown += (source, translation) => post(() =>
         {
             LastSource = source;

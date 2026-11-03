@@ -25,6 +25,13 @@ final class FakeServices: AppServices {
     var launchedServer: String?
     var streams: [FakeStream] = []
     var keepers: [FakeKeeper] = []
+    var appOnTV: String? = "0.6.1"
+    var devMode = false
+    var keyServer = true
+    var refuseKey = false
+    var installs = 0
+    var pairCount = 0
+    var onMoved: ((LGTV) -> Void)?
 
     func discoverConsoles() async -> [ConsoleInfo] { consoles }
     func accountId(fromRedirect url: URL) async throws -> Data { Data(repeating: 1, count: 8) }
@@ -35,19 +42,36 @@ final class FakeServices: AppServices {
         return console
     }
     func discoverTVs() async -> [LGTV] { tvs }
-    func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> String {
+    func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> TVPairing {
         launchedServer = server
-        return "tv-key"
+        pairCount += 1
+        return TVPairing(key: "tv-key", launched: appOnTV != nil)
     }
     func makeStream(console: RegisteredConsole, accountId: Data) -> StreamControlling {
         let stream = FakeStream()
         streams.append(stream)
         return stream
     }
-    func makeKeeper(tv: LGTV, key: String?, params: [String: Any]) -> KeeperControlling {
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], onMoved: @escaping (LGTV) -> Void) -> KeeperControlling {
         let keeper = FakeKeeper()
         keepers.append(keeper)
+        self.onMoved = onMoved
         return keeper
+    }
+    var bundledTVAppVersion: String? = "0.6.1"
+    func isDevModeOn(host: String) async -> Bool { devMode }
+    func fetchDevKey(host: String, passphrase: String) async throws -> String {
+        guard keyServer else { throw DevModeError.keyServerOff }
+        guard passphrase == "ABC123" else { throw DevModeError.wrongPassphrase }
+        return "dev-key"
+    }
+    func installedTVAppVersion(host: String, devKey: String) async throws -> String? {
+        if refuseKey { throw DevModeError.keyRefused }
+        return appOnTV
+    }
+    func installTVApp(host: String, devKey: String) async throws {
+        installs += 1
+        appOnTV = bundledTVAppVersion
     }
 }
 
@@ -273,5 +297,122 @@ final class LocalizationTests: XCTestCase {
         XCTAssertFalse(english.isEmpty)
         XCTAssertEqual(Set(english.keys).subtracting(turkish.keys), [])
         XCTAssertTrue(turkish.values.allSatisfy { !$0.isEmpty })
+    }
+}
+
+@MainActor
+final class TVAppInstallTests: XCTestCase {
+    private let tv = LGTV(name: "LG TV", host: "192.168.1.153")
+
+    private func model(_ services: FakeServices, store: MemoryStore = MemoryStore()) -> AppModel {
+        AppModel(services: services, store: store, defaults: .isolated())
+    }
+
+    func testMissingAppWithDevModeOffShowsTheSteps() async throws {
+        let services = FakeServices()
+        services.appOnTV = nil
+        let model = model(services)
+        try await model.pair(tv)
+        XCTAssertEqual(model.tvApp, .devModeOff)
+        XCTAssertNotNil(model.tv, "Eşleşme uygulama olmadan da kaydedilir")
+    }
+
+    func testTurningDevModeOnAsksForThePassphrase() async throws {
+        let services = FakeServices()
+        services.appOnTV = nil
+        let model = model(services)
+        try await model.pair(tv)
+        services.devMode = true
+        await model.refreshTVApp()
+        XCTAssertEqual(model.tvApp, .needsPassphrase(error: nil))
+    }
+
+    func testPassphraseInstallsAndOpensTheApp() async throws {
+        let services = FakeServices()
+        services.appOnTV = nil
+        services.devMode = true
+        let store = MemoryStore()
+        let model = model(services, store: store)
+        try await model.pair(tv)
+        let pairs = services.pairCount
+        await model.installTVApp(passphrase: " ABC123 ")
+        XCTAssertEqual(model.tvApp, .upToDate("0.6.1"))
+        XCTAssertEqual(services.installs, 1)
+        XCTAssertEqual(store.load(String.self, for: StoreKey.tvDevKey), "dev-key")
+        XCTAssertEqual(services.pairCount, pairs + 1, "Kurulumdan sonra TV uygulaması açılır")
+    }
+
+    func testWrongPassphraseAsksAgain() async throws {
+        let services = FakeServices()
+        services.appOnTV = nil
+        services.devMode = true
+        let model = model(services)
+        try await model.pair(tv)
+        await model.installTVApp(passphrase: "WRONG")
+        XCTAssertEqual(model.tvApp, .needsPassphrase(error: .wrongPassphrase))
+        XCTAssertEqual(services.installs, 0)
+    }
+
+    func testClosedKeyServerIsExplained() async throws {
+        let services = FakeServices()
+        services.appOnTV = nil
+        services.devMode = true
+        services.keyServer = false
+        let model = model(services)
+        try await model.pair(tv)
+        await model.installTVApp(passphrase: "ABC123")
+        XCTAssertEqual(model.tvApp, .needsPassphrase(error: .keyServerOff))
+    }
+
+    func testOlderAppIsUpdatedWithoutAsking() async throws {
+        let services = FakeServices()
+        services.appOnTV = "0.4.0"
+        services.devMode = true
+        let store = MemoryStore()
+        store.save("dev-key", for: StoreKey.tvDevKey)
+        let model = model(services, store: store)
+        try await model.pair(tv)
+        XCTAssertEqual(model.tvApp, .upToDate("0.6.1"))
+        XCTAssertEqual(services.installs, 1)
+    }
+
+    func testCurrentAppIsNotReinstalled() async throws {
+        let services = FakeServices()
+        services.devMode = true
+        let store = MemoryStore()
+        store.save("dev-key", for: StoreKey.tvDevKey)
+        let model = model(services, store: store)
+        try await model.pair(tv)
+        XCTAssertEqual(model.tvApp, .upToDate("0.6.1"))
+        XCTAssertEqual(services.installs, 0)
+    }
+
+    func testRefusedKeyIsForgottenAndPassphraseAskedAgain() async throws {
+        let services = FakeServices()
+        services.devMode = true
+        services.refuseKey = true
+        let store = MemoryStore()
+        store.save("old-key", for: StoreKey.tvDevKey)
+        let model = model(services, store: store)
+        try await model.pair(tv)
+        XCTAssertEqual(model.tvApp, .needsPassphrase(error: nil))
+        XCTAssertNil(store.load(String.self, for: StoreKey.tvDevKey))
+    }
+
+    func testWorkingAppWithoutKeyAsksNothing() async throws {
+        let services = FakeServices()
+        services.devMode = true
+        let model = model(services)
+        try await model.pair(tv)
+        XCTAssertEqual(model.tvApp, .unknown)
+    }
+
+    func testMovedTVIsSaved() {
+        let store = MemoryStore()
+        let model = model(FakeServices(), store: store)
+        let moved = LGTV(name: "LG TV", host: "192.168.1.230")
+        model.tvMoved(to: moved)
+        XCTAssertEqual(model.tv, moved)
+        XCTAssertEqual(store.load(LGTV.self, for: StoreKey.tv), moved)
     }
 }

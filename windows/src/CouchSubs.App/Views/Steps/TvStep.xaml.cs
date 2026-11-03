@@ -59,11 +59,11 @@ public partial class TvStep : UserControl
         catch (SsapException error) when (error.Reason != "cannot connect")
         {
             // TV yanıt verdi ama reddetti ya da süre doldu: gerçek nedeni göster.
-            Error.Text = $"{Localizer.Current["The TV did not respond. Is the CouchSubs TV app installed?"]} ({error.Reason})";
+            Error.Text = $"{Localizer.Current["The TV did not respond. Make sure it is on and on the same network."]} ({error.Reason})";
         }
         catch (Exception)
         {
-            Error.Text = Localizer.Current["The TV did not respond. Is the CouchSubs TV app installed?"];
+            Error.Text = Localizer.Current["The TV did not respond. Make sure it is on and on the same network."];
         }
         Waiting.Visibility = Visibility.Collapsed;
         Tvs.IsEnabled = true;
