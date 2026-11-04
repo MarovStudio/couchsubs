@@ -115,6 +115,8 @@ Menü adları markaya göre biraz değişebilir.
 2. Dosyayı bir USB belleğe kopyalayıp TV'ye takın.
 3. TV'de dosya yöneticisiyle dosyayı açıp kurun. TV'nizde dosya yöneticisi yoksa Play Store'dan ücretsiz birini kurun.
 
+Yeni sürüme geçerken önce eski CouchSubs'ı TV'den kaldırın. Paket şimdilik geçici bir imza taşıdığı için üzerine kurulmaz.
+
 ### 3. Bağlayın
 
 1. CouchSubs'ın TV adımında **Android TV / Google TV**'yi seçin.

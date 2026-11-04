@@ -41,6 +41,6 @@ Not tested on a real TV yet. Some TVs may not give the HDMI picture to other app
 black. Please report your TV model in [Issues](https://github.com/yorulmazsinan/couchsubs/issues).
 
 1. In **Settings › Device Preferences › About** press OK on **Build** 7 times, then allow your file manager under **Unknown sources**.
-2. Copy `CouchSubs-androidtv.apk` from [Releases](https://github.com/yorulmazsinan/couchsubs/releases) to a USB stick and install it with a file manager on the TV.
+2. Copy `CouchSubs-androidtv.apk` from [Releases](https://github.com/yorulmazsinan/couchsubs/releases) to a USB stick and install it with a file manager on the TV. To update, uninstall the old app first: the package has a temporary signature for now.
 3. In the TV step of CouchSubs, select **Android TV / Google TV**, then open CouchSubs on the TV. It finds your computer by itself.
 4. If there is no picture, press OK for the panel and pick the HDMI input with left and right.

@@ -23,6 +23,8 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bilinen durumlar**
 
+- LG TV uygulamasının bu sürümü (0.7.0) Samsung ve Android ile ortak koda geçti ve gerçek TV'de henüz denenmedi. Önceki sürümü gerçek LG TV'de çalıştı.
+- Android TV paketi geçici imzalı: yeni sürüme geçerken önce eskisini TV'den kaldırın.
 - Windows sürümü henüz gerçek bir bilgisayarda denenmedi; ilk deneyenlerin geri bildirimi çok değerli.
 - Windows paketi imzasız: "Windows bilgisayarınızı korudu" uyarısında **Ek bilgi › Yine de çalıştır**. İlk açılışta çeviri modeli için yaklaşık 530 MB indirilir.
 - Mağaza sürümleri henüz yok. Vestel, Arçelik, Beko ve Grundig'in Linux modelleri ile Philips Saphi ve Titan OS desteklenmiyor.
@@ -32,4 +34,4 @@ Sorunları [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasın
 
 ---
 
-New beta. Reads the English subtitles of PS5 games and shows a Turkish translation on an LG TV, on top of the game. The desktop app now installs the TV app itself once Developer Mode is on. Samsung and Android TV apps are included but not tested on real TVs yet. Windows has not been tested on a real PC yet. Setup: see the [README](https://github.com/yorulmazsinan/couchsubs#english).
+New beta. Reads the English subtitles of PS5 games and shows a Turkish translation on an LG TV, on top of the game. The desktop app now installs the TV app itself once Developer Mode is on. Samsung and Android TV apps are included but not tested on real TVs yet. This LG TV app version (0.7.0) moved to shared code and has not been tested on a real TV either; the previous version ran on a real LG TV. The Android TV package has a temporary signature, so uninstall the old app before updating. Windows has not been tested on a real PC yet. Setup: see the [README](https://github.com/yorulmazsinan/couchsubs#english).
