@@ -53,7 +53,8 @@ fi
 [[ -x "$APP/Contents/MacOS/couchsubs-tv-helper" ]] || { echo "TV kurulum yardımcısı pakette yok."; exit 1; }
 # package-tv.sh dist/tv-app'i baştan kurar; APK yalnız ANDROID_APK verilince geri eklenir. Yerel deneme derlemesi için
 # ALLOW_NO_APK=1 ile atlanır.
-if [[ -z "$ALLOW_NO_APK" ]] && ! compgen -G "$APP/Contents/Resources/tv-app/*.apk" > /dev/null; then
+APKS=("$APP"/Contents/Resources/tv-app/*.apk(N))
+if [[ -z "$ALLOW_NO_APK" ]] && (( ${#APKS} == 0 )); then
   echo "Android TV paketi (APK) uygulamada yok: ANDROID_APK=/yol/couchsubs-androidtv.apk ile çalıştırın."; exit 1
 fi
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
