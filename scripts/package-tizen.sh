@@ -12,7 +12,10 @@ cp tv-webos/app.js tv-webos/i18n.js tv-webos/config.js tv-webos/index.html tv-we
 cp tv-webos/icon.png "$OUT/panel-icon.png"
 cp tv-tizen/platform.js tv-tizen/config.xml tv-tizen/icon.png "$OUT/"
 # Panel başlığındaki küçük simge webOS'taki gibi icon.png adını kullanamaz: Tizen'in simgesi büyüktür.
-sed 's/src="icon.png"/src="panel-icon.png"/' tv-webos/index.html > "$OUT/index.html"
+# Samsung'un ürün API'leri (ekran koruyucuyu kapatmak için webapis.appcommon) platform.js'ten önce yüklenir.
+sed -e 's/src="icon.png"/src="panel-icon.png"/' \
+    -e 's|  <script src="platform.js"></script>|  <script src="$WEBAPIS/webapis/webapis.js"></script>\n  <script src="platform.js"></script>|' \
+    tv-webos/index.html > "$OUT/index.html"
 # Masaüstü uygulamalarına gömülen imzasız paket: CouchSubs kurarken TV'ye özel sertifikayla imzalar.
 VERSION=$(sed -n 's/.* version="\([0-9.]*\)" viewmodes.*/\1/p' tv-tizen/config.xml | head -1)
 mkdir -p dist/tv-app

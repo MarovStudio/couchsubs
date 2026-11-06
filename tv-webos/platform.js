@@ -6,7 +6,28 @@
   window.COUCHSUBS_PLATFORM = {
     backKey: 461,
 
-    init: function () {},
+    // Oyun kumandayla oynanır, TV kumandasına dokunulmaz; TV bunu boşta sanıp ekran koruyucuya ve sonra uykuya
+    // geçer. TV ekran koruyucuyu açmadan önce abonelere zaman damgalı bir istek yollar; ack:false yanıtı onu erteler
+    // (Kodi'nin webOS sürümünün yaptığı gibi). Servis yoksa ya da izin verilmezse sessizce geçilir.
+    init: function () {
+      var CLIENT = 'com.couchsubs.tv';
+      try {
+        var register = new PalmServiceBridge();
+        register.onservicecallback = function (message) {
+          var request;
+          try { request = JSON.parse(message); } catch (e) { return; }
+          if (!request || request.timestamp === undefined) return;
+          var reply = new PalmServiceBridge();
+          reply.call('luna://com.webos.service.tvpower/power/responseScreenSaverRequest',
+            JSON.stringify({ clientName: CLIENT, ack: false, timestamp: request.timestamp }));
+          window.__screenSaverReply = reply;
+        };
+        register.call('luna://com.webos.service.tvpower/power/registerScreenSaverRequest',
+          JSON.stringify({ subscribe: true, clientName: CLIENT }));
+        // Köprü nesnesi çöpe gitmesin; abonelik uygulama açık kaldıkça sürer.
+        window.__screenSaverBridge = register;
+      } catch (e) {}
+    },
 
     launchParams: function () {
       return window.PalmSystem && window.PalmSystem.launchParams;

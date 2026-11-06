@@ -48,6 +48,11 @@
       for (var i = 0; i < KEYS.length; i++) {
         try { tizen.tvinputdevice.registerKey(KEYS[i]); } catch (e) {}
       }
+      // Oyun TV kumandasına dokunmadan oynanır; TV boşta sanıp ekran koruyucuyu açmasın (Samsung AppCommon API).
+      // Eski TV'lerde API yoksa sessizce geçilir.
+      try {
+        webapis.appcommon.setScreenSaver(webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF);
+      } catch (e) {}
     },
 
     launchParams: requestedParams,
