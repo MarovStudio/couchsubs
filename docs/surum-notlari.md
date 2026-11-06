@@ -1,37 +1,36 @@
-CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunlarının İngilizce altyazısını okur, Türkçesini LG TV'de oyunun üstünde gösterir.
+CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunlarının İngilizce altyazısını okur, Türkçesini TV'de oyunun üstünde gösterir.
+
+**İndir:** [Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) · [Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip)
 
 **Bu sürümde yenilikler**
 
-- **Samsung TV uygulaması.** Gerçek TV'de henüz denenmedi, kendi Samsung sertifikanızla kurulur.
-- **Android TV uygulaması:** Vestel, Arçelik, Beko, Grundig, Philips ve diğer Android/Google TV'ler için. Gerçek TV'de henüz denenmedi.
-- **Geliştirici modu rehberi:** [adım adım kurulum](https://github.com/yorulmazsinan/couchsubs/blob/main/docs/tv-kurulum.md).
-- **TV uygulamasını CouchSubs kuruyor.** TV'de geliştirici modunu açın, ekrandaki parolayı bir kez yazın; sonraki sürümleri de kendisi kurar.
-- **TV'nin ağ adresi değişse de bağlantı kopmuyor.** Uygulama TV'yi ağda yeniden bulur.
-- **Altyazı daha sık kontrol ediliyor.** Saniyede 20 okuma; altyazı bölgesi değişmediyse yazı tanıma çalışmaz.
-- **Mac paketi Apple onaylı.** İlk açılışta ek izin gerekmez.
+- **Kurulum çok daha kolay.** TV uygulamasını artık her markada CouchSubs kendisi kuruyor. TV'de geliştirici modunu açmanız yeter; adımları uygulama ekranda gösterir ve TV'yi kendisi bekler.
+  - **Samsung:** Tizen Studio, sertifika yöneticisi ve komut satırı gerekmez. Tarayıcıda bir kez Samsung hesabınızla giriş yaparsınız, CouchSubs TV'nize özel imzayı alır ve kurar.
+  - **Android TV:** USB bellek gerekmez. TV'de hata ayıklamayı açın, TV'nin sorusuna "İzin ver" deyin; CouchSubs uygulamayı ağ üzerinden kurar.
+  - **LG:** geliştirici modunun 1000 saatlik süresini CouchSubs her kullanışınızda kendisi baştan başlatır.
+- **Tek tıkla indirme.** Dosya adları artık sürüm numarası taşımıyor; yukarıdaki bağlantılar hep en son sürümü indirir.
 
 **İndirme**
 
 | Dosya | Ne için |
 |---|---|
-| `CouchSubs-…-macos.zip` | Mac (Apple Silicon, macOS 26+) |
-| `CouchSubs-…-windows-x64.zip` | Windows 10 (2004) / 11, 64 bit |
+| `CouchSubs-macos.zip` | Mac (Apple Silicon, macOS 26+) |
+| `CouchSubs-windows-x64.zip` | Windows 10 (2004) / 11, 64 bit |
 | `com.couchsubs.tv_…_all.ipk` | LG TV uygulaması, elle kurmak isteyenler için |
-| `CouchSubs-samsung-kaynak.zip` | Samsung TV uygulaması, kendi sertifikanızla imzalanır |
-| `CouchSubs-androidtv.apk` | Android TV / Google TV uygulaması |
+| `CouchSubs-samsung-kaynak.zip` | Samsung TV uygulaması, Tizen Studio ile elle kurmak isteyenler için |
+| `CouchSubs-androidtv.apk` | Android TV / Google TV uygulaması, USB bellekle kurmak isteyenler için |
 | `SHA256SUMS.txt` | Dosyaların doğrulama özetleri |
 
 **Bilinen durumlar**
 
-- LG TV uygulamasının bu sürümü (0.7.0) Samsung ve Android ile ortak koda geçti ve gerçek TV'de henüz denenmedi. Önceki sürümü gerçek LG TV'de çalıştı.
-- Android TV paketi geçici imzalı: yeni sürüme geçerken önce eskisini TV'den kaldırın.
-- Windows sürümü henüz gerçek bir bilgisayarda denenmedi; ilk deneyenlerin geri bildirimi çok değerli.
-- Windows paketi imzasız: "Windows bilgisayarınızı korudu" uyarısında **Ek bilgi › Yine de çalıştır**. İlk açılışta çeviri modeli için yaklaşık 530 MB indirilir.
+- Samsung ve Android TV kurulumu gerçek TV'de henüz denenmedi. Sorun olursa TV modelinizle birlikte [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından yazın; elle kurulum yolları [rehberde](https://github.com/yorulmazsinan/couchsubs/blob/main/docs/tv-kurulum.md) duruyor.
+- Samsung'da geliştirici modunda girilen bilgisayar adresi değişirse TV bilgisayarı tanımaz; adresi yeniden girin.
+- Android TV paketi geçici imzalı: CouchSubs eski kopyayı gerekirse kendisi kaldırıp yenisini kurar.
+- Windows sürümü henüz gerçek bir bilgisayarda denenmedi. Paket imzasız: "Windows bilgisayarınızı korudu" uyarısında **Ek bilgi › Yine de çalıştır**. İlk açılışta çeviri modeli için yaklaşık 530 MB indirilir.
 - Mağaza sürümleri henüz yok. Vestel, Arçelik, Beko ve Grundig'in Linux modelleri ile Philips Saphi ve Titan OS desteklenmiyor.
-- Geliştirici modu en çok 1000 saat açık kalır; süre dolmadan TV'den uzatın, yoksa TV uygulaması silinir.
 
 Sorunları [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından bildirebilirsiniz.
 
 ---
 
-New beta. Reads the English subtitles of PS5 games and shows a Turkish translation on an LG TV, on top of the game. The desktop app now installs the TV app itself once Developer Mode is on. Samsung and Android TV apps are included but not tested on real TVs yet. This LG TV app version (0.7.0) moved to shared code and has not been tested on a real TV either; the previous version ran on a real LG TV. The Android TV package has a temporary signature, so uninstall the old app before updating. Windows has not been tested on a real PC yet. Setup: see the [README](https://github.com/yorulmazsinan/couchsubs#english).
+New beta. Setup is much simpler: CouchSubs now installs the TV app on every supported TV by itself. Samsung needs a one-time Samsung account sign-in instead of Tizen Studio; Android TV installs over the network instead of a USB stick; on LG, CouchSubs restarts the 1000-hour developer mode session each time you use it. Download links no longer change between versions: [Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) · [Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip). Samsung and Android TV installs are not tested on real TVs yet. Setup: see the [README](https://github.com/yorulmazsinan/couchsubs#english).

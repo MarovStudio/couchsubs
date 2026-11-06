@@ -1,13 +1,14 @@
 # CouchSubs TV uygulamasını kurma
 
-TV uygulamaları henüz mağazalarda yok. Kurmak için TV'nizde geliştirici modunu açmanız gerekir. Bu ücretsizdir ve
-TV'ye zarar vermez. Önce TV'nizin hangi gruba girdiğine bakın:
+TV uygulamaları henüz mağazalarda yok. TV'nizde geliştirici modunu açmanız yeter: uygulamayı CouchSubs kendisi kurar.
+Geliştirici modu ücretsizdir ve TV'ye zarar vermez. Adımları bilgisayar uygulaması da TV adımında gösterir ve TV'yi
+kendisi bekler; bu sayfa aynı adımların ayrıntılı hâlidir. Önce TV'nizin hangi gruba girdiğine bakın:
 
 | TV | Durum | Rehber |
 |---|---|---|
 | **LG** (webOS 4 ve üstü) | Gerçek TV'de denendi. CouchSubs TV uygulamasını kendisi kurar | [LG](#lg-tv) |
-| **Samsung** (Tizen) | Gerçek TV'de henüz denenmedi. Kendi Samsung sertifikanız gerekir | [Samsung](#samsung-tv) |
-| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi | [Android TV](#android-tv--google-tv) |
+| **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de henüz denenmedi. CouchSubs kendisi kurar, bir kez Samsung girişi ister | [Samsung](#samsung-tv) |
+| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi. CouchSubs ağ üzerinden kendisi kurar | [Android TV](#android-tv--google-tv) |
 | **Vestel, Arçelik, Beko, Grundig'in Linux modelleri, Philips Saphi ve Titan OS** | Desteklenmiyor: bu TV'lere uygulama kurmanın bir yolunu bulamadık | |
 
 **TV'm Android mi?** Ana ekranda Google Play Store ya da Google TV yazıyorsa Android'dir. Üreticinin kendi uygulama
@@ -40,9 +41,12 @@ Parola yalnız bir kez sorulur. Yeni sürümleri CouchSubs, çeviriyi başlattı
 
 ### Süreyi uzatın
 
-Developer Mode uygulamasındaki **Remain Session** kalan süreyi gösterir (en çok 1000 saat). Süre dolmadan TV internete
-bağlıyken **EXTEND**'e basın. Süre dolarsa geliştirici modu kapanır ve TV uygulaması silinir; süre dolduktan sonra
-uzatılamaz, baştan kurmanız gerekir. TV internetsiz 10 kez yeniden başlarsa da aynısı olur.
+Geliştirici modu en çok 1000 saat açık kalır. **CouchSubs, her kullanışınızda süreyi kendisi baştan başlatır** ve kalan
+süreyi TV adımında gösterir. TV'nin kendi ekranındaki **Remain Session** sayacı bunu TV yeniden başlayınca gösterir.
+
+CouchSubs'ı uzun süre kullanmayacaksanız, süre dolmadan TV internete bağlıyken Developer Mode uygulamasındaki
+**EXTEND**'e basın. Süre dolarsa geliştirici modu kapanır ve TV uygulaması silinir; süre dolduktan sonra uzatılamaz,
+baştan kurmanız gerekir. TV internetsiz 10 kez yeniden başlarsa da aynısı olur.
 
 Modu kapatıp yeniden açarsanız TV yeni anahtar üretir ve parola bir kez daha sorulur.
 
@@ -61,39 +65,40 @@ Paketi [Sürümler](https://github.com/yorulmazsinan/couchsubs/releases) sayfas�
 
 ## Samsung TV
 
-Samsung, uygulamanın her TV için ayrı imzalanmasını ister. Bu yüzden CouchSubs kurulumu sizin yerinize yapamaz ve
-adımlar LG'den uzundur. Gerçek TV'de henüz denenmedi; sorun olursa
-[Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından yazın.
+Samsung, uygulamanın her TV için ayrı imzalanmasını ister. CouchSubs bunu sizin yerinize yapar: tek gereken, bir kez
+ücretsiz bir Samsung hesabıyla giriş yapmanız. Gerçek TV'de henüz denenmedi; sorun olursa
+[Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından TV modelinizle birlikte yazın.
 
 ### 1. TV'de geliştirici modunu açın
 
 1. TV'de **Uygulamalar** ekranını açın.
-2. Kumandayla ya da ekran klavyesiyle `12345` yazın. Geliştirici modu penceresi açılır.
+2. Kumandayla `1 2 3 4 5` tuşlarına basın (ya da ekran klavyesiyle `12345` yazın). Geliştirici modu penceresi açılır.
 3. **Developer mode**'u **On** yapın.
-4. Bilgisayarınızın IP adresini yazıp **OK**'e basın.
+4. **Host PC IP** alanına bilgisayarınızın adresini yazıp **OK**'e basın. Adresi CouchSubs TV adımında gösterir.
 5. TV'yi yeniden başlatın. Uygulamalar ekranında **Develop Mode** yazısı görünür.
 
-### 2. Bilgisayarı hazırlayın
+### 2. CouchSubs kursun
 
-1. [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html)'yu ve
-   Package Manager'dan **Samsung Certificate Extension**'ı kurun.
-2. **Tools › Device Manager**'dan TV'yi IP adresiyle ekleyip bağlanın.
-3. **Tools › Certificate Manager**'dan **Samsung** türünde sertifika profili oluşturun ve Samsung hesabınızla giriş yapın.
-   Distributor sertifikasına Device Manager'daki TV'nin DUID'ini ekleyin.
+1. CouchSubs'ın TV adımında Samsung TV'nizi seçip **Bağlan**'a basın ve TV'deki izni onaylayın.
+2. CouchSubs geliştirici modunu görünce tarayıcıda Samsung'un giriş sayfasını açar. Samsung hesabınızla giriş yapın
+   (hesabınız yoksa aynı sayfadan ücretsiz açabilirsiniz). Tarayıcı yerel ağa erişim izni sorarsa **İzin ver** deyin.
+3. CouchSubs TV'nize özel sertifikayı alır, uygulamayı imzalar, kurar ve açar. Giriş yalnız ilk kurulumda istenir.
 
-### 3. Uygulamayı imzalayıp kurun
+**TV bilgisayarı kabul etmedi** uyarısı çıkarsa geliştirici modu penceresindeki **Host PC IP**'nin bilgisayarınızın
+şu anki adresi olduğunu kontrol edin ve TV'yi yeniden başlatın. Bilgisayarın adresi değişirse bu adım yinelenir.
 
-[Sürümler](https://github.com/yorulmazsinan/couchsubs/releases) sayfasından `CouchSubs-samsung-kaynak.zip` dosyasını bir klasöre açın ve:
+### Elle kurulum
+
+Otomatik kurulum çalışmazsa [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html)
+ile kurabilirsiniz: Package Manager'dan **Samsung Certificate Extension**'ı kurun, **Device Manager**'dan TV'ye bağlanın,
+**Certificate Manager**'da TV'nin DUID'iyle **Samsung** türünde sertifika profili oluşturun. Sonra
+[Sürümler](https://github.com/yorulmazsinan/couchsubs/releases) sayfasındaki `CouchSubs-samsung-kaynak.zip`'i bir
+klasöre açıp:
 
 ```bash
 tizen package -t wgt -s SERTIFIKA_PROFILI -- KLASOR
 tizen install -n KLASOR/CouchSubs.wgt -t TV_ADI
 ```
-
-### 4. Bağlayın
-
-CouchSubs'ın TV adımında Samsung TV'nizi seçip **Bağlan**'a basın ve TV'deki izni onaylayın. Uygulama açılmazsa TV'den
-kendiniz açın; bilgisayarı ağda kendisi bulur.
 
 ## Android TV / Google TV
 
@@ -101,24 +106,31 @@ Gerçek TV'de henüz denenmedi. Bazı TV'ler HDMI görüntüsünü başka uygula
 görünür ama arkası siyah kalır. Lütfen [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından
 TV modelinizle birlikte yazın.
 
-### 1. TV'de bilinmeyen kaynağa izin verin
+### 1. TV'de hata ayıklamayı açın
 
 1. **Ayarlar › Cihaz Tercihleri › Hakkında**'ya girin (Google TV'de **Ayarlar › Sistem › Hakkında**).
 2. **Yapı numarası**'nın üstünde Tamam tuşuna 7 kez basın. "Geliştiricisiniz" uyarısı çıkar.
-3. **Ayarlar › Uygulamalar › Güvenlik ve kısıtlamalar › Bilinmeyen kaynaklar**'dan dosya yöneticisine izin verin.
+3. **Cihaz Tercihleri** (Google TV'de **Sistem**) **› Geliştirici seçenekleri**'nden **USB hata ayıklama**'yı açın.
+   **Ağ hata ayıklama** seçeneği varsa onu da açın.
 
 Menü adları markaya göre biraz değişebilir.
 
-### 2. Uygulamayı kurun
+### 2. CouchSubs kursun
 
-1. [Sürümler](https://github.com/yorulmazsinan/couchsubs/releases) sayfasından `CouchSubs-androidtv.apk` dosyasını indirin.
-2. Dosyayı bir USB belleğe kopyalayıp TV'ye takın.
+1. CouchSubs'ın TV adımında **Android TV / Google TV**'yi seçin. CouchSubs TV'yi ağda arar.
+2. TV ekranında "USB hata ayıklamaya izin verilsin mi?" sorusu çıkar. **Bu bilgisayardan her zaman izin ver**'i
+   işaretleyip **İzin ver**'e basın.
+3. CouchSubs uygulamayı kurar ve açar. TV uygulaması bilgisayarı ağda kendisi bulur.
+4. Görüntü gelmezse Tamam ile paneli açıp sol ve sağ tuşlarıyla doğru HDMI girişini seçin.
+
+Kurulumdan sonra hata ayıklamayı kapatabilirsiniz; yeni sürümleri kurmak için CouchSubs onu yeniden açmanızı ister.
+
+### USB bellekle kurulum
+
+CouchSubs TV'yi ağda bulamazsa (bazı TV'ler ağdan hata ayıklamaya izin vermez):
+
+1. **Ayarlar › Uygulamalar › Güvenlik ve kısıtlamalar › Bilinmeyen kaynaklar**'dan dosya yöneticisine izin verin.
+2. [Sürümler](https://github.com/yorulmazsinan/couchsubs/releases) sayfasından `CouchSubs-androidtv.apk` dosyasını
+   indirip bir USB belleğe kopyalayın ve TV'ye takın.
 3. TV'de dosya yöneticisiyle dosyayı açıp kurun. TV'nizde dosya yöneticisi yoksa Play Store'dan ücretsiz birini kurun.
-
-Yeni sürüme geçerken önce eski CouchSubs'ı TV'den kaldırın. Paket şimdilik geçici bir imza taşıdığı için üzerine kurulmaz.
-
-### 3. Bağlayın
-
-1. CouchSubs'ın TV adımında **Android TV / Google TV**'yi seçin.
-2. TV'de CouchSubs'ı açın. Bilgisayarı ağda kendisi bulur.
-3. Görüntü gelmezse Tamam ile paneli açıp sol ve sağ tuşlarıyla doğru HDMI girişini seçin.
+4. CouchSubs'ın TV adımında **Android TV / Google TV**'yi seçin ve TV'de CouchSubs'ı açın.

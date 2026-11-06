@@ -10,6 +10,15 @@ yapılır; altyazılar internete gönderilmez. Ücretsiz ve açık kaynaklıdır
 
 *English below.*
 
+## İndir
+
+| Bilgisayarınız | Tek tıkla indirin |
+|---|---|
+| **Mac** (Apple Silicon, macOS 26+) | **[CouchSubs-macos.zip](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip)** |
+| **Windows** 10 / 11 (64 bit) | **[CouchSubs-windows-x64.zip](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip)** |
+
+TV uygulamasını ayrıca indirmeniz gerekmez: bilgisayar uygulaması TV'nize kendisi kurar.
+
 > **Beta.** Uygulama deneme aşamasındadır ve denemeniz bize çok yardımcı olur. Sorunları ve önerileri
 > [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından bildirebilirsiniz.
 
@@ -18,14 +27,15 @@ yapılır; altyazılar internete gönderilmez. Ücretsiz ve açık kaynaklıdır
 | TV | Durum |
 |---|---|
 | **LG** (webOS 4 ve üstü) | Gerçek TV'de denendi. Uygulamayı CouchSubs kendisi kurar |
-| **Samsung** (Tizen) | Gerçek TV'de henüz denenmedi. Kendi Samsung sertifikanızla kurulur |
-| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi. USB bellekle kurulur |
+| **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de henüz denenmedi. Uygulamayı CouchSubs kendisi kurar; bir kez Samsung hesabıyla giriş istenir |
+| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi. Uygulamayı CouchSubs ağ üzerinden kendisi kurar |
 | Vestel, Arçelik, Beko, Grundig'in Linux modelleri, Philips Saphi ve Titan OS | Desteklenmiyor: uygulama kurmanın bir yolunu bulamadık |
 
 Bilgisayar tarafında Mac gerçek cihazla denendi; Windows henüz gerçek bilgisayarda denenmedi. İlk deneyenlerin
 geri bildirimi çok değerli.
 
-**Geliştirici modunu açma ve TV'ye kurma adım adım:** [docs/tv-kurulum.md](docs/tv-kurulum.md)
+TV'de yapmanız gereken tek şey geliştirici modunu açmak. Adımları bilgisayar uygulaması ekranda gösterir ve TV'yi
+kendisi bekler. Resimli rehber isterseniz: [docs/tv-kurulum.md](docs/tv-kurulum.md)
 
 ## Nasıl çalışır
 
@@ -50,21 +60,21 @@ yalnız altyazıyı okumak için kullanır. Siz oyunu HDMI'dan, gecikmesiz oynam
 
 ## Kurulum
 
-1. **TV'de geliştirici modu:** [adım adım rehber](docs/tv-kurulum.md). LG'de uygulamayı CouchSubs kendisi kurar;
-   Samsung ve Android TV'de rehberdeki gibi siz kurarsınız.
-2. **Bilgisayar uygulaması:** [Sürümler](https://github.com/yorulmazsinan/couchsubs/releases/latest)
-   sayfasından indirin.
-   - **Mac:** `CouchSubs-…-macos.zip` dosyasını açın, CouchSubs'ı **Uygulamalar** klasörüne taşıyıp açın.
-     Uygulama Apple onaylıdır.
-   - **Windows:** `CouchSubs-…-windows-x64.zip` dosyasını bir klasöre çıkarın ve `CouchSubs.exe`'yi
-     açın. "Windows bilgisayarınızı korudu" uyarısı çıkarsa **Ek bilgi › Yine de çalıştır**'a basın.
-     Güvenlik duvarı sorarsa **Özel ağlar**'a izin verin (TV altyazıları bu bağlantıdan alır).
-3. Kurulum sihirbazı gerisini adım adım anlatır: ikinci hesapla giriş, PS5 eşleme, TV eşleme ve deneme.
+1. Yukarıdan bilgisayarınıza uygun dosyayı indirin.
+   - **Mac:** zip'i açın, CouchSubs'ı **Uygulamalar** klasörüne taşıyıp açın. Uygulama Apple onaylıdır.
+   - **Windows:** zip'i bir klasöre çıkarın ve `CouchSubs.exe`'yi açın. "Windows bilgisayarınızı korudu" uyarısı çıkarsa
+     **Ek bilgi › Yine de çalıştır**'a basın. Güvenlik duvarı sorarsa **Özel ağlar**'a izin verin.
+2. Kurulum sihirbazını izleyin: ikinci PSN hesabıyla giriş, PS5 eşleme, TV seçimi.
+3. TV adımında uygulama, TV'nizin markasına göre geliştirici modunu nasıl açacağınızı gösterir. Açtığınızda TV
+   uygulamasını kendisi kurar:
+   - **LG:** TV ekranındaki 6 karakterli parolayı bir kez yazarsınız.
+   - **Samsung:** tarayıcıda bir kez Samsung hesabınızla giriş yaparsınız (Samsung uygulamayı TV'nize özel imzalatır).
+   - **Android TV:** TV'de "hata ayıklamaya izin verilsin mi?" sorusuna **İzin ver** dersiniz.
 
 **Bilmeniz gerekenler**
 
-- LG'de geliştirici modu en çok 1000 saat açık kalır. Süre dolmadan TV'deki Developer Mode uygulamasından
-  uzatın; süre dolarsa TV uygulaması silinir ve yeniden kurmanız gerekir.
+- LG'de geliştirici modu en çok 1000 saat açık kalır. CouchSubs her kullanışınızda süreyi kendisi baştan başlatır;
+  uygulamayı uzun süre kullanmazsanız TV'deki Developer Mode uygulamasından **EXTEND** ile uzatın.
 - Altyazı, oyunda altyazı açıksa okunabilir. Bölgeyi **Ayarlar › Altyazı alanı**'ndan oyuna göre ayarlayabilirsiniz.
 - Çeviri makine çevirisidir; bazı cümleler kusurlu olabilir.
 
@@ -140,12 +150,15 @@ and translation run on your computer, and subtitles are never sent to the intern
 PlayStation Network account, and either a Mac with Apple Silicon on macOS 26+ or a 64-bit Windows 10 (2004)
 or 11 PC.
 
-**TVs:** LG (tested on a real TV; CouchSubs installs the TV app itself), Samsung and Android TV / Google TV such as
-Vestel, Arçelik, Beko, Grundig and Philips (not tested on real TVs yet). Mac is tested on real hardware; Windows is not
+**TVs:** LG (tested on a real TV), Samsung (2019 and later) and Android TV / Google TV such as Vestel, Arçelik, Beko,
+Grundig and Philips (not tested on real TVs yet). CouchSubs installs the TV app on all of them. Mac is tested on real hardware; Windows is not
 tested on a real PC yet.
 
-**Setup:** turn on developer mode on the TV ([step-by-step guide](docs/tv-setup.md)), download the Mac or Windows app from
-[Releases](https://github.com/yorulmazsinan/couchsubs/releases/latest) and follow the setup assistant.
+**Download:** [Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) · [Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip)
+
+**Setup:** open the app and follow the setup assistant. On the TV step it shows how to turn on developer mode for your
+TV brand and then installs the TV app by itself (LG: type the on-screen passphrase once; Samsung: sign in with a
+Samsung account once; Android TV: allow debugging on the TV). Guide: [docs/tv-setup.md](docs/tv-setup.md).
 On Windows, if SmartScreen appears, choose **More info › Run anyway**.
 
 Licensed under the [GNU AGPL-3.0](LICENSE); third-party components are listed in
