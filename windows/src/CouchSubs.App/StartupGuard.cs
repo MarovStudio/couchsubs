@@ -82,13 +82,17 @@ internal static class StartupGuard
         app.Shutdown(3);
     }
 
-    /// <summary>Açılıştan sonraki yakalanmamış hataları da sessiz kalmadan gösterir.</summary>
+    /// <summary>
+    /// Açılıştan sonraki yakalanmamış hataları da sessiz kalmadan gösterir. Uygulama kapanmaz: kullanıcı yaptığı işi
+    /// (ör. az önce bitirdiği PSN girişini) kaybetmesin.
+    /// </summary>
     public static void Watch(Application app)
     {
         app.DispatcherUnhandledException += (_, e) =>
         {
             Log("DispatcherUnhandledException", e.Exception);
             MessageBox.Show(ErrorMessage(e.Exception), "CouchSubs", MessageBoxButton.OK, MessageBoxImage.Error);
+            e.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             Log("UnhandledException", e.ExceptionObject as Exception);

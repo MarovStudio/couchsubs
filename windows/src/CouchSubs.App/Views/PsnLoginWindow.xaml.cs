@@ -27,19 +27,36 @@ public partial class PsnLoginWindow : Window
         return window.redirect;
     }
 
+    // Tarayıcı süreci kapanana kadar ortam canlı kalmalı; yoksa BrowserProcessExited gelmez.
+    private static CoreWebView2Environment? lastEnvironment;
+
     private async Task OpenAsync()
     {
         // Her girişte temiz oturum: önceki çerezler (ör. kendi hesabınız) karışmasın.
-        var folder = Path.Combine(AppPaths.Data, "webview", Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(AppPaths.Data, "webview");
+        DeleteLeftovers(root);
+        var folder = Path.Combine(root, Guid.NewGuid().ToString("N"));
         var environment = await CoreWebView2Environment.CreateAsync(null, folder);
+        lastEnvironment = environment;
+        // WebView2 kapanırken dosyalarını (ör. BrowserMetrics-*.pma) bir süre açık tutar. Klasör ancak tarayıcı
+        // süreci bitince silinebilir; silinemeyen klasörü bir sonraki giriş temizler.
+        environment.BrowserProcessExited += (_, _) => TryDelete(folder);
         await Browser.EnsureCoreWebView2Async(environment);
         Browser.CoreWebView2.NavigationStarting += OnNavigation;
         Browser.CoreWebView2.Navigate(PsnAccount.AuthorizeUrl.AbsoluteUri);
-        Closed += (_, _) =>
-        {
-            Browser.Dispose();
-            try { Directory.Delete(folder, true); } catch (IOException) { }
-        };
+        Closed += (_, _) => Browser.Dispose();
+    }
+
+    private static void DeleteLeftovers(string root)
+    {
+        if (!Directory.Exists(root)) return;
+        foreach (var folder in Directory.EnumerateDirectories(root)) TryDelete(folder);
+    }
+
+    private static void TryDelete(string folder)
+    {
+        try { Directory.Delete(folder, recursive: true); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }
 
     private void OnNavigation(object? sender, CoreWebView2NavigationStartingEventArgs e)
