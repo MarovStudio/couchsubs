@@ -15,7 +15,19 @@ public interface ICommandRunner
     Task<CommandResult> RunAsync(string executable, IReadOnlyList<string> arguments, string? inputFile);
 }
 
-public enum DevModeError { Unreachable, KeyServerOff, WrongPassphrase, KeyRefused, InstallFailed, ToolMissing }
+/// <summary>TV uygulamasını kurarken çıkan sorunlar (LG, Samsung ve Android TV ortak).</summary>
+public enum DevModeError
+{
+    Unreachable, KeyServerOff, WrongPassphrase, KeyRefused, InstallFailed, ToolMissing,
+    /// <summary>Samsung: TV Tizen 5.0'dan (2019) eski.</summary>
+    TooOld,
+    /// <summary>Samsung hesabıyla giriş tamamlanmadı.</summary>
+    SignInFailed,
+    /// <summary>Samsung TV'ye özel sertifikayı vermedi.</summary>
+    CertificateFailed,
+    /// <summary>Android: TV'de hata ayıklama izni verilmedi.</summary>
+    NotApproved,
+}
 
 public sealed class DevModeException(DevModeError error) : Exception(error.ToString())
 {
@@ -134,6 +146,39 @@ public sealed class DevModeInstaller(string host, string keyFile, ICommandRunner
         }
         try { await SshAsync($"rm -f {RemotePackage}"); } catch (DevModeException) { /* geçici dosya kalabilir */ }
         if (!installed) throw new DevModeException(DevModeError.InstallFailed);
+    }
+
+    private const string SessionTokenPath = "/var/luna/preferences/devmode_enabled";
+    public static Uri RenewUrl(string token) => new($"https://developer.lge.com/secure/ResetDevModeSession.dev?sessionToken={Uri.EscapeDataString(token)}");
+    public static Uri CheckUrl(string token) => new($"https://developer.lge.com/secure/CheckDevModeSession.dev?sessionToken={Uri.EscapeDataString(token)}");
+
+    /// <summary>
+    /// Geliştirici modunun 1000 saatlik süresini baştan başlatır (TV'deki Developer Mode uygulamasının EXTEND düğmesi
+    /// gibi). Oturum jetonu TV'den okunur ve LG'nin sunucusuna gönderilir; webOS Homebrew'un dev-manager-desktop
+    /// aracının yaptığının aynısı. Başarısız olursa yalnız uyarı döner: süre dolmadan kullanıcı TV'den de uzatabilir.
+    /// </summary>
+    /// <returns>Kalan süre (saat); bilinmiyorsa null.</returns>
+    public async Task<int?> RenewSessionAsync(HttpClient http)
+    {
+        var token = (await SshAsync($"cat {SessionTokenPath}")).Output.Trim();
+        if (token.Length == 0 || token.Contains(' ')) return null;
+        try
+        {
+            var renewed = await http.GetStringAsync(RenewUrl(token));
+            if (!renewed.Contains("success", StringComparison.OrdinalIgnoreCase)) return null;
+            return RemainingHours(await http.GetStringAsync(CheckUrl(token)));
+        }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>LG'nin yanıtındaki kalan süre <c>999:58:40</c> (saat:dakika:saniye) biçimindedir.</summary>
+    public static int? RemainingHours(string response)
+    {
+        var match = Regex.Match(response, @"(\d{1,4}):(\d{2}):(\d{2})");
+        return match.Success ? int.Parse(match.Groups[1].Value) : null;
     }
 
     private async Task<CommandResult> SshAsync(string command, string? input = null)

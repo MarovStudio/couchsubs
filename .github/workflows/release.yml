@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Sürüm: v* etiketi gönderilince Mac, Windows ve TV paketlerini derler ve GitHub sürümü olarak yayınlar.
-# Etikette "-" varsa (ör. v0.1.0-beta.1) ön sürüm olarak işaretlenir.
+# Beta etiketleri de (ör. v0.1.0-beta.6) "en son sürüm" olarak yayınlanır: README'deki
+# releases/latest/download/… bağlantıları ön sürümleri görmez. Dosya adları sürüm taşımaz, bağlantılar hep çalışır.
 #
 # Mac imzası ve Apple onayı isteğe bağlıdır; şu depo sırları tanımlıysa yapılır:
 #   MAC_CERTIFICATE_P12       Developer ID Application sertifikası (.p12, base64)
@@ -18,12 +19,16 @@ permissions:
 
 jobs:
   windows:
+    needs: android
     uses: ./.github/workflows/windows.yml
+    with:
+      with-android: true
 
   android:
     uses: ./.github/workflows/tv-android.yml
     secrets: inherit
   mac:
+    needs: android
     runs-on: macos-26
     env:
       HAS_SIGNING: ${{ secrets.MAC_CERTIFICATE_P12 != '' }}
@@ -36,6 +41,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      # Samsung ve Android TV kurulum yardımcısı Native AOT ile derlenir; Microsoft'un .NET'i gerekir (Homebrew'unki değil).
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: couchsubs-android
+          path: android-apk
 
       - name: Araçlar
         run: |
@@ -74,7 +89,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Paketle
-        run: ./scripts/package-mac.sh
+        run: ANDROID_APK="$(ls android-apk/*.apk | head -1)" ./scripts/package-mac.sh
 
       - uses: actions/upload-artifact@v4
         with:
@@ -94,6 +109,8 @@ jobs:
           npm install -g @webos-tools/cli
           ./scripts/package-tv.sh
           ./scripts/package-tizen.sh
+          # Masaüstü uygulamaları imzalar; elle kurmak isteyenler için kaynak klasör de verilir.
+          rm -f dist/tv-app/couchsubs-samsung_*.wgt
           (cd dist/tv-tizen/app && zip -qr ../../tv-app/CouchSubs-samsung-kaynak.zip .)
           ls dist/tv-app
       - uses: actions/upload-artifact@v4
@@ -118,8 +135,10 @@ jobs:
           VERSION="${VERSION%%-*}"
           mkdir -p out
           cp LICENSE THIRD-PARTY-NOTICES.md artifacts/couchsubs-windows/
-          (cd artifacts/couchsubs-windows && zip -qr "$GITHUB_WORKSPACE/out/CouchSubs-$VERSION-windows-x64.zip" .)
-          cp artifacts/couchsubs-mac/*.zip artifacts/couchsubs-tv/* artifacts/couchsubs-android/*.apk out/
+          # Sabit adlar: README'deki tek tıkla indirme bağlantıları her sürümde aynı kalır.
+          (cd artifacts/couchsubs-windows && zip -qr "$GITHUB_WORKSPACE/out/CouchSubs-windows-x64.zip" .)
+          cp artifacts/couchsubs-mac/*.zip out/CouchSubs-macos.zip
+          cp artifacts/couchsubs-tv/* artifacts/couchsubs-android/*.apk out/
           (cd out && sha256sum * > SHA256SUMS.txt)
           ls -l out
 
@@ -127,7 +146,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          FLAGS=()
-          [[ "$GITHUB_REF_NAME" == *-* ]] && FLAGS+=(--prerelease)
           gh release create "$GITHUB_REF_NAME" out/* --title "CouchSubs ${GITHUB_REF_NAME#v}" \
-            --notes-file docs/surum-notlari.md "${FLAGS[@]}"
+            --notes-file docs/surum-notlari.md --latest

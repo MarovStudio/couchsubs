@@ -13,6 +13,21 @@ cp tv-webos/icon.png "$OUT/panel-icon.png"
 cp tv-tizen/platform.js tv-tizen/config.xml tv-tizen/icon.png "$OUT/"
 # Panel başlığındaki küçük simge webOS'taki gibi icon.png adını kullanamaz: Tizen'in simgesi büyüktür.
 sed 's/src="icon.png"/src="panel-icon.png"/' tv-webos/index.html > "$OUT/index.html"
+# Masaüstü uygulamalarına gömülen imzasız paket: CouchSubs kurarken TV'ye özel sertifikayla imzalar.
+VERSION=$(sed -n 's/.* version="\([0-9.]*\)" viewmodes.*/\1/p' tv-tizen/config.xml | head -1)
+mkdir -p dist/tv-app
+rm -f dist/tv-app/couchsubs-samsung_*.wgt
+PY=$(command -v python3 || command -v python)
+"$PY" - "$OUT" "dist/tv-app/couchsubs-samsung_$VERSION.wgt" <<'PYEOF'
+import os, sys, zipfile
+src, dst = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED) as z:
+    for root, _, files in os.walk(src):
+        for name in sorted(files):
+            path = os.path.join(root, name)
+            z.write(path, os.path.relpath(path, src).replace(os.sep, '/'))
+PYEOF
+echo "İmzasız paket: dist/tv-app/couchsubs-samsung_$VERSION.wgt"
 if [ -n "$TIZEN_PROFILE" ]; then
   tizen package -t wgt -s "$TIZEN_PROFILE" -o dist/tv-tizen -- "$OUT"
   ls dist/tv-tizen/*.wgt

@@ -34,6 +34,12 @@ targets:
         type: folder
         optional: true
         buildPhase: resources
+      # Samsung ve Android TV kurulum yardımcısı (scripts/build-tv-helper.sh üretir, package-mac.sh imzalar).
+      - path: ../dist/tv-helper/couchsubs-tv-helper
+        optional: true
+        buildPhase:
+          copyFiles:
+            destination: executables
     dependencies:
       - package: CouchSubsCore
       - package: RemotePlay

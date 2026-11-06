@@ -120,6 +120,13 @@ public static class ScreenRenderer
         public Task<string> FetchDevKeyAsync(string host, string passphrase) => throw new NotSupportedException();
         public Task<string?> InstalledTvAppVersionAsync(string host, string devKey) => throw new NotSupportedException();
         public Task InstallTvAppAsync(string host, string devKey) => throw new NotSupportedException();
+        public Task<int?> RenewDevSessionAsync(string host, string devKey) => Task.FromResult<int?>(null);
+        public BundledTvApp? BundledApp(TvBrand brand) => null;
+        public Task<bool> IsSamsungDevModeOnAsync(string host) => Task.FromResult(false);
+        public Task InstallSamsungAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent) => throw new NotSupportedException();
+        public Task<bool> IsAndroidDebugOnAsync(string host) => Task.FromResult(false);
+        public Task<IReadOnlyList<string>> ScanAndroidTvsAsync() => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<string> InstallAndroidAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent) => throw new NotSupportedException();
         public ITextReader? MakeReader(string language) => null;
     }
 

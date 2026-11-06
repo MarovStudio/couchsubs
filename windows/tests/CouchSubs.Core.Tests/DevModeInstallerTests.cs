@@ -31,6 +31,14 @@ public class DevModeInstallerTests
     }
 
     [Fact]
+    public void RemainingSessionTimeIsReadFromLgsReply()
+    {
+        Assert.Equal(999, DevModeInstaller.RemainingHours("{\"result\":\"success\",\"errorCode\":\"200\",\"errorMsg\":\"999:58:40\"}"));
+        Assert.Null(DevModeInstaller.RemainingHours("{\"result\":\"fail\"}"));
+        Assert.Equal("https://developer.lge.com/secure/ResetDevModeSession.dev?sessionToken=ab12", DevModeInstaller.RenewUrl("ab12").AbsoluteUri);
+    }
+
+    [Fact]
     public void VersionComparisonIsNumeric()
     {
         Assert.True(DevModeInstaller.IsNewer("0.10.0", "0.9.9"));

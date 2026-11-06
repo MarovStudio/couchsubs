@@ -35,6 +35,9 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private TvAppState tvApp = TvAppState.Unknown;
     /// <summary>Son eşleşmede TV uygulaması açılamadı.</summary>
     private bool tvAppMissing;
+    /// <summary>TV uygulaması denetimi sürüyor (bekleme ekranı ve çeviri başlangıcı aynı anda çağırabilir).</summary>
+    private bool refreshingTvApp;
+    private int? devModeHoursLeft;
     private UserSettings settings;
     private bool isRunning;
     private bool isStarting;
@@ -187,12 +190,16 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     {
         await StartServerAsync();
         var pairing = await services.PairTvAsync(target, store.Load<string>(StoreKeys.TvKey), ServerAddress(target));
+        if (tv?.Brand != target.Brand || (target.Brand != TvBrand.AndroidTv && tv?.Host != target.Host))
+            store.Remove(StoreKeys.TvAppVersion);
         tv = target;
         store.Save(StoreKeys.Tv, target);
         store.Save(StoreKeys.TvKey, pairing.Key);
         tvAppMissing = !pairing.Launched;
-        Changed(nameof(Tv), nameof(CanAdvance));
-        await RefreshTvAppAsync();
+        Changed(nameof(Tv), nameof(CanAdvance), nameof(CanInstallTvApp));
+        if (target.Brand == TvBrand.Lg) await RefreshTvAppAsync();
+        // Samsung girişi ya da Android onayı dakikalar sürebilir; eşleşme beklemesin.
+        else _ = RefreshTvAppAsync();
     }
 
     // --- TV uygulamasını kurma ---
@@ -207,13 +214,58 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         }
     }
 
+    /// <summary>LG geliştirici modunun kalan süresi (saat); CouchSubs uzattıktan sonra bilinir.</summary>
+    public int? DevModeHoursLeft
+    {
+        get => devModeHoursLeft;
+        private set
+        {
+            devModeHoursLeft = value;
+            Changed(nameof(DevModeHoursLeft));
+        }
+    }
+
+    /// <summary>Seçili TV'ye uygulamayı CouchSubs kurabilir mi (paket uygulamayla geldi mi)?</summary>
+    public bool CanInstallTvApp => tv is { } target &&
+        (target.Brand == TvBrand.Lg ? services.BundledTvAppVersion is not null : services.BundledApp(target.Brand) is not null);
+
+    /// <summary>Samsung'un sertifika sayfasını tarayıcıda açar (arayüz atar; testlerde boş kalır).</summary>
+    public Action<Uri> OpenInBrowser { get; set; } = _ => { };
+
+    /// <summary>Samsung'da geliştirici modunda "Host PC IP" olarak yazılacak bu bilgisayarın adresi.</summary>
+    public string? ComputerAddress => LocalAddress(tv is { Host.Length: > 0 } target ? target.Host : "192.168.1.1");
+
     /// <summary>
     /// Geliştirici modu açık TV'de uygulamayı eksikse kurar, eskiyse günceller.
     /// Anahtar yoksa ve uygulama çalışıyorsa kullanıcıdan bir şey istenmez.
     /// </summary>
     public async Task RefreshTvAppAsync()
     {
-        if (tv is not { Brand: TvBrand.Lg } target || services.BundledTvAppVersion is not { } bundled) return;
+        if (tv is not { } target || refreshingTvApp) return;
+        refreshingTvApp = true;
+        try
+        {
+            switch (target.Brand)
+            {
+                case TvBrand.Lg: await RefreshLgAppAsync(target); break;
+                case TvBrand.Samsung: await RefreshSamsungAppAsync(target); break;
+                case TvBrand.AndroidTv: await RefreshAndroidAppAsync(target); break;
+            }
+        }
+        finally
+        {
+            refreshingTvApp = false;
+        }
+    }
+
+    private string? InstalledAppVersion => store.Load<string>(StoreKeys.TvAppVersion);
+
+    private bool NeedsInstall(BundledTvApp bundled) =>
+        InstalledAppVersion is not { } installed || DevModeInstaller.IsNewer(bundled.Version, installed);
+
+    private async Task RefreshLgAppAsync(LgTv target)
+    {
+        if (services.BundledTvAppVersion is not { } bundled) return;
         if (!await services.IsDevModeOnAsync(target.Host))
         {
             TvApp = tvAppMissing ? new TvAppState(TvAppKind.DevModeOff) : TvAppState.Unknown;
@@ -225,6 +277,91 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             return;
         }
         await InstallTvAppAsync(target, devKey, bundled);
+    }
+
+    /// <summary>Samsung: geliştirici modu açıksa uygulamayı imzalayıp kurar. Sertifika yoksa Samsung girişi istenir.</summary>
+    private async Task RefreshSamsungAppAsync(LgTv target)
+    {
+        if (services.BundledApp(TvBrand.Samsung) is not { } bundled) return;
+        if (!NeedsInstall(bundled))
+        {
+            TvApp = new TvAppState(TvAppKind.UpToDate, InstalledAppVersion ?? bundled.Version);
+            return;
+        }
+        if (!await services.IsSamsungDevModeOnAsync(target.Host))
+        {
+            TvApp = new TvAppState(TvAppKind.DevModeOff);
+            return;
+        }
+        TvApp = new TvAppState(TvAppKind.Working);
+        try
+        {
+            await services.InstallSamsungAppAsync(target.Host, bundled, e => post(() => InstallEvent(e)));
+            store.Save(StoreKeys.TvAppVersion, bundled.Version);
+            TvApp = new TvAppState(TvAppKind.UpToDate, bundled.Version);
+            await OpenTvAppAfterInstallAsync(target);
+        }
+        catch (DevModeException error)
+        {
+            TvApp = new TvAppState(TvAppKind.Failed, Error: error.Error);
+        }
+    }
+
+    /// <summary>Android TV: ağda ADB'si açık TV'yi bulur, uygulamayı kurar ve açar.</summary>
+    private async Task RefreshAndroidAppAsync(LgTv target)
+    {
+        if (services.BundledApp(TvBrand.AndroidTv) is not { } bundled) return;
+        var host = target.Host;
+        if (host.Length == 0 || !await services.IsAndroidDebugOnAsync(host))
+        {
+            // Uygulama kuruluysa ve TV'de hata ayıklama kapalıysa yapılacak bir şey yok.
+            if (!NeedsInstall(bundled))
+            {
+                TvApp = new TvAppState(TvAppKind.UpToDate, InstalledAppVersion ?? bundled.Version);
+                return;
+            }
+            if ((await services.ScanAndroidTvsAsync()).FirstOrDefault() is not { } found)
+            {
+                TvApp = new TvAppState(TvAppKind.DevModeOff);
+                return;
+            }
+            host = found;
+        }
+        TvApp = new TvAppState(TvAppKind.Working);
+        try
+        {
+            var version = await services.InstallAndroidAppAsync(host, bundled, e => post(() => InstallEvent(e)));
+            // TV'nin adresi bundan sonra sürüm denetimi için kullanılır.
+            var located = target with { Host = host };
+            tv = located;
+            store.Save(StoreKeys.Tv, located);
+            store.Save(StoreKeys.TvAppVersion, version);
+            Changed(nameof(Tv));
+            TvApp = new TvAppState(TvAppKind.UpToDate, version);
+        }
+        catch (DevModeException error)
+        {
+            TvApp = new TvAppState(TvAppKind.Failed, Error: error.Error);
+        }
+    }
+
+    private void InstallEvent(TvInstallEvent e)
+    {
+        // Kurulum bittikten sonra gelen geç olay sonucu ezmesin.
+        if (TvApp.Kind is not (TvAppKind.Working or TvAppKind.SignIn or TvAppKind.ApproveOnTv)) return;
+        switch (e.Kind)
+        {
+            case TvInstallEventKind.SignIn when e.Url is { } url:
+                TvApp = new TvAppState(TvAppKind.SignIn, Url: url);
+                OpenInBrowser(url);
+                break;
+            case TvInstallEventKind.ApproveOnTv:
+                TvApp = new TvAppState(TvAppKind.ApproveOnTv);
+                break;
+            case TvInstallEventKind.Progress when TvApp.Kind == TvAppKind.SignIn:
+                TvApp = new TvAppState(TvAppKind.Working);
+                break;
+        }
     }
 
     /// <summary>Key Server'dan anahtarı alır (TV ekranındaki parolayla) ve uygulamayı kurar.</summary>
@@ -253,11 +390,13 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             if (installed is not null && !DevModeInstaller.IsNewer(bundled, installed))
             {
                 TvApp = new TvAppState(TvAppKind.UpToDate, installed);
+                await RenewDevSessionIfDueAsync(target, devKey);
                 return;
             }
             await services.InstallTvAppAsync(target.Host, devKey);
             TvApp = new TvAppState(TvAppKind.UpToDate, bundled);
             tvAppMissing = false;
+            await RenewDevSessionIfDueAsync(target, devKey);
             await OpenTvAppAfterInstallAsync(target);
         }
         catch (DevModeException error) when (error.Error == DevModeError.KeyRefused)
@@ -269,6 +408,21 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         catch (DevModeException error)
         {
             TvApp = new TvAppState(TvAppKind.Failed, Error: error.Error);
+        }
+    }
+
+    /// <summary>
+    /// LG geliştirici modunun 1000 saatlik süresini günde en çok bir kez baştan başlatır; kullanıcı TV'den uzatmak
+    /// zorunda kalmaz.
+    /// </summary>
+    private async Task RenewDevSessionIfDueAsync(LgTv target, string devKey)
+    {
+        var last = store.Load<DateTimeOffset?>(StoreKeys.DevSessionRenewed) ?? DateTimeOffset.MinValue;
+        if (DateTimeOffset.UtcNow - last < TimeSpan.FromHours(20)) return;
+        if (await services.RenewDevSessionAsync(target.Host, devKey) is { } hours)
+        {
+            DevModeHoursLeft = hours;
+            store.Save(StoreKeys.DevSessionRenewed, (DateTimeOffset?)DateTimeOffset.UtcNow);
         }
     }
 
@@ -336,7 +490,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public void ResetSetup()
     {
         Stop();
-        foreach (var key in new[] { StoreKeys.AccountId, StoreKeys.Console, StoreKeys.Tv, StoreKeys.TvKey, StoreKeys.TvDevKey }) store.Remove(key);
+        foreach (var key in new[] { StoreKeys.AccountId, StoreKeys.Console, StoreKeys.Tv, StoreKeys.TvKey, StoreKeys.TvDevKey, StoreKeys.TvAppVersion }) store.Remove(key);
         accountId = null;
         console = null;
         tv = null;

@@ -17,6 +17,38 @@
         }
       }
     },
+    "1. On the TV, open Apps.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. On the TV, open Apps."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. TV'de Uygulamalar ekranını açın."
+          }
+        }
+      }
+    },
+    "1. On the TV, open Settings › Device Preferences › About (Google TV: Settings › System › About).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. On the TV, open Settings › Device Preferences › About (Google TV: Settings › System › About)."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. TV'de Ayarlar › Cihaz Tercihleri › Hakkında'ya girin (Google TV'de Ayarlar › Sistem › Hakkında)."
+          }
+        }
+      }
+    },
     "2. On the TV, install Developer Mode from the LG Content Store and sign in.": {
       "localizations": {
         "en": {
@@ -33,6 +65,70 @@
         }
       }
     },
+    "2. Press 1 2 3 4 5 on the remote (or type 12345 on the on-screen keypad). The Developer Mode window opens.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Press 1 2 3 4 5 on the remote (or type 12345 on the on-screen keypad). The Developer Mode window opens."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Kumandada 1 2 3 4 5 tuşlarına basın (ya da ekran klavyesiyle 12345 yazın). Geliştirici modu penceresi açılır."
+          }
+        }
+      }
+    },
+    "2. Press OK on Build 7 times until it says you are a developer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Press OK on Build 7 times until it says you are a developer."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Yapı numarasının üstünde Tamam'a, geliştirici olduğunuz yazana kadar 7 kez basın."
+          }
+        }
+      }
+    },
+    "3. Go back to Device Preferences (Google TV: System) › Developer options and turn on USB debugging. Turn on Network debugging too if you see it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Go back to Device Preferences (Google TV: System) › Developer options and turn on USB debugging. Turn on Network debugging too if you see it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Cihaz Tercihleri (Google TV'de Sistem) › Geliştirici seçenekleri'ne dönüp USB hata ayıklama'yı açın. Ağ hata ayıklama varsa onu da açın."
+          }
+        }
+      }
+    },
+    "3. Turn Developer mode On, type this computer's address as Host PC IP: %@ and press OK.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Turn Developer mode On, type this computer's address as Host PC IP: %@ and press OK."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Developer mode'u On yapın, Host PC IP olarak bu bilgisayarın adresini yazın: %@ ve OK'e basın."
+          }
+        }
+      }
+    },
     "3. Turn on Dev Mode Status. The TV restarts and this screen continues by itself.": {
       "localizations": {
         "en": {
@@ -45,6 +141,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "3. Dev Mode Status'u açın. TV yeniden başlar, bu ekran kendiliğinden devam eder."
+          }
+        }
+      }
+    },
+    "4. Restart the TV. This screen continues by itself.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. Restart the TV. This screen continues by itself."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. TV'yi yeniden başlatın. Bu ekran kendiliğinden devam eder."
           }
         }
       }
@@ -401,6 +513,22 @@
         }
       }
     },
+    "CouchSubs extends Developer Mode by itself each time you use it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs extends Developer Mode by itself each time you use it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs, geliştirici modunun süresini her kullanışınızda kendisi uzatır."
+          }
+        }
+      }
+    },
     "CouchSubs is not affiliated with Sony Interactive Entertainment. PlayStation and PS5 are trademarks of Sony Interactive Entertainment Inc.": {
       "localizations": {
         "en": {
@@ -497,6 +625,22 @@
         }
       }
     },
+    "Debugging was not allowed on the TV. Try again and choose Allow on the TV.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debugging was not allowed on the TV. Try again and choose Allow on the TV."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV'de hata ayıklamaya izin verilmedi. Yeniden deneyin ve TV'de İzin ver'i seçin."
+          }
+        }
+      }
+    },
     "Developer Mode is on. One last step to install the TV app:": {
       "localizations": {
         "en": {
@@ -509,6 +653,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geliştirici modu açık. TV uygulamasını kurmak için son bir adım kaldı:"
+          }
+        }
+      }
+    },
+    "Developer Mode: %lld hours left. CouchSubs extends it by itself each time you use it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer Mode: %lld hours left. CouchSubs extends it by itself each time you use it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geliştirici modu: %lld saat kaldı. CouchSubs süreyi her kullanışınızda kendisi uzatır."
           }
         }
       }
@@ -769,6 +929,38 @@
         }
       }
     },
+    "Install with a USB stick instead": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install with a USB stick instead"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bunun yerine USB bellekle kur"
+          }
+        }
+      }
+    },
+    "Installing the TV app…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installing the TV app…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV uygulaması kuruluyor…"
+          }
+        }
+      }
+    },
     "Japanese": {
       "localizations": {
         "en": {
@@ -849,6 +1041,22 @@
         }
       }
     },
+    "Later you sign in once with a free Samsung account; Samsung needs it to sign the app for your TV.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later you sign in once with a free Samsung account; Samsung needs it to sign the app for your TV."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ardından bir kez ücretsiz bir Samsung hesabıyla giriş yaparsınız; Samsung uygulamayı TV'nize özel imzalamak için bunu ister."
+          }
+        }
+      }
+    },
     "Left": {
       "localizations": {
         "en": {
@@ -881,6 +1089,38 @@
         }
       }
     },
+    "Look at the TV: it asks whether to allow debugging from this computer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look at the TV: it asks whether to allow debugging from this computer."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV'ye bakın: bu bilgisayardan hata ayıklamaya izin verilip verilmeyeceğini soruyor."
+          }
+        }
+      }
+    },
+    "Looking for the TV on the network…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looking for the TV on the network…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV ağda aranıyor…"
+          }
+        }
+      }
+    },
     "Medium": {
       "localizations": {
         "en": {
@@ -893,6 +1133,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Orta"
+          }
+        }
+      }
+    },
+    "Menu names differ a little by brand. If the app is already on the TV, you can skip this step.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu names differ a little by brand. If the app is already on the TV, you can skip this step."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menü adları markaya göre biraz değişir. Uygulama TV'de zaten kuruluysa bu adımı geçebilirsiniz."
           }
         }
       }
@@ -941,6 +1197,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "PS5 bulunamadı. Açık ve aynı ağda olduğundan emin olun ya da IP adresini girin."
+          }
+        }
+      }
+    },
+    "No account? You can create a free one on the same page. If the browser asks to allow access to devices on your network, allow it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No account? You can create a free one on the same page. If the browser asks to allow access to devices on your network, allow it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesabınız yok mu? Aynı sayfadan ücretsiz açabilirsiniz. Tarayıcı ağınızdaki cihazlara erişim izni sorarsa izin verin."
           }
         }
       }
@@ -1089,6 +1361,22 @@
         }
       }
     },
+    "Open the page again": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the page again"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sayfayı yeniden aç"
+          }
+        }
+      }
+    },
     "PS5": {
       "localizations": {
         "en": {
@@ -1229,6 +1517,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sağ"
+          }
+        }
+      }
+    },
+    "Samsung did not issue the signing certificate. Try again in a few minutes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samsung did not issue the signing certificate. Try again in a few minutes."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samsung imza sertifikasını vermedi. Birkaç dakika sonra yeniden deneyin."
+          }
+        }
+      }
+    },
+    "Samsung sign-in did not complete. Try again and finish signing in on the page that opens.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samsung sign-in did not complete. Try again and finish signing in on the page that opens."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samsung girişi tamamlanmadı. Yeniden deneyin ve açılan sayfada girişi bitirin."
+          }
+        }
+      }
+    },
+    "Samsung signs the app for your TV. Sign in with your Samsung account on the page that opened in your browser.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samsung signs the app for your TV. Sign in with your Samsung account on the page that opened in your browser."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samsung uygulamayı TV'nize özel imzalar. Tarayıcıda açılan sayfada Samsung hesabınızla giriş yapın."
           }
         }
       }
@@ -1761,6 +2097,38 @@
         }
       }
     },
+    "The TV app is not installed. CouchSubs installs it once Developer Mode is on.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV app is not installed. CouchSubs installs it once Developer Mode is on."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV uygulaması kurulu değil. Geliştirici modu açılınca CouchSubs kendisi kurar."
+          }
+        }
+      }
+    },
+    "The TV app is not installed. CouchSubs installs it over the network once debugging is on.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV app is not installed. CouchSubs installs it over the network once debugging is on."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV uygulaması kurulu değil. Hata ayıklama açılınca CouchSubs ağ üzerinden kendisi kurar."
+          }
+        }
+      }
+    },
     "The TV app is ready (version %@).": {
       "localizations": {
         "en": {
@@ -1773,6 +2141,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "TV uygulaması hazır (sürüm %@)."
+          }
+        }
+      }
+    },
+    "The TV did not accept this computer. In the TV's Developer Mode window, check that Host PC IP is this computer's address, then restart the TV.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV did not accept this computer. In the TV's Developer Mode window, check that Host PC IP is this computer's address, then restart the TV."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV bu bilgisayarı kabul etmedi. TV'deki geliştirici modu penceresinde Host PC IP'nin bu bilgisayarın adresi olduğunu kontrol edip TV'yi yeniden başlatın."
           }
         }
       }
@@ -1937,6 +2321,22 @@
         }
       }
     },
+    "This Samsung TV is too old for the CouchSubs TV app (2019 models and later are supported).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Samsung TV is too old for the CouchSubs TV app (2019 models and later are supported)."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Samsung TV, CouchSubs TV uygulaması için çok eski (2019 ve sonraki modeller destekleniyor)."
+          }
+        }
+      }
+    },
     "This is a test subtitle. Can you see it on top of the game?": {
       "localizations": {
         "en": {
@@ -1949,6 +2349,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu bir test altyazısı. Oyunun üstünde görebiliyor musunuz?"
+          }
+        }
+      }
+    },
+    "Tick “Always allow from this computer” and choose Allow. The app then installs by itself.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tick “Always allow from this computer” and choose Allow. The app then installs by itself."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Bu bilgisayardan her zaman izin ver”i işaretleyip İzin ver'i seçin. Uygulama ardından kendiliğinden kurulur."
           }
         }
       }
@@ -2097,6 +2513,22 @@
         }
       }
     },
+    "Waiting for sign-in…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for sign-in…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giriş bekleniyor…"
+          }
+        }
+      }
+    },
     "Waiting for the TV app": {
       "localizations": {
         "en": {
@@ -2109,6 +2541,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "TV uygulaması bekleniyor"
+          }
+        }
+      }
+    },
+    "Waiting for the TV…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the TV…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV bekleniyor…"
           }
         }
       }

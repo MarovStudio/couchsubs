@@ -119,6 +119,16 @@ final class DevModeInstallerTests: XCTestCase {
         XCTAssertTrue(arguments.contains("prisoner@192.168.1.230"))
     }
 
+    func testRemainingSessionTimeIsReadFromLGsReply() {
+        XCTAssertEqual(DevModeInstaller.remainingHours(#"{"result":"success","errorCode":"200","errorMsg":"999:58:40"}"#), 999)
+        XCTAssertNil(DevModeInstaller.remainingHours(#"{"result":"fail"}"#))
+    }
+
+    func testRenewalAddressCarriesTheSessionToken() {
+        XCTAssertEqual(DevModeInstaller.renewURL(token: "ab12").absoluteString,
+                       "https://developer.lge.com/secure/ResetDevModeSession.dev?sessionToken=ab12")
+    }
+
     func testKeyServerAddress() {
         XCTAssertEqual(DevModeInstaller.keyURL(host: "192.168.1.230").absoluteString, "http://192.168.1.230:9991/webos_rsa")
     }

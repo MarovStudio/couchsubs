@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 using System.IO;
+using System.Net.Http;
 using System.Text.Json;
 using CouchSubs.Core;
 using CouchSubs.Core.LgTv;
 using CouchSubs.RemotePlay;
 using CouchSubs.Shell;
 using CouchSubs.Translation;
+using CouchSubs.TvInstall.Android;
+using CouchSubs.TvInstall.Samsung;
 
 namespace CouchSubs.App.Services;
 
@@ -128,6 +131,96 @@ public sealed class LiveServices : IAppServices
             await Installer(host, file).InstallAsync(package, version);
             return null;
         });
+
+    public async Task<int?> RenewDevSessionAsync(string host, string devKey)
+    {
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            return await WithKeyFileAsync(devKey, file => Installer(host, file).RenewSessionAsync(http));
+        }
+        catch (DevModeException)
+        {
+            return null;
+        }
+    }
+
+    // --- Samsung ve Android TV (CouchSubs.TvInstall) ---
+
+    /// <summary>Kalıcı dosyalar: ADB anahtarı ve Samsung sertifikaları.</summary>
+    private static string DataDirectory(string name) =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CouchSubs", name);
+
+    public BundledTvApp? BundledApp(TvBrand brand)
+    {
+        var pattern = brand switch { TvBrand.Samsung => "*.wgt", TvBrand.AndroidTv => "*.apk", _ => null };
+        var folder = Path.Combine(AppContext.BaseDirectory, "tv-app");
+        if (pattern is null || !Directory.Exists(folder)) return null;
+        var file = Directory.EnumerateFiles(folder, pattern).FirstOrDefault();
+        return file is not null && TvInstall.Versions.OfBundledFile(file) is { } version ? new BundledTvApp(file, version) : null;
+    }
+
+    public Task<bool> IsSamsungDevModeOnAsync(string host) => SamsungTvInstaller.IsDevModeOnAsync(host);
+
+    public async Task InstallSamsungAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent)
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(1) };
+        var installer = new SamsungTvInstaller(host, DataDirectory("samsung"), new SamsungCertificates(http))
+        {
+            Progress = _ => onEvent(new TvInstallEvent(TvInstallEventKind.Progress)),
+            SignIn = token => SamsungLogin.SignInAsync(url => onEvent(new TvInstallEvent(TvInstallEventKind.SignIn, new Uri(url))),
+                TimeSpan.FromMinutes(10), token),
+        };
+        try
+        {
+            await Task.Run(() => installer.InstallAsync(app.Path));
+        }
+        catch (SamsungInstallException error)
+        {
+            throw new DevModeException(error.Error switch
+            {
+                SamsungInstallError.Unreachable => DevModeError.Unreachable,
+                SamsungInstallError.LoginFailed => DevModeError.SignInFailed,
+                SamsungInstallError.CertificateFailed => DevModeError.CertificateFailed,
+                SamsungInstallError.TooOld => DevModeError.TooOld,
+                _ => DevModeError.InstallFailed,
+            });
+        }
+        catch (Exception error) when (error is not DevModeException)
+        {
+            throw new DevModeException(DevModeError.InstallFailed);
+        }
+    }
+
+    public Task<bool> IsAndroidDebugOnAsync(string host) => AndroidTvInstaller.IsReachableAsync(host);
+
+    public Task<IReadOnlyList<string>> ScanAndroidTvsAsync() => AndroidTvInstaller.ScanAsync();
+
+    public async Task<string> InstallAndroidAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent)
+    {
+        var installer = new AndroidTvInstaller(host, DataDirectory("adb"))
+        {
+            OnApprovalNeeded = () => onEvent(new TvInstallEvent(TvInstallEventKind.ApproveOnTv)),
+        };
+        try
+        {
+            var (version, _) = await Task.Run(() => installer.EnsureInstalledAsync(app.Path, app.Version));
+            return version;
+        }
+        catch (AndroidInstallException error)
+        {
+            throw new DevModeException(error.Error switch
+            {
+                AndroidInstallError.Unreachable => DevModeError.Unreachable,
+                AndroidInstallError.NotApproved => DevModeError.NotApproved,
+                _ => DevModeError.InstallFailed,
+            });
+        }
+        catch (Exception error) when (error is not DevModeException)
+        {
+            throw new DevModeException(DevModeError.InstallFailed);
+        }
+    }
 
     private static DevModeInstaller Installer(string host, string keyFile) =>
         new(host, keyFile, new ProcessRunner(), DevModeTools.ForThisSystem());

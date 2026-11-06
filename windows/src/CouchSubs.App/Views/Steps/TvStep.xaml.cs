@@ -27,7 +27,9 @@ public partial class TvStep : UserControl
     {
         Done.Text = Controller.Tv?.Name ?? "";
         Done.Visibility = Controller.Tv is null ? Visibility.Collapsed : Visibility.Visible;
-        ManualInstall.Visibility = Controller.Tv is null or { Brand: TvBrand.Lg } ? Visibility.Collapsed : Visibility.Visible;
+        // Uygulamayla TV paketi gelmediyse (geliştirici derlemesi) rehber gösterilir.
+        ManualInstall.Visibility = Controller.Tv is null or { Brand: TvBrand.Lg } || Controller.CanInstallTvApp
+            ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private async Task SearchAsync()

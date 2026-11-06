@@ -13,6 +13,10 @@ public static class StoreKeys
     public const string Tv = "tv";
     public const string TvKey = "tvKey";
     public const string TvDevKey = "tvDevKey";
+    /// <summary>Samsung ve Android TV'ye CouchSubs'ın kurduğu sürüm (LG'de sürüm TV'den okunur).</summary>
+    public const string TvAppVersion = "tvAppVersion";
+    /// <summary>LG geliştirici modu süresinin son uzatıldığı an.</summary>
+    public const string DevSessionRenewed = "devSessionRenewed";
 }
 
 /// <summary>Kalıcı ayarlar (şifreli depo değil, sıradan ayar dosyası).</summary>
@@ -80,6 +84,17 @@ public interface IAppServices
     Task<string> FetchDevKeyAsync(string host, string passphrase);
     Task<string?> InstalledTvAppVersionAsync(string host, string devKey);
     Task InstallTvAppAsync(string host, string devKey);
+    /// <summary>LG geliştirici modunun süresini baştan başlatır; kalan saati döner (bilinmiyorsa null).</summary>
+    Task<int?> RenewDevSessionAsync(string host, string devKey);
+    /// <summary>Samsung ve Android TV için uygulamayla gelen paket (geliştirici derlemesinde olmayabilir).</summary>
+    BundledTvApp? BundledApp(TvBrand brand);
+    Task<bool> IsSamsungDevModeOnAsync(string host);
+    Task InstallSamsungAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent);
+    Task<bool> IsAndroidDebugOnAsync(string host);
+    /// <summary>Ağda ADB'si açık cihazlar.</summary>
+    Task<IReadOnlyList<string>> ScanAndroidTvsAsync();
+    /// <summary>Eksikse ya da eskiyse kurar; TV'deki sürümü döner.</summary>
+    Task<string> InstallAndroidAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent);
     /// <summary>Oyun dili için yazı tanıyıcı; bilgisayarda hiç OCR dili yoksa null.</summary>
     ITextReader? MakeReader(string language);
     ITranslationModel Translation { get; }
@@ -88,10 +103,22 @@ public interface IAppServices
 /// <param name="Launched">false ise TV uygulaması açılamadı; büyük olasılıkla TV'de kurulu değil.</param>
 public sealed record TvPairing(string Key, bool Launched);
 
-public enum TvAppKind { Unknown, Working, UpToDate, DevModeOff, NeedsPassphrase, Failed }
+/// <param name="Path">Paket dosyası.</param>
+public sealed record BundledTvApp(string Path, string Version);
+
+public enum TvInstallEventKind { SignIn, ApproveOnTv, Progress }
+
+/// <summary>Samsung ve Android TV kurulumu sırasında kullanıcıdan bir şey isteyen olay.</summary>
+public sealed record TvInstallEvent(TvInstallEventKind Kind, Uri? Url = null);
+
+/// <summary>
+/// SignIn: Samsung sertifikası için tarayıcıda Samsung hesabıyla giriş bekleniyor. ApproveOnTv: Android TV ekranında
+/// hata ayıklama izni bekleniyor.
+/// </summary>
+public enum TvAppKind { Unknown, Working, UpToDate, DevModeOff, NeedsPassphrase, Failed, SignIn, ApproveOnTv }
 
 /// <summary>TV uygulamasının kurulum durumu.</summary>
-public sealed record TvAppState(TvAppKind Kind, string? Version = null, DevModeError? Error = null)
+public sealed record TvAppState(TvAppKind Kind, string? Version = null, DevModeError? Error = null, Uri? Url = null)
 {
     public static readonly TvAppState Unknown = new(TvAppKind.Unknown);
 }

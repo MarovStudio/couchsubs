@@ -22,9 +22,9 @@
     <Resource Include="Assets\logo.png" />
   </ItemGroup>
 
-  <!-- TV uygulaması paketi (scripts/package-tv.sh üretir); geliştirici modu açık TV'ye kurulur. -->
+  <!-- TV uygulaması paketleri (scripts/package-tv.sh, package-tizen.sh ve Android derlemesi üretir); geliştirici modu açık TV'ye kurulur. -->
   <ItemGroup>
-    <Content Include="..\..\..\dist\tv-app\*.ipk" Link="tv-app\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\..\dist\tv-app\*.ipk;..\..\..\dist\tv-app\*.wgt;..\..\..\dist\tv-app\*.apk" Link="tv-app\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +32,7 @@
     <ProjectReference Include="..\CouchSubs.Translation\CouchSubs.Translation.csproj" />
     <ProjectReference Include="..\CouchSubs.RemotePlay\CouchSubs.RemotePlay.csproj" />
     <ProjectReference Include="..\CouchSubs.Shell\CouchSubs.Shell.csproj" />
+    <ProjectReference Include="..\CouchSubs.TvInstall\CouchSubs.TvInstall.csproj" />
   </ItemGroup>
 
 </Project>

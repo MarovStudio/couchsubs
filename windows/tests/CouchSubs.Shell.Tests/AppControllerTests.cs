@@ -144,6 +144,39 @@ internal sealed class FakeServices : IAppServices
         AppOnTv = BundledTvAppVersion;
         return Task.CompletedTask;
     }
+    public int? RenewedHours { get; set; } = 999;
+    public int Renewals { get; private set; }
+    public Task<int?> RenewDevSessionAsync(string host, string devKey)
+    {
+        Renewals++;
+        return Task.FromResult(RenewedHours);
+    }
+
+    // Samsung ve Android TV
+    public Dictionary<TvBrand, BundledTvApp> Bundled { get; } = [];
+    public bool SamsungDevMode { get; set; }
+    public List<string> AndroidHosts { get; } = [];
+    public DevModeError? InstallError { get; set; }
+    public List<TvInstallEvent> Events { get; } = [];
+    public List<(TvBrand Brand, string Host)> BrandInstalls { get; } = [];
+    public BundledTvApp? BundledApp(TvBrand brand) => Bundled.GetValueOrDefault(brand);
+    public Task<bool> IsSamsungDevModeOnAsync(string host) => Task.FromResult(SamsungDevMode);
+    public Task InstallSamsungAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent)
+    {
+        Events.ForEach(onEvent);
+        if (InstallError is { } error) throw new DevModeException(error);
+        BrandInstalls.Add((TvBrand.Samsung, host));
+        return Task.CompletedTask;
+    }
+    public Task<bool> IsAndroidDebugOnAsync(string host) => Task.FromResult(AndroidHosts.Contains(host));
+    public Task<IReadOnlyList<string>> ScanAndroidTvsAsync() => Task.FromResult<IReadOnlyList<string>>([.. AndroidHosts]);
+    public Task<string> InstallAndroidAppAsync(string host, BundledTvApp app, Action<TvInstallEvent> onEvent)
+    {
+        Events.ForEach(onEvent);
+        if (InstallError is { } error) throw new DevModeException(error);
+        BrandInstalls.Add((TvBrand.AndroidTv, host));
+        return Task.FromResult(app.Version);
+    }
     public ITextReader? MakeReader(string language)
     {
         ReaderLanguages.Add(language);
@@ -507,6 +540,80 @@ public class TvAppInstallTests
         await controller.PairAsync(Tv);
         Assert.Equal(TvAppKind.NeedsPassphrase, controller.TvApp.Kind);
         Assert.Null(store.Load<string>(StoreKeys.TvDevKey));
+    }
+
+    [Fact]
+    public async Task LgDeveloperModeIsExtendedOncePerDay()
+    {
+        var services = new FakeServices { DevMode = true };
+        var store = new MemoryStore();
+        store.Save(StoreKeys.TvDevKey, "dev-key");
+        var controller = Make(services, store);
+        await controller.PairAsync(Tv);
+        Assert.Equal(999, controller.DevModeHoursLeft);
+        await controller.RefreshTvAppAsync();
+        Assert.Equal(1, services.Renewals);
+    }
+
+    private static readonly LgTv Samsung = new("Samsung", "192.168.1.20", TvBrand.Samsung);
+    private static readonly BundledTvApp SamsungApp = new("couchsubs-samsung_0.7.0.wgt", "0.7.0");
+
+    [Fact]
+    public async Task SamsungWithDevModeOffShowsTheSteps()
+    {
+        var services = new FakeServices();
+        services.Bundled[TvBrand.Samsung] = SamsungApp;
+        var controller = Make(services);
+        await controller.PairAsync(Samsung);
+        Assert.Equal(TvAppKind.DevModeOff, controller.TvApp.Kind);
+        Assert.True(controller.CanInstallTvApp);
+    }
+
+    [Fact]
+    public async Task SamsungInstallOpensSignInAndRemembersTheVersion()
+    {
+        var page = new Uri("https://account.samsung.com/signin");
+        var services = new FakeServices { SamsungDevMode = true };
+        services.Bundled[TvBrand.Samsung] = SamsungApp;
+        services.Events.Add(new TvInstallEvent(TvInstallEventKind.SignIn, page));
+        var store = new MemoryStore();
+        var controller = Make(services, store);
+        var opened = new List<Uri>();
+        controller.OpenInBrowser = opened.Add;
+        await controller.PairAsync(Samsung);
+        Assert.Equal([page], opened);
+        Assert.Equal(new TvAppState(TvAppKind.UpToDate, "0.7.0"), controller.TvApp);
+        Assert.Equal("0.7.0", store.Load<string>(StoreKeys.TvAppVersion));
+        await controller.RefreshTvAppAsync();
+        Assert.Single(services.BrandInstalls);
+    }
+
+    [Fact]
+    public async Task SamsungFailureIsShown()
+    {
+        var services = new FakeServices { SamsungDevMode = true, InstallError = DevModeError.SignInFailed };
+        services.Bundled[TvBrand.Samsung] = SamsungApp;
+        var controller = Make(services);
+        await controller.PairAsync(Samsung);
+        Assert.Equal(new TvAppState(TvAppKind.Failed, Error: DevModeError.SignInFailed), controller.TvApp);
+    }
+
+    [Fact]
+    public async Task AndroidTvIsFoundOnTheNetworkAndRemembered()
+    {
+        var services = new FakeServices();
+        services.Bundled[TvBrand.AndroidTv] = new BundledTvApp("couchsubs-androidtv_0.7.0.apk", "0.7.0");
+        var store = new MemoryStore();
+        var controller = Make(services, store);
+        await controller.PairAsync(new LgTv("Android TV", "", TvBrand.AndroidTv));
+        Assert.Equal(TvAppKind.DevModeOff, controller.TvApp.Kind);
+
+        services.AndroidHosts.Add("192.168.1.40");
+        services.Events.Add(new TvInstallEvent(TvInstallEventKind.ApproveOnTv));
+        await controller.RefreshTvAppAsync();
+        Assert.Equal(new TvAppState(TvAppKind.UpToDate, "0.7.0"), controller.TvApp);
+        Assert.Equal("192.168.1.40", controller.Tv?.Host);
+        Assert.Equal("192.168.1.40", store.Load<LgTv>(StoreKeys.Tv)?.Host);
     }
 
     [Fact]

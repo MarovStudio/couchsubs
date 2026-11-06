@@ -5,11 +5,14 @@
     <Project Path="src/CouchSubs.RemotePlay/CouchSubs.RemotePlay.csproj" />
     <Project Path="src/CouchSubs.Shell/CouchSubs.Shell.csproj" />
     <Project Path="src/CouchSubs.Translation/CouchSubs.Translation.csproj" />
+    <Project Path="src/CouchSubs.TvHelper/CouchSubs.TvHelper.csproj" />
+    <Project Path="src/CouchSubs.TvInstall/CouchSubs.TvInstall.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CouchSubs.Core.Tests/CouchSubs.Core.Tests.csproj" />
     <Project Path="tests/CouchSubs.RemotePlay.Tests/CouchSubs.RemotePlay.Tests.csproj" />
     <Project Path="tests/CouchSubs.Shell.Tests/CouchSubs.Shell.Tests.csproj" />
     <Project Path="tests/CouchSubs.Translation.Tests/CouchSubs.Translation.Tests.csproj" />
+    <Project Path="tests/CouchSubs.TvInstall.Tests/CouchSubs.TvInstall.Tests.csproj" />
   </Folder>
 </Solution>

@@ -9,6 +9,11 @@ on:
   workflow_dispatch:
   # Sürüm iş akışı (release.yml) Windows paketini buradan alır.
   workflow_call:
+    inputs:
+      with-android:
+        description: Android TV APK'sı (tv-android iş akışının çıktısı) uygulamaya gömülsün
+        type: boolean
+        default: false
 
 env:
   FFMPEG_VERSION: "7.1.2"
@@ -147,11 +152,19 @@ jobs:
       - name: Testler
         run: dotnet test windows/CouchSubs.Windows.slnx -c Release --no-build -m:1
 
-      - name: TV paketi
+      - uses: actions/download-artifact@v4
+        if: inputs.with-android
+        with:
+          name: couchsubs-android
+          path: android-apk
+
+      - name: TV paketleri
         shell: bash
         run: |
           npm install -g @webos-tools/cli
           ./scripts/package-tv.sh
+          ./scripts/package-tizen.sh
+          if [ -d android-apk ]; then ./scripts/bundle-android-apk.sh "$(ls android-apk/*.apk | head -1)"; fi
 
       - name: Yayınla
         run: dotnet publish windows/src/CouchSubs.App -c Release -r win-x64 --self-contained -o publish/CouchSubs

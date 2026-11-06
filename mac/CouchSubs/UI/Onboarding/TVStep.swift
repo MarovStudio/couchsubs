@@ -52,7 +52,8 @@ struct TVStep: View {
                 }
                 ErrorText(error: error)
                 TVAppCard()
-                if let tv = model.tv, tv.brand != .lg {
+                // Uygulamayla TV paketi gelmediyse (geliştirici derlemesi) rehber gösterilir.
+                if let tv = model.tv, tv.brand != .lg, !model.canInstallTVApp {
                     Card(title: "CouchSubs TV app") {
                         Text("Install the CouchSubs TV app on this TV using the guide and open it. It finds this computer by itself.")
                         Link("Open the guide", destination: AppIdentity.tvGuideURL)

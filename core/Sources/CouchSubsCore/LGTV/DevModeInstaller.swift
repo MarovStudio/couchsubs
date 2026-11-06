@@ -18,8 +18,17 @@ public protocol CommandRunning: Sendable {
     func run(_ executable: String, _ arguments: [String], input: URL?) async throws -> CommandResult
 }
 
+/// TV uygulamasını kurarken çıkan sorunlar (LG, Samsung ve Android TV ortak).
 public enum DevModeError: Error, Equatable {
     case unreachable, keyServerOff, wrongPassphrase, keyRefused, installFailed
+    /// Samsung: TV Tizen 5.0'dan (2019) eski.
+    case tooOld
+    /// Samsung hesabıyla giriş tamamlanmadı.
+    case signInFailed
+    /// Samsung TV'ye özel sertifikayı vermedi.
+    case certificateFailed
+    /// Android: TV'de hata ayıklama izni verilmedi.
+    case notApproved
 }
 
 /// TV uygulamasını LG'nin geliştirici modu üzerinden kurar ve günceller.
@@ -66,8 +75,14 @@ public struct DevModeInstaller: Sendable {
 
     /// TV'de geliştirici modu açık mı? Kapalıysa port yanıt vermez.
     public static func isDevModeOn(host: String, timeout: Duration = .seconds(2)) async -> Bool {
-        await withCheckedContinuation { continuation in
-            let connection = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
+        await isPortOpen(host: host, port: port, timeout: timeout)
+    }
+
+    /// TCP portu bağlantı kabul ediyor mu? Samsung (26101) ve Android TV (5555) geliştirici modları için de kullanılır.
+    public static func isPortOpen(host: String, port: UInt16, timeout: Duration = .seconds(2)) async -> Bool {
+        guard !host.isEmpty, let endpointPort = NWEndpoint.Port(rawValue: port) else { return false }
+        return await withCheckedContinuation { continuation in
+            let connection = NWConnection(host: NWEndpoint.Host(host), port: endpointPort, using: .tcp)
             let once = Once { result in
                 connection.cancel()
                 continuation.resume(returning: result)
@@ -134,6 +149,37 @@ public struct DevModeInstaller: Sendable {
         }
         _ = try? await ssh("rm -f \(Self.remotePackage)")
         guard installed else { throw DevModeError.installFailed }
+    }
+
+    // MARK: - Süreyi uzatma
+
+    static let sessionTokenPath = "/var/luna/preferences/devmode_enabled"
+
+    static func renewURL(token: String) -> URL {
+        URL(string: "https://developer.lge.com/secure/ResetDevModeSession.dev?sessionToken=\(token.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "")")!
+    }
+
+    static func checkURL(token: String) -> URL {
+        URL(string: "https://developer.lge.com/secure/CheckDevModeSession.dev?sessionToken=\(token.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "")")!
+    }
+
+    /// Geliştirici modunun 1000 saatlik süresini baştan başlatır (TV'deki Developer Mode uygulamasının EXTEND düğmesi
+    /// gibi). Oturum jetonu TV'den okunur ve LG'nin sunucusuna gönderilir; webOS Homebrew'un dev-manager-desktop aracının
+    /// yaptığının aynısı. Başarısız olursa nil döner: süre dolmadan kullanıcı TV'den de uzatabilir.
+    /// - Returns: Kalan süre (saat); bilinmiyorsa nil.
+    public func renewSession(session: URLSession = .shared) async throws -> Int? {
+        let token = try await ssh("cat \(Self.sessionTokenPath)").output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty, !token.contains(" ") else { return nil }
+        guard let (renewed, _) = try? await session.data(from: Self.renewURL(token: token)),
+              String(decoding: renewed, as: UTF8.self).localizedCaseInsensitiveContains("success") else { return nil }
+        guard let (checked, _) = try? await session.data(from: Self.checkURL(token: token)) else { return nil }
+        return Self.remainingHours(String(decoding: checked, as: UTF8.self))
+    }
+
+    /// LG'nin yanıtındaki kalan süre `999:58:40` (saat:dakika:saniye) biçimindedir.
+    static func remainingHours(_ response: String) -> Int? {
+        guard let found = response.range(of: #"\d{1,4}:\d{2}:\d{2}"#, options: .regularExpression) else { return nil }
+        return Int(response[found].split(separator: ":")[0])
     }
 
     private func ssh(_ command: String, input: URL? = nil) async throws -> CommandResult {

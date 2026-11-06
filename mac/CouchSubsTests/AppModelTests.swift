@@ -73,6 +73,35 @@ final class FakeServices: AppServices {
         installs += 1
         appOnTV = bundledTVAppVersion
     }
+    var renewedHours: Int? = 999
+    var renewals = 0
+    func renewDevSession(host: String, devKey: String) async -> Int? {
+        renewals += 1
+        return renewedHours
+    }
+
+    // Samsung ve Android TV
+    var bundled: [TVBrand: BundledTVApp] = [:]
+    var samsungDevMode = false
+    var androidHosts: [String] = []
+    var installError: DevModeError?
+    var events: [TVInstallEvent] = []
+    var brandInstalls: [(brand: TVBrand, host: String)] = []
+    func bundledApp(for brand: TVBrand) -> BundledTVApp? { bundled[brand] }
+    func isSamsungDevModeOn(host: String) async -> Bool { samsungDevMode }
+    func installSamsungApp(host: String, app: BundledTVApp, onEvent: @escaping @Sendable (TVInstallEvent) -> Void) async throws {
+        events.forEach(onEvent)
+        if let installError { throw installError }
+        brandInstalls.append((.samsung, host))
+    }
+    func isAndroidDebugOn(host: String) async -> Bool { androidHosts.contains(host) }
+    func scanAndroidTVs() async -> [String] { androidHosts }
+    func installAndroidApp(host: String, app: BundledTVApp, onEvent: @escaping @Sendable (TVInstallEvent) -> Void) async throws -> String {
+        events.forEach(onEvent)
+        if let installError { throw installError }
+        brandInstalls.append((.androidTV, host))
+        return app.version
+    }
 }
 
 final class FakeStream: StreamControlling {
@@ -415,6 +444,96 @@ final class TVAppInstallTests: XCTestCase {
         try await model.pair(LGTV(name: "Samsung", host: "192.168.1.20", brand: .samsung))
         XCTAssertEqual(model.tvApp, .unknown)
         XCTAssertEqual(services.installs, 0)
+    }
+
+    func testLGDeveloperModeIsExtendedOncePerDay() async throws {
+        let services = FakeServices()
+        services.devMode = true
+        let store = MemoryStore()
+        store.save("dev-key", for: StoreKey.tvDevKey)
+        let model = model(services, store: store)
+        try await model.pair(tv)
+        XCTAssertEqual(model.devModeHoursLeft, 999)
+        await model.refreshTVApp()
+        XCTAssertEqual(services.renewals, 1, "Aynı gün ikinci kez uzatılmaz")
+    }
+
+    private let samsung = LGTV(name: "Samsung", host: "192.168.1.20", brand: .samsung)
+    private let app = BundledTVApp(url: URL(fileURLWithPath: "/tmp/couchsubs-samsung_0.7.0.wgt"), version: "0.7.0")
+
+    func testSamsungWithDevModeOffShowsTheSteps() async {
+        let services = FakeServices()
+        services.bundled[.samsung] = app
+        let model = model(services)
+        model.tv = samsung
+        await model.refreshTVApp()
+        XCTAssertEqual(model.tvApp, .devModeOff)
+        XCTAssertTrue(model.canInstallTVApp)
+    }
+
+    func testSamsungInstallOpensSignInAndRemembersTheVersion() async {
+        let services = FakeServices()
+        services.bundled[.samsung] = app
+        services.samsungDevMode = true
+        let page = URL(string: "https://account.samsung.com/signin")!
+        services.events = [.signIn(page)]
+        let store = MemoryStore()
+        let model = model(services, store: store)
+        model.openInBrowser = { _ in }
+        model.tv = samsung
+        await model.refreshTVApp()
+        // Olaylar ana iş parçacığına bir sonraki turda gelir.
+        await Task.yield()
+        XCTAssertEqual(model.tvApp, .upToDate("0.7.0"))
+        XCTAssertEqual(store.load(String.self, for: StoreKey.tvAppVersion), "0.7.0")
+        XCTAssertEqual(services.brandInstalls.map { $0.host }, ["192.168.1.20"])
+
+        await model.refreshTVApp()
+        XCTAssertEqual(services.brandInstalls.count, 1, "Kurulu sürüm yeniden kurulmaz")
+    }
+
+    func testSamsungFailureIsShown() async {
+        let services = FakeServices()
+        services.bundled[.samsung] = app
+        services.samsungDevMode = true
+        services.installError = .signInFailed
+        let model = model(services)
+        model.tv = samsung
+        await model.refreshTVApp()
+        XCTAssertEqual(model.tvApp, .failed(.signInFailed))
+    }
+
+    func testAndroidTVIsFoundOnTheNetworkAndRemembered() async {
+        let services = FakeServices()
+        services.bundled[.androidTV] = BundledTVApp(url: URL(fileURLWithPath: "/tmp/couchsubs-androidtv_0.7.0.apk"), version: "0.7.0")
+        let store = MemoryStore()
+        let model = model(services, store: store)
+        model.tv = LGTV(name: "Android TV", host: "", brand: .androidTV)
+        await model.refreshTVApp()
+        XCTAssertEqual(model.tvApp, .devModeOff, "Hata ayıklama açılana kadar adımlar görünür")
+
+        services.androidHosts = ["192.168.1.40"]
+        await model.refreshTVApp()
+        XCTAssertEqual(model.tvApp, .upToDate("0.7.0"))
+        XCTAssertEqual(model.tv?.host, "192.168.1.40")
+        XCTAssertEqual(store.load(LGTV.self, for: StoreKey.tv)?.host, "192.168.1.40")
+    }
+
+    func testInstalledAndroidAppNeedsNothingWhenDebuggingIsOff() async {
+        let services = FakeServices()
+        services.bundled[.androidTV] = BundledTVApp(url: URL(fileURLWithPath: "/tmp/a_0.7.0.apk"), version: "0.7.0")
+        let store = MemoryStore()
+        store.save("0.7.0", for: StoreKey.tvAppVersion)
+        let model = model(services, store: store)
+        model.tv = LGTV(name: "Android TV", host: "192.168.1.40", brand: .androidTV)
+        await model.refreshTVApp()
+        XCTAssertEqual(model.tvApp, .upToDate("0.7.0"))
+        XCTAssertTrue(services.brandInstalls.isEmpty)
+    }
+
+    func testBundledFileNameCarriesTheVersion() {
+        XCTAssertEqual(BundledTVApp.version(ofFile: "couchsubs-androidtv_0.7.0.apk"), "0.7.0")
+        XCTAssertNil(BundledTVApp.version(ofFile: "couchsubs.apk"))
     }
 
     func testMovedTVIsSaved() {

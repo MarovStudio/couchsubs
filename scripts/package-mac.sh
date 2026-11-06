@@ -12,6 +12,10 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 [[ -f third-party/build/CChiaki.xcframework/Info.plist ]] || ./scripts/build-chiaki-macos.sh
 
 ./scripts/package-tv.sh
+./scripts/package-tizen.sh
+# Android TV APK'sı verilirse (CI: tv-android iş akışının çıktısı) uygulamaya gömülür.
+[[ -n "$ANDROID_APK" ]] && ./scripts/bundle-android-apk.sh "$ANDROID_APK"
+[[ -x dist/tv-helper/couchsubs-tv-helper ]] || ./scripts/build-tv-helper.sh
 
 BUILD="$PWD/build/mac"
 rm -rf "$BUILD"
@@ -24,6 +28,13 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   # Xcode'un eklediği get-task-allow yetkisi olursa Apple onayı reddedilir.
   SIGN_ARGS=(CODE_SIGN_IDENTITY="$DEVELOPER_ID" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$TEAM"
              OTHER_CODE_SIGN_FLAGS="--timestamp" CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO)
+fi
+
+# Yardımcı uygulamaya kopyalanmadan önce kendi başına imzalanır (Apple onayı sıkılaştırılmış çalışma ister).
+if [[ -n "$DEVELOPER_ID" ]]; then
+  codesign --force --options runtime --timestamp -s "$DEVELOPER_ID" dist/tv-helper/couchsubs-tv-helper
+else
+  codesign --force -s - dist/tv-helper/couchsubs-tv-helper
 fi
 
 # XCODE_JOBS: bilgisayar yüklüyken derlemeyi hafifletmek için (verilmezse Xcode kendi seçer).
@@ -39,6 +50,7 @@ APP="$BUILD/Build/Products/Release/CouchSubs.app"
 if [[ -n "$DEVELOPER_ID" ]]; then
   codesign --verify --deep --strict "$APP" || { echo "İmza doğrulanamadı."; exit 1; }
 fi
+[[ -x "$APP/Contents/MacOS/couchsubs-tv-helper" ]] || { echo "TV kurulum yardımcısı pakette yok."; exit 1; }
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
 mkdir -p dist
 ZIP="dist/CouchSubs-$VERSION-macos.zip"

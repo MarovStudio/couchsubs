@@ -21,7 +21,11 @@ public partial class App : Application
         ThemeManager.Apply(Resources);
         ThemeManager.Follow(Resources);
         var controller = new AppController(new LiveServices(), new DpapiAppStore(), new FileSettingsStore(), new WindowsSleepGuard(),
-            Localizer.Current, action => Dispatcher.BeginInvoke(action));
+            Localizer.Current, action => Dispatcher.BeginInvoke(action))
+        {
+            // Samsung'un sertifika için giriş sayfası varsayılan tarayıcıda açılır.
+            OpenInBrowser = url => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true }),
+        };
         var window = new ShellWindow(controller);
         MainWindow = window;
         window.Show();

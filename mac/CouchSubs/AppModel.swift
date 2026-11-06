@@ -12,6 +12,10 @@ enum StoreKey {
     static let tv = "tv"
     static let tvKey = "tvKey"
     static let tvDevKey = "tvDevKey"
+    /// Samsung ve Android TV'ye CouchSubs'ın kurduğu sürüm (LG'de sürüm TV'den okunur).
+    static let tvAppVersion = "tvAppVersion"
+    /// LG geliştirici modu süresinin son uzatıldığı an.
+    static let devSessionRenewed = "devSessionRenewed"
     static let settings = "settings"
 }
 
@@ -60,6 +64,30 @@ protocol AppServices: AnyObject {
     func fetchDevKey(host: String, passphrase: String) async throws -> String
     func installedTVAppVersion(host: String, devKey: String) async throws -> String?
     func installTVApp(host: String, devKey: String) async throws
+    /// LG geliştirici modunun süresini baştan başlatır; kalan saati döner (bilinmiyorsa nil).
+    func renewDevSession(host: String, devKey: String) async -> Int?
+
+    /// Samsung ve Android TV için uygulamayla gelen paket (geliştirici derlemesinde olmayabilir).
+    func bundledApp(for brand: TVBrand) -> BundledTVApp?
+    func isSamsungDevModeOn(host: String) async -> Bool
+    func installSamsungApp(host: String, app: BundledTVApp, onEvent: @escaping @Sendable (TVInstallEvent) -> Void) async throws
+    func isAndroidDebugOn(host: String) async -> Bool
+    /// Ağda ADB'si açık cihazlar.
+    func scanAndroidTVs() async -> [String]
+    /// Eksikse ya da eskiyse kurar; TV'deki sürümü döner.
+    func installAndroidApp(host: String, app: BundledTVApp, onEvent: @escaping @Sendable (TVInstallEvent) -> Void) async throws -> String
+}
+
+struct BundledTVApp: Equatable {
+    let url: URL
+    let version: String
+
+    /// `couchsubs-androidtv_0.7.0.apk` → `0.7.0`
+    static func version(ofFile name: String) -> String? {
+        let stem = (name as NSString).deletingPathExtension
+        guard let underscore = stem.lastIndex(of: "_"), underscore < stem.index(before: stem.endIndex) else { return nil }
+        return String(stem[stem.index(after: underscore)...])
+    }
 }
 
 /// Denetlenemeyen TV'ler için: TV uygulaması kendisi bağlanır.
@@ -198,6 +226,49 @@ final class LiveServices: AppServices {
         }
     }
 
+    func renewDevSession(host: String, devKey: String) async -> Int? {
+        try? await withKeyFile(devKey) { file in
+            try await DevModeInstaller(host: host, keyFile: file, runner: ProcessRunner()).renewSession()
+        }
+    }
+
+    // MARK: Samsung ve Android TV (gömülü yardımcıyla)
+
+    func bundledApp(for brand: TVBrand) -> BundledTVApp? {
+        let ext = switch brand {
+        case .samsung: "wgt"
+        case .androidTV: "apk"
+        case .lg: "ipk"
+        }
+        guard brand != .lg, TVHelper.executable != nil,
+              let url = Bundle.main.urls(forResourcesWithExtension: ext, subdirectory: "tv-app")?.first,
+              let version = BundledTVApp.version(ofFile: url.lastPathComponent) else { return nil }
+        return BundledTVApp(url: url, version: version)
+    }
+
+    func isSamsungDevModeOn(host: String) async -> Bool { await Self.isPortOpen(host: host, port: 26101) }
+
+    func installSamsungApp(host: String, app: BundledTVApp, onEvent: @escaping @Sendable (TVInstallEvent) -> Void) async throws {
+        _ = try await TVHelper.run(["samsung-install", "--host", host, "--package", app.url.path, "--version", app.version,
+                                    "--profiles", TVHelper.dataDirectory.appendingPathComponent("samsung").path], onEvent: onEvent)
+    }
+
+    func isAndroidDebugOn(host: String) async -> Bool { await Self.isPortOpen(host: host, port: 5555) }
+
+    func scanAndroidTVs() async -> [String] {
+        (try? await TVHelper.run(["android-scan"]).hosts) ?? []
+    }
+
+    func installAndroidApp(host: String, app: BundledTVApp, onEvent: @escaping @Sendable (TVInstallEvent) -> Void) async throws -> String {
+        let result = try await TVHelper.run(["android-install", "--host", host, "--package", app.url.path, "--version", app.version,
+                                             "--key-dir", TVHelper.dataDirectory.appendingPathComponent("adb").path], onEvent: onEvent)
+        return result.version ?? app.version
+    }
+
+    static func isPortOpen(host: String, port: UInt16) async -> Bool {
+        await DevModeInstaller.isPortOpen(host: host, port: port)
+    }
+
     /// ssh anahtarı dosyadan okur; dosya yalnız komut süresince durur.
     private func withKeyFile<T>(_ key: String, _ body: (URL) async throws -> T) async throws -> T {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -234,6 +305,10 @@ enum TVAppState: Equatable {
     /// Geliştirici modu açık; Key Server parolası gerekiyor. `error` son denemenin sonucu.
     case needsPassphrase(error: DevModeError?)
     case failed(DevModeError)
+    /// Samsung: sertifika için tarayıcıda Samsung hesabıyla giriş bekleniyor.
+    case signIn(URL)
+    /// Android TV: TV ekranında hata ayıklama izni bekleniyor.
+    case approveOnTV
 }
 
 @MainActor
@@ -248,8 +323,12 @@ final class AppModel {
     var console: RegisteredConsole?
     var tv: LGTV?
     var tvApp = TVAppState.unknown
+    /// LG geliştirici modunun kalan süresi (saat); CouchSubs uzattıktan sonra bilinir.
+    var devModeHoursLeft: Int?
     /// Son eşleşmede TV uygulaması açılamadı.
     private var tvAppMissing = false
+    /// TV uygulaması denetimi sürüyor (bekleme ekranı ve çeviri başlangıcı aynı anda çağırabilir).
+    private var refreshingTVApp = false
     var settings: UserSettings {
         didSet {
             // Sıradan tercih; her kaydırıcı hareketinde Anahtarlık'a yazılmasın.
@@ -359,11 +438,19 @@ final class AppModel {
     func pair(_ tv: LGTV) async throws {
         try await startServer()
         let pairing = try await services.pairTV(tv, key: store.load(String.self, for: StoreKey.tvKey), server: serverAddress(for: tv))
+        if self.tv?.brand != tv.brand || (tv.brand != .androidTV && self.tv?.host != tv.host) {
+            store.remove(StoreKey.tvAppVersion)
+        }
         self.tv = tv
         store.save(tv, for: StoreKey.tv)
         store.save(pairing.key, for: StoreKey.tvKey)
         tvAppMissing = !pairing.launched
-        await refreshTVApp()
+        if tv.brand == .lg {
+            await refreshTVApp()
+        } else {
+            // Samsung girişi ya da Android onayı dakikalar sürebilir; eşleşme beklemesin.
+            Task { await refreshTVApp() }
+        }
     }
 
     // MARK: - TV uygulamasını kurma
@@ -371,7 +458,26 @@ final class AppModel {
     /// Geliştirici modu açık TV'de uygulamayı eksikse kurar, eskiyse günceller.
     /// Anahtar yoksa ve uygulama çalışıyorsa kullanıcıdan bir şey istenmez.
     func refreshTVApp() async {
-        guard let tv, tv.brand == .lg, let bundled = services.bundledTVAppVersion else { return }
+        guard let tv, !refreshingTVApp else { return }
+        refreshingTVApp = true
+        defer { refreshingTVApp = false }
+        switch tv.brand {
+        case .lg: await refreshLGApp(tv)
+        case .samsung: await refreshSamsungApp(tv)
+        case .androidTV: await refreshAndroidApp(tv)
+        }
+    }
+
+    /// Samsung ya da Android TV'ye daha önce CouchSubs'ın kurduğu sürüm.
+    private var installedAppVersion: String? { store.load(String.self, for: StoreKey.tvAppVersion) }
+
+    private func needsInstall(_ bundled: BundledTVApp) -> Bool {
+        guard let installed = installedAppVersion else { return true }
+        return DevModeInstaller.isNewer(bundled.version, than: installed)
+    }
+
+    private func refreshLGApp(_ tv: LGTV) async {
+        guard let bundled = services.bundledTVAppVersion else { return }
         guard await services.isDevModeOn(host: tv.host) else {
             tvApp = tvAppMissing ? .devModeOff : .unknown
             return
@@ -381,6 +487,94 @@ final class AppModel {
             return
         }
         await install(tv: tv, devKey: devKey, bundled: bundled)
+    }
+
+    /// Samsung: geliştirici modu açıksa uygulamayı imzalayıp kurar. Sertifika yoksa Samsung girişi istenir.
+    private func refreshSamsungApp(_ tv: LGTV) async {
+        guard let bundled = services.bundledApp(for: .samsung) else { return }
+        guard needsInstall(bundled) else {
+            tvApp = .upToDate(installedAppVersion ?? bundled.version)
+            return
+        }
+        guard await services.isSamsungDevModeOn(host: tv.host) else {
+            tvApp = .devModeOff
+            return
+        }
+        tvApp = .working
+        do {
+            try await services.installSamsungApp(host: tv.host, app: bundled) { [weak self] event in
+                Task { @MainActor in self?.installEvent(event) }
+            }
+            store.save(bundled.version, for: StoreKey.tvAppVersion)
+            tvApp = .upToDate(bundled.version)
+            await openTVAppAfterInstall(tv)
+        } catch {
+            tvApp = .failed(error as? DevModeError ?? .installFailed)
+        }
+    }
+
+    /// Android TV: ağda ADB'si açık TV'yi bulur, uygulamayı kurar ve açar.
+    private func refreshAndroidApp(_ tv: LGTV) async {
+        guard let bundled = services.bundledApp(for: .androidTV) else { return }
+        var host = tv.host
+        let reachable = host.isEmpty ? false : await services.isAndroidDebugOn(host: host)
+        if !reachable {
+            // Uygulama kuruluysa ve TV'de hata ayıklama kapalıysa yapılacak bir şey yok.
+            if !needsInstall(bundled) {
+                tvApp = .upToDate(installedAppVersion ?? bundled.version)
+                return
+            }
+            guard let found = await services.scanAndroidTVs().first else {
+                tvApp = .devModeOff
+                return
+            }
+            host = found
+        }
+        tvApp = .working
+        do {
+            let version = try await services.installAndroidApp(host: host, app: bundled) { [weak self] event in
+                Task { @MainActor in self?.installEvent(event) }
+            }
+            // TV'nin adresi bundan sonra sürüm denetimi için kullanılır.
+            let located = LGTV(name: tv.name, host: host, brand: .androidTV)
+            self.tv = located
+            store.save(located, for: StoreKey.tv)
+            store.save(version, for: StoreKey.tvAppVersion)
+            tvApp = .upToDate(version)
+        } catch {
+            tvApp = .failed(error as? DevModeError ?? .installFailed)
+        }
+    }
+
+    private func installEvent(_ event: TVInstallEvent) {
+        // Kurulum bittikten sonra gelen geç olay sonucu ezmesin.
+        switch tvApp {
+        case .working, .signIn, .approveOnTV: break
+        default: return
+        }
+        switch event {
+        case .signIn(let url):
+            tvApp = .signIn(url)
+            openInBrowser(url)
+        case .approveOnTV:
+            tvApp = .approveOnTV
+        case .progress:
+            if case .signIn = tvApp { tvApp = .working }
+        }
+    }
+
+    /// Seçili TV'ye uygulamayı CouchSubs kurabilir mi (paket uygulamayla geldi mi)?
+    var canInstallTVApp: Bool {
+        guard let tv else { return false }
+        return tv.brand == .lg ? services.bundledTVAppVersion != nil : services.bundledApp(for: tv.brand) != nil
+    }
+
+    /// Testlerde tarayıcı açılmasın diye değiştirilebilir.
+    var openInBrowser: (URL) -> Void = { _ = NSWorkspace.shared.open($0) }
+
+    /// Samsung'da geliştirici modunda "Host PC IP" olarak yazılacak bu Mac'in adresi.
+    var computerAddress: String? {
+        Self.localAddress(near: tv?.host.isEmpty == false ? tv!.host : "192.168.1.1")
     }
 
     /// Key Server'dan anahtarı alır (TV ekranındaki parolayla) ve uygulamayı kurar.
@@ -402,11 +596,13 @@ final class AppModel {
             let installed = try await services.installedTVAppVersion(host: tv.host, devKey: devKey)
             if let installed, !DevModeInstaller.isNewer(bundled, than: installed) {
                 tvApp = .upToDate(installed)
+                await renewDevSessionIfDue(tv: tv, devKey: devKey)
                 return
             }
             try await services.installTVApp(host: tv.host, devKey: devKey)
             tvApp = .upToDate(bundled)
             tvAppMissing = false
+            await renewDevSessionIfDue(tv: tv, devKey: devKey)
             await openTVAppAfterInstall(tv)
         } catch DevModeError.keyRefused {
             // Geliştirici modu yeniden açılınca TV yeni anahtar üretir; eskisi işe yaramaz.
@@ -414,6 +610,17 @@ final class AppModel {
             tvApp = .needsPassphrase(error: nil)
         } catch {
             tvApp = .failed(error as? DevModeError ?? .installFailed)
+        }
+    }
+
+    /// LG geliştirici modunun 1000 saatlik süresini günde en çok bir kez baştan başlatır; kullanıcı TV'den uzatmak
+    /// zorunda kalmaz.
+    private func renewDevSessionIfDue(tv: LGTV, devKey: String) async {
+        let last = defaults.object(forKey: StoreKey.devSessionRenewed) as? Date ?? .distantPast
+        guard Date().timeIntervalSince(last) > 20 * 3600 else { return }
+        if let hours = await services.renewDevSession(host: tv.host, devKey: devKey) {
+            devModeHoursLeft = hours
+            defaults.set(Date(), forKey: StoreKey.devSessionRenewed)
         }
     }
 
@@ -433,7 +640,7 @@ final class AppModel {
     /// Kurulumu baştan başlatır (kayıtlı her şeyi siler).
     func resetSetup() {
         stop()
-        [StoreKey.accountId, StoreKey.console, StoreKey.tv, StoreKey.tvKey, StoreKey.tvDevKey].forEach(store.remove)
+        [StoreKey.accountId, StoreKey.console, StoreKey.tv, StoreKey.tvKey, StoreKey.tvDevKey, StoreKey.tvAppVersion].forEach(store.remove)
         accountId = nil
         console = nil
         tv = nil
