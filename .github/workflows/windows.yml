@@ -186,9 +186,9 @@ jobs:
         run: |
           $p = Start-Process publish/CouchSubs/CouchSubs.exe -ArgumentList "--render-screens", "$PWD/screens" -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "ekran görüntüsü aracı zamanında bitmedi" }
-          if (Test-Path screens/errors.txt) { Get-Content screens/errors.txt }
+          if (Test-Path screens/errors.txt) { Get-Content screens/errors.txt; throw "ekranlardan biri hata verdi" }
           $count = (Get-ChildItem screens -Filter *.png).Count
-          if ($count -lt 20) { throw "beklenen 20 ekran görüntüsü, bulunan: $count" }
+          if ($count -lt 22) { throw "beklenen 22 ekran görüntüsü, bulunan: $count" }
 
       # Antivirüs bir DLL'i karantinaya alınca uygulama sessizce kapanmamalı, eksik dosyayı söylemeli.
       - name: Eksik DLL ile açılış

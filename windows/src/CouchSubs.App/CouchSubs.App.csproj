@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <Resource Include="Assets\logo.png" />
+    <!-- ShellWindow.xaml pencere simgesi olarak bunu okur; ApplicationIcon yalnız exe simgesidir. -->
+    <Resource Include="Assets\CouchSubs.ico" />
   </ItemGroup>
 
   <!-- TV uygulaması paketleri (scripts/package-tv.sh, package-tizen.sh ve Android derlemesi üretir); geliştirici modu açık TV'ye kurulur. -->
