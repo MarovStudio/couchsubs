@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
+using System.Runtime.CompilerServices;
 using System.Windows;
 using CouchSubs.App.Services;
 using CouchSubs.App.Theme;
@@ -13,9 +14,32 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        if (e.Args is ["--render-screens", var folder])
+        var renderFolder = e.Args is ["--render-screens", var folder] ? folder : null;
+        // Eksik bir DLL, onu kullanan yöntem derlenirken hata verir. Bu yüzden denetim ve yakalama burada, uygulamanın
+        // kendi türlerine dokunan kod ise ayrı yöntemde (Start) durur.
+        var missing = StartupGuard.MissingFiles(AppContext.BaseDirectory);
+        if (missing.Count > 0)
         {
-            ScreenRenderer.Run(this, folder);
+            StartupGuard.Fail(this, StartupGuard.MissingMessage(missing), null, renderFolder);
+            return;
+        }
+        if (renderFolder is null) StartupGuard.Watch(this);
+        try
+        {
+            Start(renderFolder);
+        }
+        catch (Exception error)
+        {
+            StartupGuard.Fail(this, StartupGuard.ErrorMessage(error), error, renderFolder);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    void Start(string? renderFolder)
+    {
+        if (renderFolder is not null)
+        {
+            ScreenRenderer.Run(this, renderFolder);
             return;
         }
         ThemeManager.Apply(Resources);

@@ -190,6 +190,19 @@ jobs:
           $count = (Get-ChildItem screens -Filter *.png).Count
           if ($count -lt 20) { throw "beklenen 20 ekran görüntüsü, bulunan: $count" }
 
+      # Antivirüs bir DLL'i karantinaya alınca uygulama sessizce kapanmamalı, eksik dosyayı söylemeli.
+      - name: Eksik DLL ile açılış
+        shell: pwsh
+        run: |
+          Copy-Item publish/CouchSubs broken -Recurse
+          Remove-Item broken/CouchSubs.RemotePlay.dll
+          $p = Start-Process broken/CouchSubs.exe -ArgumentList "--render-screens", "$PWD/broken-out" -PassThru
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); throw "uygulama eksik DLL ile takıldı" }
+          if (-not (Test-Path broken-out/errors.txt)) { throw "eksik DLL bildirilmedi (çıkış kodu $($p.ExitCode))" }
+          $text = Get-Content broken-out/errors.txt -Raw
+          $text
+          if ($text -notmatch "CouchSubs\.RemotePlay\.dll") { throw "hata metni eksik dosyayı söylemiyor" }
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
