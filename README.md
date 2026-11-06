@@ -10,6 +10,12 @@ yapılır; altyazılar internete gönderilmez. Ücretsiz ve açık kaynaklıdır
 
 *English below.*
 
+## Oyunda nasıl görünüyor
+
+Mafia: The Old Country, PS5'te İngilizce oynanıyor; Türkçe altyazı TV'de oyunun üstünde, CouchSubs bilgisayarda çalışıyor.
+
+https://github.com/user-attachments/assets/bb8569d8-115d-49c7-a772-da2d9e171c17
+
 ## İndir
 
 | Bilgisayarınız | Tek tıkla indirin |
