@@ -137,6 +137,19 @@ public static class SamsungDiscovery
             catch (Exception) { /* ad okunamazsa genel ad kullanılır */ }
             tvs.Add(new LgTv(name ?? "Samsung TV", host, TvBrand.Samsung));
         }
+        if (tvs.Count > 0) return tvs;
+
+        // SSDP yanıtı gelmediyse (bazı modemler ve TV'ler çok noktaya yayını geçirmez) ağdaki adresler tek tek denenir:
+        // Samsung TV 8001 portunda kendi adını veren bir arayüz sunar.
+        foreach (var host in await LocalNetwork.HostsWithOpenPortAsync(8001, TimeSpan.FromMilliseconds(700), cancellationToken))
+        {
+            try
+            {
+                if (SamsungMessages.DeviceName(await Http.GetStringAsync($"http://{host}:8001/api/v2/", cancellationToken)) is { } name)
+                    tvs.Add(new LgTv(name, host, TvBrand.Samsung));
+            }
+            catch (Exception error) when (error is HttpRequestException or TaskCanceledException) { }
+        }
         return tvs;
     }
 }

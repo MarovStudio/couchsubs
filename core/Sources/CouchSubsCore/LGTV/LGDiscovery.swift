@@ -47,13 +47,22 @@ public enum LGDiscovery {
         address.sin_addr.s_addr = inet_addr("239.255.255.250")
 
         let request = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: \(searchTarget)\r\n\r\n"
-        for _ in 0..<2 {
+        func send() {
             _ = request.withCString { pointer in
                 withUnsafePointer(to: &address) {
                     $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                         sendto(fd, pointer, strlen(pointer), 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
                     }
                 }
+            }
+        }
+        // İstek her ağ bağdaştırıcısından ayrı gönderilir: varsayılan bağdaştırıcı VPN olabilir ve TV o ağda değildir.
+        let interfaces = LocalNetwork.privateAddresses()
+        for _ in 0..<2 {
+            if interfaces.isEmpty { send() }
+            for var local in interfaces {
+                setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &local, socklen_t(MemoryLayout<in_addr>.size))
+                send()
             }
         }
 

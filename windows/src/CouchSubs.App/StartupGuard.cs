@@ -98,7 +98,8 @@ internal static class StartupGuard
             Log("UnhandledException", e.ExceptionObject as Exception);
     }
 
-    static void Log(string message, Exception? error)
+    /// <summary>%LOCALAPPDATA%\CouchSubs\hata.log dosyasına yazar; yazılamazsa sessizce geçer.</summary>
+    internal static void Log(string message, Exception? error)
     {
         try
         {

@@ -29,7 +29,9 @@ public enum DevModeError
     NotApproved,
 }
 
-public sealed class DevModeException(DevModeError error) : Exception(error.ToString())
+/// <param name="detail">Sorunu bulmak için ayrıntı (komut çıktısı gibi); hata günlüğüne yazılır, kullanıcıya gösterilmez.</param>
+public sealed class DevModeException(DevModeError error, string? detail = null)
+    : Exception(detail is null ? error.ToString() : $"{error}: {detail}")
 {
     public DevModeError Error { get; } = error;
 }
@@ -126,11 +128,17 @@ public sealed class DevModeInstaller(string host, string keyFile, ICommandRunner
     public async Task InstallAsync(string package, string version)
     {
         var upload = await SshAsync($"mkdir -p /media/developer/temp && cat > {RemotePackage}", package);
-        if (upload.Status != 0) throw new DevModeException(DevModeError.InstallFailed);
+        if (upload.Status != 0)
+            throw new DevModeException(DevModeError.InstallFailed, $"yükleme çıkış kodu {upload.Status}: {Short(upload.Output)}");
+        // Paket TV'ye eksiksiz ulaştı mı? (wc yoksa ya da çıktı okunamazsa denetim atlanır.)
+        var expected = new FileInfo(package).Length;
+        var size = await SshAsync($"wc -c < {RemotePackage}");
+        if (long.TryParse(size.Output.Trim(), out var actual) && actual != expected)
+            throw new DevModeException(DevModeError.InstallFailed, $"paket TV'ye eksik ya da bozuk ulaştı: {actual}/{expected} bayt");
 
         var parameters = $"{{\"id\":\"com.ares.defaultName\",\"ipkUrl\":\"{RemotePackage}\",\"subscribe\":true}}";
         // -n 1: ilk yanıttan sonra çıkar; kurulum TV'de sürer.
-        await SshAsync($"/usr/bin/luna-send-pub -n 1 'luna://com.webos.appInstallService/dev/install' '{parameters}'");
+        var response = await SshAsync($"/usr/bin/luna-send-pub -n 1 'luna://com.webos.appInstallService/dev/install' '{parameters}'");
 
         var timer = Stopwatch.StartNew();
         var limit = installTimeout ?? TimeSpan.FromSeconds(90);
@@ -145,8 +153,12 @@ public sealed class DevModeInstaller(string host, string keyFile, ICommandRunner
             await Task.Delay(pollInterval ?? TimeSpan.FromSeconds(2));
         }
         try { await SshAsync($"rm -f {RemotePackage}"); } catch (DevModeException) { /* geçici dosya kalabilir */ }
-        if (!installed) throw new DevModeException(DevModeError.InstallFailed);
+        if (!installed)
+            throw new DevModeException(DevModeError.InstallFailed,
+                $"TV'de {version} sürümü görünmedi; kurulum yanıtı ({response.Status}): {Short(response.Output)}");
     }
+
+    private static string Short(string text) => text.Length <= 500 ? text.Trim() : text[..500].Trim() + "…";
 
     private const string SessionTokenPath = "/var/luna/preferences/devmode_enabled";
     public static Uri RenewUrl(string token) => new($"https://developer.lge.com/secure/ResetDevModeSession.dev?sessionToken={Uri.EscapeDataString(token)}");

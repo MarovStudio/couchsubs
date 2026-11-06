@@ -20,6 +20,14 @@ public class DevModeInstallerTests
 
     private static readonly DevModeTools Tools = new("ssh", "ssh-keygen", "NUL");
 
+    /// <summary>10 baytlık geçici paket; kurulum TV'deki boyutu bununla karşılaştırır.</summary>
+    private static string Package()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"couchsubs-test-{Guid.NewGuid():N}.ipk");
+        File.WriteAllBytes(file, new byte[10]);
+        return file;
+    }
+
     private static DevModeInstaller Installer(FakeRunner runner) =>
         new("192.168.1.230", "key", runner, Tools, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(200));
 
@@ -78,10 +86,12 @@ public class DevModeInstallerTests
                 return new CommandResult(0, reads < 3 ? "\"version\": \"0.4.0\"" : "\"version\": \"0.6.1\"");
             },
         };
-        await Installer(runner).InstallAsync("tv.ipk", "0.6.1");
-        Assert.Equal("tv.ipk", runner.Calls[0].Input);
+        var package = Package();
+        await Installer(runner).InstallAsync(package, "0.6.1");
+        Assert.Equal(package, runner.Calls[0].Input);
         Assert.Contains("cat > /media/developer/temp/couchsubs.ipk", runner.Calls[0].Arguments[^1]);
-        Assert.Contains("luna://com.webos.appInstallService/dev/install", runner.Calls[1].Arguments[^1]);
+        Assert.Contains("wc -c < /media/developer/temp/couchsubs.ipk", runner.Calls[1].Arguments[^1]);
+        Assert.Contains("luna://com.webos.appInstallService/dev/install", runner.Calls[2].Arguments[^1]);
         Assert.Contains("rm -f /media/developer/temp/couchsubs.ipk", runner.Calls[^1].Arguments[^1]);
     }
 
@@ -89,15 +99,26 @@ public class DevModeInstallerTests
     public async Task InstallTimesOutWhenTheVersionNeverChanges()
     {
         var runner = new FakeRunner { Answer = line => line.Contains("appinfo.json") ? new CommandResult(0, "\"version\": \"0.4.0\"") : null };
-        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync("tv.ipk", "0.6.1"));
+        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync(Package(), "0.6.1"));
         Assert.Equal(DevModeError.InstallFailed, error.Error);
+    }
+
+    [Fact]
+    public async Task IncompleteUploadIsReportedBeforeInstalling()
+    {
+        // Paket TV'ye eksik ulaştıysa kurulum denenmez; hata günlüğü iki boyutu da söyler.
+        var runner = new FakeRunner { Answer = line => line.Contains("wc -c") ? new CommandResult(0, "7\n") : null };
+        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync(Package(), "0.6.1"));
+        Assert.Equal(DevModeError.InstallFailed, error.Error);
+        Assert.Contains("7/10", error.Message);
+        Assert.DoesNotContain(runner.Calls, call => call.Arguments[^1].Contains("appInstallService"));
     }
 
     [Fact]
     public async Task FailedUploadStopsBeforeInstalling()
     {
         var runner = new FakeRunner { Answer = line => line.Contains("cat >") ? new CommandResult(1, "disk full") : null };
-        await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync("tv.ipk", "0.6.1"));
+        await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync(Package(), "0.6.1"));
         Assert.DoesNotContain(runner.Calls, call => call.Arguments[^1].Contains("appInstallService"));
     }
 

@@ -123,14 +123,24 @@ public sealed class LiveServices : IAppServices
     public Task<string?> InstalledTvAppVersionAsync(string host, string devKey) =>
         WithKeyFileAsync(devKey, file => Installer(host, file).InstalledVersionAsync());
 
-    public Task InstallTvAppAsync(string host, string devKey) =>
-        WithKeyFileAsync<object?>(devKey, async file =>
+    public async Task InstallTvAppAsync(string host, string devKey)
+    {
+        try
         {
-            if (BundledTvPackage is not { } package || BundledTvAppVersion is not { } version)
-                throw new DevModeException(DevModeError.InstallFailed);
-            await Installer(host, file).InstallAsync(package, version);
-            return null;
-        });
+            await WithKeyFileAsync<object?>(devKey, async file =>
+            {
+                if (BundledTvPackage is not { } package || BundledTvAppVersion is not { } version)
+                    throw new DevModeException(DevModeError.InstallFailed, "uygulamanın yanında LG paketi (tv-app/*.ipk) yok");
+                await Installer(host, file).InstallAsync(package, version);
+                return null;
+            });
+        }
+        catch (DevModeException error)
+        {
+            StartupGuard.Log("LG TV kurulumu", error);
+            throw;
+        }
+    }
 
     public async Task<int?> RenewDevSessionAsync(string host, string devKey)
     {
@@ -177,6 +187,7 @@ public sealed class LiveServices : IAppServices
         }
         catch (SamsungInstallException error)
         {
+            StartupGuard.Log("Samsung TV kurulumu", error);
             throw new DevModeException(error.Error switch
             {
                 SamsungInstallError.Unreachable => DevModeError.Unreachable,
@@ -188,7 +199,8 @@ public sealed class LiveServices : IAppServices
         }
         catch (Exception error) when (error is not DevModeException)
         {
-            throw new DevModeException(DevModeError.InstallFailed);
+            StartupGuard.Log("TV kurulumu", error);
+            throw new DevModeException(DevModeError.InstallFailed, error.Message);
         }
     }
 
@@ -209,6 +221,7 @@ public sealed class LiveServices : IAppServices
         }
         catch (AndroidInstallException error)
         {
+            StartupGuard.Log("Android TV kurulumu", error);
             throw new DevModeException(error.Error switch
             {
                 AndroidInstallError.Unreachable => DevModeError.Unreachable,
@@ -218,7 +231,8 @@ public sealed class LiveServices : IAppServices
         }
         catch (Exception error) when (error is not DevModeException)
         {
-            throw new DevModeException(DevModeError.InstallFailed);
+            StartupGuard.Log("TV kurulumu", error);
+            throw new DevModeException(DevModeError.InstallFailed, error.Message);
         }
     }
 

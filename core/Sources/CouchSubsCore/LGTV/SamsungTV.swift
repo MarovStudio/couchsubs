@@ -137,12 +137,42 @@ public enum SamsungDiscovery {
         for host in Set(hosts).sorted() {
             tvs.append(LGTV(name: await name(host: host) ?? "Samsung TV", host: host, brand: .samsung))
         }
-        return tvs
+        if !tvs.isEmpty { return tvs }
+
+        // SSDP yanıtı gelmediyse (bazı modemler ve TV'ler çok noktaya yayını geçirmez) ağdaki adresler tek tek denenir:
+        // Samsung TV 8001 portunda kendi adını veren bir arayüz sunar.
+        return await scan()
     }
 
-    private static func name(host: String) async -> String? {
+    private static let probe: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 0.8
+        configuration.timeoutIntervalForResource = 1.5
+        configuration.httpMaximumConnectionsPerHost = 1
+        return URLSession(configuration: configuration)
+    }()
+
+    private static func scan() async -> [LGTV] {
+        let targets = LocalNetwork.scanTargets(LocalNetwork.privateAddresses())
+        var found: [LGTV] = []
+        // 64'erli gruplar: ağı ve bilgisayarı yormadan birkaç saniyede biter.
+        for start in stride(from: 0, to: targets.count, by: 64) {
+            let batch = targets[start..<min(start + 64, targets.count)]
+            await withTaskGroup(of: LGTV?.self) { group in
+                for host in batch {
+                    group.addTask {
+                        await name(host: host, session: probe).map { LGTV(name: $0, host: host, brand: .samsung) }
+                    }
+                }
+                for await tv in group { if let tv { found.append(tv) } }
+            }
+        }
+        return found.sorted { $0.host.compare($1.host, options: .numeric) == .orderedAscending }
+    }
+
+    private static func name(host: String, session: URLSession = .shared) async -> String? {
         guard let url = URL(string: "http://\(host):8001/api/v2/"),
-              let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+              let (data, _) = try? await session.data(from: url) else { return nil }
         return SamsungMessages.deviceName(data)
     }
 }

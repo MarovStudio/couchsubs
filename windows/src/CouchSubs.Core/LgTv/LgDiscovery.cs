@@ -56,7 +56,22 @@ public static class LgDiscovery
         var request = Encoding.ASCII.GetBytes(
             $"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: {searchTarget}\r\n\r\n");
         var target = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
-        for (var i = 0; i < 2; i++) await udp.SendAsync(request, target, cancellationToken);
+        // İstek her ağ bağdaştırıcısından ayrı gönderilir: varsayılan bağdaştırıcı VPN ya da sanal ağ (Hyper-V, WSL)
+        // olabilir ve TV o ağda değildir. Yanıtlar bu soketin portuna tek tek gelir.
+        var interfaces = LocalNetwork.PrivateAddresses();
+        for (var i = 0; i < 2; i++)
+        {
+            if (interfaces.Count == 0) await udp.SendAsync(request, target, cancellationToken);
+            foreach (var local in interfaces)
+            {
+                try
+                {
+                    udp.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, local.GetAddressBytes());
+                    await udp.SendAsync(request, target, cancellationToken);
+                }
+                catch (SocketException) { /* bu bağdaştırıcıdan gönderilemedi; diğerleri denenir */ }
+            }
+        }
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(timeout);
