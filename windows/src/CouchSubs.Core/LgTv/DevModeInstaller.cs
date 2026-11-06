@@ -195,8 +195,12 @@ public sealed class DevModeInstaller(string host, string keyFile, ICommandRunner
 
     private async Task<CommandResult> SshAsync(string command, string? input = null)
     {
+        // Windows'un ssh.exe'si girişi bir boruya bağlıyken komutun çıktısını hiç vermeyebiliyor (Win32-OpenSSH);
+        // TV'deki sürüm boş okunuyor, kurulum hiç bitmemiş sanılıyordu. Girdi gönderilmeyen komutlarda -n ile
+        // ssh girişi hiç okumaz, ProcessRunner da girişi bağlamaz.
         var result = await runner.RunAsync(tools.Ssh,
         [
+            .. input is null ? new[] { "-n" } : [],
             "-p", Port.ToString(), "-i", keyFile,
             "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", "-o", "LogLevel=ERROR",
             // TV'nin anahtarı her fabrika ayarında değişir ve eski türdedir.
@@ -218,7 +222,8 @@ public sealed class ProcessRunner : ICommandRunner
     {
         var start = new ProcessStartInfo(executable)
         {
-            RedirectStandardInput = true,
+            // Girdi yoksa giriş bağlanmaz (bkz. DevModeInstaller.SshAsync).
+            RedirectStandardInput = inputFile is not null,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -240,10 +245,10 @@ public sealed class ProcessRunner : ICommandRunner
         var error = process.StandardError.ReadToEndAsync();
         if (inputFile is not null)
         {
-            await using var input = File.OpenRead(inputFile);
-            await input.CopyToAsync(process.StandardInput.BaseStream);
+            await using (var input = File.OpenRead(inputFile))
+                await input.CopyToAsync(process.StandardInput.BaseStream);
+            process.StandardInput.Close();
         }
-        process.StandardInput.Close();
         await process.WaitForExitAsync();
         return new CommandResult(process.ExitCode, await output + await error);
     }

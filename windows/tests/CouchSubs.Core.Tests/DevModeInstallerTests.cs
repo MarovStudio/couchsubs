@@ -137,6 +137,25 @@ public class DevModeInstallerTests
     }
 
     [Fact]
+    public async Task OnlyTheUploadKeepsSshInputOpen()
+    {
+        // Windows'un ssh.exe'si girişi boruya bağlıyken çıktı vermeyebiliyor; girdi gönderilmeyen her komut -n alır.
+        var runner = new FakeRunner { Answer = line => line.Contains("appinfo.json") ? new CommandResult(0, "\"version\": \"0.6.1\"") : null };
+        await Installer(runner).InstallAsync(Package(), "0.6.1");
+        var upload = runner.Calls.Single(call => call.Input is not null);
+        Assert.DoesNotContain("-n", upload.Arguments);
+        Assert.All(runner.Calls.Where(call => call.Input is null), call => Assert.Equal("-n", call.Arguments[0]));
+    }
+
+    [Fact]
+    public async Task RealRunnerReadsOutputWithoutInput()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var result = await new ProcessRunner().RunAsync("/bin/echo", ["merhaba"], null);
+        Assert.Equal(new CommandResult(0, "merhaba\n"), result);
+    }
+
+    [Fact]
     public async Task RealRunnerPassesEmptyArgumentsAndInput()
     {
         if (OperatingSystem.IsWindows()) return;
