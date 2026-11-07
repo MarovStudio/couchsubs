@@ -21,6 +21,17 @@
                 </Button>
             </Grid>
 
+            <!-- Yeni sürüm -->
+            <c:Card x:Name="UpdateCard" Margin="0,0,0,16" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="UpdateTitle" FontWeight="SemiBold" Foreground="{DynamicResource accentBrush}" TextWrapping="Wrap" />
+                    <ProgressBar x:Name="UpdateBar" Minimum="0" Maximum="1" Margin="0,12,0,0" Visibility="Collapsed" />
+                    <TextBlock x:Name="UpdateErrorText" Foreground="{DynamicResource dangerBrush}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed" />
+                    <Button x:Name="UpdateButton" Content="{t:T 'Update now'}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"
+                            Margin="0,12,0,0" Click="OnUpdate" />
+                </StackPanel>
+            </c:Card>
+
             <!-- Başlat / Durdur -->
             <Button x:Name="Toggle" HorizontalAlignment="Stretch" MinHeight="{DynamicResource size.primaryActionHeight}" Click="OnToggle"
                     IsEnabled="{Binding IsStarting, Converter={StaticResource Not}}">

@@ -166,13 +166,48 @@ jobs:
           ./scripts/package-tizen.sh
           if [ -d android-apk ]; then ./scripts/bundle-android-apk.sh "$(ls android-apk/*.apk | head -1)"; fi
 
+      # Sürüm etiketten gelir (v0.1.0-beta.10 → 0.1.0-beta.10); uygulama içi güncelleme bununla karşılaştırır.
       - name: Yayınla
-        run: dotnet publish windows/src/CouchSubs.App -c Release -r win-x64 --self-contained -o publish/CouchSubs
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION=0.1.0-dev; fi
+          dotnet publish windows/src/CouchSubs.App -c Release -r win-x64 --self-contained -o publish/CouchSubs -p:Version="$VERSION"
 
       # Türkçe dublajın ses motoru (Kyutai pocket-tts, MIT): sabit sürüm, özeti denetlenir.
       - name: Dublaj ses motoru
         shell: bash
         run: ./scripts/fetch-pocket-tts.sh windows publish/CouchSubs/tts
+
+      # Kurulum dosyası ve uygulama içi güncelleme paketleri (Velopack, MIT). Sürümde önceki sürüm indirilir; yalnız
+      # değişen parçalar (delta) da üretilir. Her derlemede denenir ki paketleme hatası sürüm anında çıkmasın.
+      - name: Kurulum dosyası
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME.TrimStart("v") } else { "0.1.0-dev" }
+          Copy-Item -Recurse publish/CouchSubs pack
+          Copy-Item LICENSE, THIRD-PARTY-NOTICES.md pack/
+          dotnet tool install -g vpk --version 1.2.161
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            vpk download github --repoUrl https://github.com/yorulmazsinan/couchsubs -o Releases
+            if ($LASTEXITCODE -ne 0) { Write-Host "Önceki Velopack sürümü yok; yalnız tam paket üretilecek." }
+          }
+          vpk pack --packId CouchSubsApp --packVersion $version --packDir pack --mainExe CouchSubs.exe `
+            --packTitle CouchSubs --packAuthors Enmera --icon windows/src/CouchSubs.App/Assets/CouchSubs.ico --outputDir Releases
+          if ($LASTEXITCODE -ne 0) { throw "vpk pack başarısız" }
+          New-Item -ItemType Directory installer | Out-Null
+          Move-Item Releases/CouchSubsApp-win-Setup.exe installer/CouchSubs-windows-Setup.exe
+          # Bu sürümün güncelleme dosyaları; önceki sürümden indirilen paketler sürüme yeniden eklenmez.
+          Get-ChildItem Releases -File |
+            Where-Object { ($_.Name -like "*$version*" -or $_.Name -like "releases.*.json" -or $_.Name -like "assets.*.json" -or $_.Name -eq "RELEASES") -and $_.Name -notlike "*Portable*" } |
+            ForEach-Object { Copy-Item $_.FullName installer/ }
+          Get-ChildItem installer
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couchsubs-windows-installer
+          path: installer/*
+          if-no-files-found: error
 
       - name: Yerel DLL yayın klasöründe mi
         shell: pwsh

@@ -104,6 +104,8 @@ public interface IAppServices
     IDubbingModel? Dubbing => null;
     /// <summary>Bilgisayardan ses çalma (dublaj).</summary>
     IAudioOutput? Audio => null;
+    /// <summary>Uygulama güncellemesi; geliştirici derlemesinde null.</summary>
+    IUpdater? Updater => null;
 }
 
 /// <param name="Launched">false ise TV uygulaması açılamadı; büyük olasılıkla TV'de kurulu değil.</param>

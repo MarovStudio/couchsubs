@@ -99,3 +99,16 @@ public class DubberTests
         await dubber.DisposeAsync();
     }
 }
+
+public class AppVersionTests
+{
+    [Theory]
+    [InlineData("0.1.0-beta.10", "0.1.0-beta.9", true)]
+    [InlineData("0.1.0", "0.1.0-beta.12", true)]
+    [InlineData("0.2.0-beta.1", "0.1.0", true)]
+    [InlineData("v0.1.0-beta.9", "0.1.0-beta.9", false)]
+    [InlineData("0.1.0-beta.9", "0.1.0-beta.10", false)]
+    [InlineData("0.1.0-beta.9", "0.1.0", false)]
+    public void PreReleaseNumbersCompareAsNumbers(string candidate, string current, bool newer) =>
+        Assert.Equal(newer, AppVersion.IsNewer(candidate, current));
+}

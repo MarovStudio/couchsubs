@@ -23,13 +23,33 @@ public partial class MainView : UserControl
         controller.PropertyChanged += OnChanged;
         Unloaded += (_, _) => controller.PropertyChanged -= OnChanged;
         Refresh();
+        ShowUpdate();
+        _ = controller.CheckForUpdateAsync();
     }
 
     private void OnChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(AppController.IsRunning) or nameof(AppController.TranslatorStatus) or nameof(AppController.ModelInstalled))
             Refresh();
+        if (e.PropertyName is nameof(AppController.UpdateVersion) or nameof(AppController.Updating)
+            or nameof(AppController.UpdateProgress) or nameof(AppController.UpdateError))
+            ShowUpdate();
     }
+
+    private void ShowUpdate()
+    {
+        var text = Localizer.Current;
+        UpdateCard.Visibility = controller.UpdateVersion is null ? Visibility.Collapsed : Visibility.Visible;
+        UpdateTitle.Text = text["A new version of CouchSubs is available: %@"].Replace("%@", controller.UpdateVersion ?? "");
+        UpdateButton.Content = text[controller.CanUpdateItself ? "Update now" : "Download"];
+        UpdateButton.IsEnabled = !controller.Updating;
+        UpdateBar.Visibility = controller.Updating ? Visibility.Visible : Visibility.Collapsed;
+        UpdateBar.Value = controller.UpdateProgress;
+        UpdateErrorText.Text = controller.UpdateError ?? "";
+        UpdateErrorText.Visibility = controller.UpdateError is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private async void OnUpdate(object sender, RoutedEventArgs e) => await controller.InstallUpdateAsync();
 
     private void Refresh()
     {

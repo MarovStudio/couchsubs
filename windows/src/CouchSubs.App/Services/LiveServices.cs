@@ -19,6 +19,7 @@ public sealed class LiveServices : IAppServices
     public ITranslationModel Translation { get; } = new MarianModel();
     public IDubbingModel? Dubbing { get; } = PocketDubbingModel.EngineBundled ? new PocketDubbingModel() : null;
     public IAudioOutput? Audio { get; } = new WindowsAudioOutput();
+    public IUpdater? Updater { get; } = new Updater();
 
     public Task<IReadOnlyList<ConsoleInfo>> DiscoverConsolesAsync() => ConsoleDiscovery.DiscoverAsync();
 

@@ -241,6 +241,22 @@
         }
       }
     },
+    "A new version of CouchSubs is available: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A new version of CouchSubs is available: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs'ın yeni sürümü çıktı: %@"
+          }
+        }
+      }
+    },
     "A second PSN account": {
       "localizations": {
         "en": {
@@ -445,6 +461,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Karakterler"
+          }
+        }
+      }
+    },
+    "Check for Updates…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güncellemeleri denetle…"
           }
         }
       }
@@ -2989,6 +3021,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "PS5'inizi açın"
+          }
+        }
+      }
+    },
+    "Update now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update now"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şimdi güncelle"
           }
         }
       }

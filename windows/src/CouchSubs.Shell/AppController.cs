@@ -63,6 +63,10 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private TextBox? lastSubtitleBox;
     private int processing;
     private Dubber? dubber;
+    private string? updateVersion;
+    private bool updating;
+    private double updateProgress;
+    private string? updateError;
     private bool dubbingDownloading;
     private double dubbingProgress;
     private string? dubbingError;
@@ -721,6 +725,51 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             }
         }
         return fallback;
+    }
+
+    // --- Uygulama güncellemesi ---
+
+    /// <summary>GitHub'da daha yeni sürüm varsa numarası.</summary>
+    public string? UpdateVersion { get => updateVersion; private set => Set(ref updateVersion, value); }
+    public bool Updating { get => updating; private set => Set(ref updating, value); }
+    public double UpdateProgress { get => updateProgress; private set => Set(ref updateProgress, value); }
+    public string? UpdateError { get => updateError; private set => Set(ref updateError, value); }
+    /// <summary>Kurulum dosyasıyla kurulduysa tek tıkla güncellenir; değilse sürüm sayfası açılır.</summary>
+    public bool CanUpdateItself => services.Updater?.CanUpdateItself == true;
+
+    /// <summary>Açılışta bir kez; ağ yoksa sessizce geçer.</summary>
+    public async Task CheckForUpdateAsync()
+    {
+        if (services.Updater is not { } updater) return;
+        try { UpdateVersion = await updater.CheckAsync(); }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException) { }
+    }
+
+    public async Task InstallUpdateAsync()
+    {
+        if (services.Updater is not { } updater || updating) return;
+        if (!updater.CanUpdateItself)
+        {
+            OpenInBrowser(updater.DownloadPage);
+            return;
+        }
+        Updating = true;
+        UpdateError = null;
+        try
+        {
+            // Çeviri sürüyorsa önce durur; uygulama güncellenip yeniden açılır.
+            Stop();
+            await updater.InstallAsync(new ImmediateProgress(value => post(() => UpdateProgress = value)));
+        }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException
+                                          or UnauthorizedAccessException)
+        {
+            UpdateError = error.Message;
+        }
+        finally
+        {
+            Updating = false;
+        }
     }
 
     // --- Türkçe dublaj ---

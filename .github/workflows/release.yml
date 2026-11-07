@@ -139,6 +139,7 @@ jobs:
           (cd artifacts/couchsubs-windows && zip -qr "$GITHUB_WORKSPACE/out/CouchSubs-windows-x64.zip" .)
           cp artifacts/couchsubs-mac/*.zip out/CouchSubs-macos.zip
           cp artifacts/couchsubs-tv/* artifacts/couchsubs-android/*.apk out/
+          cp artifacts/couchsubs-windows-installer/* out/
           (cd out && sha256sum * > SHA256SUMS.txt)
           ls -l out
 
