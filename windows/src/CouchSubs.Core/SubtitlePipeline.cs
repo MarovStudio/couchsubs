@@ -64,7 +64,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
             catch { return Reading.Empty; }
         });
         // Kumanda ipuçları ("R2 Swing") altyazı değildir; çevrilmez, yeri de altyazının yerine katılmaz.
-        var reading = raw.WithoutButtonPrompts();
+        // Yazı tanımanın uydurduğu sözcük çöpleri ("ou$3e") de çevirmene gitmez.
+        var reading = raw.WithoutButtonPrompts().WithoutOcrNoise();
 
         lock (gate)
         {

@@ -25,4 +25,32 @@ public enum TextMatch {
         }
         return 1 - Double(previous[y.count]) / Double(max(x.count, y.count)) >= threshold
     }
+
+    /// Yeni okuma, gönderilmiş altyazının yeniden okuması mı (sadeleştirilmiş metinler). Süslü yazı tipinde ya da
+    /// solarken OCR bir iki sözcüğü her karede başka çöpe çevirir ("ou$3e", "waters2aljd") ya da iki satırlık
+    /// altyazının bir satırını kaçırır; karakter benzerliği düşse de sözcükler aynı kalır. Rakam karışmış sözcükler
+    /// ve tek harfler çöp sayılıp karşılaştırmaya girmez. Metin belirgin uzadıysa (daktilo efekti) yeni satırdır.
+    public static func isSameSubtitle(_ reread: String, _ sent: String) -> Bool {
+        if isSimilar(reread, sent) { return true }
+        let x = cleanWords(reread), y = cleanWords(sent)
+        var remaining = y
+        var shared = 0
+        for word in x {
+            if let index = remaining.firstIndex(of: word) {
+                remaining.remove(at: index)
+                shared += 1
+            }
+        }
+        // Kaçırılmış satır: yeni okumanın sözcüklerinin hemen hepsi gönderilende var.
+        if x.count >= 4, x.count <= y.count, Double(shared) >= Double(x.count) * 0.85 { return true }
+        // Kısa satırda tek sözcük anlamı değiştirir ("where is the boy" / "ship"); orada yalnız karakter benzerliği geçerli.
+        let longer = max(x.count, y.count), shorter = min(x.count, y.count)
+        guard shorter >= 6, Double(shorter) / Double(longer) >= 0.75 else { return false }
+        return Double(shared) / Double(longer) >= 0.75
+    }
+
+    private static func cleanWords(_ normalized: String) -> [Substring] {
+        // Tek harfler ("a", "I" ya da OCR'ın uydurduğu "O") karşılaştırmaya bir şey katmaz.
+        normalized.split(separator: " ").filter { $0.count > 1 && !$0.contains(where: \.isNumber) }
+    }
 }

@@ -16,6 +16,18 @@ public class SubtitleStabilizerTests
         Assert.Equal(StabilizerAction.None, s.Feed("We do not have time"));
     }
 
+    /// Süslü yazıda aynı cümle her karede başka çöple okunur; TV'de iki çeviri olarak görünmemeli.
+    [Fact]
+    public void GarbledRereadOfSentLineDoesNotReemit()
+    {
+        var s = new SubtitleStabilizer();
+        const string first = "Across the deep waters, Pbo went,\nhoping a boat would carry him home.";
+        Assert.Equal(StabilizerAction.Translate(first), s.Feed(first));
+        Assert.Equal(StabilizerAction.None, s.Feed("Across the deep waters O went,"));
+        Assert.Equal(StabilizerAction.None, s.Feed("Across the deep waters O went,"));
+        Assert.Equal(StabilizerAction.Translate("We should keep moving."), s.Feed("We should keep moving."));
+    }
+
     /// Cümle bitmişse beklemeye gerek yok; hızlı konuşmada her kare önemli.
     [Theory]
     [InlineData("We do not have time.")]

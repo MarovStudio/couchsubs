@@ -35,6 +35,33 @@ public static class TextMatch
         return 1 - (double)previous[b.Length] / Math.Max(a.Length, b.Length) >= threshold;
     }
 
+    /// <summary>
+    /// Yeni okuma, gönderilmiş altyazının yeniden okuması mı (sadeleştirilmiş metinler). Süslü yazı tipinde ya da
+    /// solarken OCR bir iki sözcüğü her karede başka çöpe çevirir ("ou$3e", "waters2aljd") ya da iki satırlık
+    /// altyazının bir satırını kaçırır; karakter benzerliği düşse de sözcükler aynı kalır. Rakam karışmış sözcükler
+    /// ve tek harfler çöp sayılıp karşılaştırmaya girmez. Metin belirgin uzadıysa (daktilo efekti) yeni satırdır.
+    /// </summary>
+    public static bool IsSameSubtitle(string reread, string sent)
+    {
+        if (IsSimilar(reread, sent)) return true;
+        var x = CleanWords(reread);
+        var remaining = CleanWords(sent);
+        var sentCount = remaining.Count;
+        var shared = 0;
+        foreach (var word in x)
+            if (remaining.Remove(word)) shared++;
+        // Kaçırılmış satır: yeni okumanın sözcüklerinin hemen hepsi gönderilende var.
+        if (x.Count >= 4 && x.Count <= sentCount && shared >= x.Count * 0.85) return true;
+        // Kısa satırda tek sözcük anlamı değiştirir ("where is the boy" / "ship"); orada yalnız karakter benzerliği geçerli.
+        int longer = Math.Max(x.Count, sentCount), shorter = Math.Min(x.Count, sentCount);
+        if (shorter < 6 || (double)shorter / longer < 0.75) return false;
+        return (double)shared / longer >= 0.75;
+    }
+
+    // Tek harfler ("a", "I" ya da OCR'ın uydurduğu "O") karşılaştırmaya bir şey katmaz.
+    private static List<string> CleanWords(string normalized) =>
+        normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 1 && !w.Any(char.IsNumber)).ToList();
+
     private static bool IsAlphanumeric(char c) => char.GetUnicodeCategory(c) switch
     {
         UnicodeCategory.UppercaseLetter or UnicodeCategory.LowercaseLetter or UnicodeCategory.TitlecaseLetter

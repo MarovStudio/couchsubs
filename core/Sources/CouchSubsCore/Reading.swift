@@ -67,6 +67,12 @@ public struct Reading: Equatable, Sendable {
         Reading(lines: lines.filter { !ButtonPrompts.isPrompt($0.text) })
     }
 
+    /// Yazı tanımanın uydurduğu sözcük çöpleri ("ou$3e", "waters2aljd") ayıklanmış hali; çevirmen bunları olduğu
+    /// gibi taşıyıp TV'de anlamsız harfler gösteriyordu.
+    public func withoutOcrNoise() -> Reading {
+        Reading(lines: lines.map { TextLine(OcrNoise.clean($0.text), box: $0.box) })
+    }
+
     /// Satır kutularını `area` içindeki oranlardan dış çerçevenin oranlarına taşır.
     public func placed(in area: TextBox) -> Reading {
         Reading(lines: lines.map { TextLine($0.text, box: $0.box?.placed(in: area)) })

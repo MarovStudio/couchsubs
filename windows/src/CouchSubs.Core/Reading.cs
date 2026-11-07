@@ -51,6 +51,12 @@ public sealed class Reading
     /// <summary>Oyunun düğme ipuçları ("R2 Swing", "△ Pick up") çıkarılmış hali; bunlar altyazı değildir.</summary>
     public Reading WithoutButtonPrompts() => new(Lines.Where(line => !ButtonPrompts.IsPrompt(line.Text)));
 
+    /// <summary>
+    /// Yazı tanımanın uydurduğu sözcük çöpleri ("ou$3e", "waters2aljd") ayıklanmış hali; çevirmen bunları olduğu
+    /// gibi taşıyıp TV'de anlamsız harfler gösteriyordu.
+    /// </summary>
+    public Reading WithoutOcrNoise() => new(Lines.Select(line => line with { Text = OcrNoise.Clean(line.Text) }));
+
     /// <summary>Satır kutularını <paramref name="area"/> içindeki oranlardan dış çerçevenin oranlarına taşır.</summary>
     public Reading PlacedIn(TextBox area) => new(Lines.Select(line => line with { Box = line.Box?.PlacedIn(area) }));
 }

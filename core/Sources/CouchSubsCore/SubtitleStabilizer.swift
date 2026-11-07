@@ -51,7 +51,8 @@ public struct SubtitleStabilizer {
         // Daktilo efektinde metin büyürken aday değişir; tamamlanıp kararlı olunca gider.
         // Noktalamayla biten satır zaten tamamdır; hızlı konuşmada beklemeden ilk karede gider.
         let ready = candidateCount == stableFrames || (candidateCount == 1 && Self.endsSentence(rawText))
-        guard ready, !TextMatch.isSimilar(text, sent, threshold: similarity) else {
+        // Gönderilenin gürültülü yeniden okuması yeni satır değildir; TV'de aynı cümle iki kez görünmesin.
+        guard ready, !TextMatch.isSimilar(text, sent, threshold: similarity), !TextMatch.isSameSubtitle(text, sent) else {
             return .none
         }
         sent = text

@@ -53,7 +53,8 @@ public sealed class SubtitleStabilizer(double similarity = 0.85, int stableFrame
         // Daktilo efektinde metin büyürken aday değişir; tamamlanıp kararlı olunca gider.
         // Noktalamayla biten satır zaten tamamdır; hızlı konuşmada beklemeden ilk karede gider.
         var ready = candidateCount == stableFrames || (candidateCount == 1 && EndsSentence(rawText));
-        if (!ready || TextMatch.IsSimilar(text, sent, similarity)) return StabilizerAction.None;
+        // Gönderilenin gürültülü yeniden okuması yeni satır değildir; TV'de aynı cümle iki kez görünmesin.
+        if (!ready || TextMatch.IsSimilar(text, sent, similarity) || TextMatch.IsSameSubtitle(text, sent)) return StabilizerAction.None;
         sent = text;
         return StabilizerAction.Translate(rawText.Trim());
     }

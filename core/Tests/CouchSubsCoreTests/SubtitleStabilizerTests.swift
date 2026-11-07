@@ -28,6 +28,16 @@ final class SubtitleStabilizerTests: XCTestCase {
         XCTAssertEqual(s.feed("The gale will not hold"), .none)
     }
 
+    /// Süslü yazıda aynı cümle her karede başka çöple okunur; TV'de iki çeviri olarak görünmemeli.
+    func testGarbledRereadOfSentLineDoesNotReemit() {
+        var s = SubtitleStabilizer()
+        let first = "Across the deep waters, Pbo ou$3e went, hoping a boat would carry him home."
+        XCTAssertEqual(s.feed(first), .translate(first))
+        XCTAssertEqual(s.feed("Across the deep waters2aljd O went, Hoping a boat would carry him home."), .none)
+        XCTAssertEqual(s.feed("Across the deep waters2aljd O went, Hoping a boat would carry him home."), .none)
+        XCTAssertEqual(s.feed("Across the deep waters, he went."), .translate("Across the deep waters, he went."))
+    }
+
     func testFlickeringHudDoesNotSpam() {
         var s = SubtitleStabilizer()
         var sent = 0

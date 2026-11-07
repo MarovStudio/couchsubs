@@ -70,7 +70,8 @@ final class SubtitlePipeline {
             scheduler.record(lastReading.text)
         }
         // Kumanda ipuçları ("R2 Swing") altyazı değildir; çevrilmez, yeri de altyazının yerine katılmaz.
-        let reading = lastReading.withoutButtonPrompts()
+        // Yazı tanımanın uydurduğu sözcük çöpleri ("ou$3e") de çevirmene gitmez.
+        let reading = lastReading.withoutButtonPrompts().withoutOcrNoise()
         switch stabilizer.feed(reading.text) {
         case .none:
             break
