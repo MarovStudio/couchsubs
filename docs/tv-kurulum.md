@@ -66,7 +66,7 @@ Paketi [Sürümler](https://github.com/yorulmazsinan/couchsubs/releases) sayfas�
 ## Samsung TV
 
 Samsung, uygulamanın her TV için ayrı imzalanmasını ister. CouchSubs bunu sizin yerinize yapar: tek gereken, bir kez
-ücretsiz bir Samsung hesabıyla giriş yapmanız. Gerçek TV'de henüz denenmedi; sorun olursa
+ücretsiz bir Samsung hesabıyla giriş yapmanız. Sorun olursa
 [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından TV modelinizle birlikte yazın.
 
 ### 1. TV'de geliştirici modunu açın
@@ -87,6 +87,19 @@ Samsung, uygulamanın her TV için ayrı imzalanmasını ister. CouchSubs bunu s
 
 **TV bilgisayarı kabul etmedi** uyarısı çıkarsa geliştirici modu penceresindeki **Host PC IP**'nin bilgisayarınızın
 şu anki adresi olduğunu kontrol edin ve TV'yi yeniden başlatın. Bilgisayarın adresi değişirse bu adım yinelenir.
+
+**Sorun çıkarsa** (75" Neo QLED'de denendi):
+
+- **"TV uygulaması kurulamadı" derse:** TV'yi kumandanın güç tuşunu Samsung logosu çıkana kadar basılı tutarak yeniden
+  başlatın. Sonra CouchSubs'ta sağ üstteki dişliye (Ayarlar) basın, **CouchSubs TV uygulaması** kutusunda **Yeniden
+  dene**'ye basın. Yarım kalan kurulumların çoğu böyle düzeliyor. Yine olmazsa kutuda TV'nin verdiği sebep yazar;
+  onu [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasına yazın.
+- **TV'de sürekli "İzin ver" penceresi çıkıyorsa:** kumandayla bir kez **İzin ver**'i seçin. Pencere, TV uygulaması
+  henüz kurulmamışken CouchSubs onu açmaya çalıştıkça çıkar; uygulama kurulunca kesilir. Ayarlarda
+  **Bağlantı › Harici Cihaz Yöneticisi › Cihaz Bağlantı Yöneticisi** altında bilgisayarı **İzin Ver** yapabilirsiniz
+  (menü adı modele göre "Aygıt" ya da "Cihaz" olabilir; ayarlarda **Cihaz** diye arayın).
+- **Kurulduğunu nasıl anlarım:** TV'de CouchSubs açıkken **Tamam**'a basınca panelde **HDMI** (PS5'in girişi,
+  "oynatılıyor"), **Uygulama** (bilgisayarın adresi) ve **Bağlantı: bağlı** görünür. Paneli kapatmak için yine **Tamam**.
 
 ### Elle kurulum
 
