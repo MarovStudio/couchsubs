@@ -20,6 +20,10 @@ packages:
     path: ../core
   RemotePlay:
     path: ../remoteplay
+  # Uygulama içi güncelleme (MIT): GitHub sürümündeki appcast.xml'e bakar, imzayı doğrular.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.1
 targets:
   CouchSubs:
     type: application
@@ -49,6 +53,7 @@ targets:
     dependencies:
       - package: CouchSubsCore
       - package: RemotePlay
+      - package: Sparkle
     info:
       path: CouchSubs/Info.plist
       properties:
@@ -58,6 +63,11 @@ targets:
         LSApplicationCategoryType: public.app-category.utilities
         NSLocalNetworkUsageDescription: CouchSubs finds your PS5 and TV on the local network to send translated subtitles.
         NSHumanReadableCopyright: AGPL-3.0. Uses chiaki-ng (AGPL-3.0).
+        # Sparkle: güncellemeler en son GitHub sürümündeki appcast.xml'den okunur, bu anahtarla imzalanmış olmalı
+        # (özel anahtar depoda değil; scripts/package-mac.sh imzalar).
+        SUFeedURL: https://github.com/yorulmazsinan/couchsubs/releases/latest/download/appcast.xml
+        SUPublicEDKey: GRsdOlnDQSm2yPnUTF/VoD/0202u2J0GPmJ8CCzVdfc=
+        SUEnableAutomaticChecks: true
     entitlements:
       path: CouchSubs/CouchSubs.entitlements
       properties:

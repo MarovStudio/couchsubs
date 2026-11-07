@@ -4,6 +4,10 @@
 # DEVELOPER_ID ("Developer ID Application: ... (TAKIM)") verilirse imzalar; NOTARY_PROFILE
 # (xcrun notarytool store-credentials ile kaydedilmiş profil) da verilirse Apple'a onaylatır.
 # Profil varsayılan anahtar zincirinde değilse NOTARY_KEYCHAIN ile yolu verilir (CI).
+# Sürüm son v* etiketinden (APP_VERSION ile değiştirilebilir), yapı numarası commit sayısından gelir; Sparkle
+# güncellemeleri yapı numarasıyla karşılaştırır. Onaylı pakette ayrıca dist/CouchSubs-macos.dmg ve, Sparkle anahtarı
+# (SPARKLE_KEY, varsayılan ~/Library/Application Support/CouchSubs-release/sparkle-ed25519.pem) varsa,
+# dist/appcast.xml çıkar.
 set -e
 setopt pipefail
 cd "${0:A:h}/.."
@@ -22,6 +26,13 @@ BUILD="$PWD/build/mac"
 rm -rf "$BUILD"
 mkdir -p build
 (cd mac && xcodegen generate --quiet)
+
+# GitHub Actions'ta etiket ortamdan gelir (sığ klonda git describe çalışmaz).
+[[ "$GITHUB_REF_TYPE" == tag ]] && APP_VERSION="${APP_VERSION:-${GITHUB_REF_NAME#v}}"
+APP_VERSION="${APP_VERSION:-$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//')}"
+APP_VERSION="${APP_VERSION:-0.1.0}"
+BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}"
+VERSION_ARGS=(MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER")
 
 SIGN_ARGS=(CODE_SIGN_IDENTITY="-")
 if [[ -n "$DEVELOPER_ID" ]]; then
@@ -45,12 +56,22 @@ JOB_ARGS=()
 [[ -n "$XCODE_JOBS" ]] && JOB_ARGS=(-jobs "$XCODE_JOBS")
 
 xcodebuild -project mac/CouchSubs.xcodeproj -scheme CouchSubs -configuration Release \
-  -derivedDataPath "$BUILD" "${JOB_ARGS[@]}" "${SIGN_ARGS[@]}" build > "$BUILD.log" 2>&1 \
+  -derivedDataPath "$BUILD" "${JOB_ARGS[@]}" "${SIGN_ARGS[@]}" "${VERSION_ARGS[@]}" build > "$BUILD.log" 2>&1 \
   || { grep -E "error:" "$BUILD.log" | head -20; echo "Derleme başarısız, ayrıntı: $BUILD.log"; exit 1; }
 
 APP="$BUILD/Build/Products/Release/CouchSubs.app"
 [[ -d "$APP" ]] || { echo "Derleme başarısız."; exit 1; }
 if [[ -n "$DEVELOPER_ID" ]]; then
+  # Sparkle'ın iç yardımcıları da bizim kimliğimizle, sıkılaştırılmış çalışmayla imzalanır (Sparkle belgelerindeki
+  # sıra: içten dışa), ardından uygulama yeniden mühürlenir.
+  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+  for ITEM in "$SPARKLE/Versions/B/XPCServices/Installer.xpc" "$SPARKLE/Versions/B/XPCServices/Downloader.xpc" \
+              "$SPARKLE/Versions/B/Autoupdate" "$SPARKLE/Versions/B/Updater.app" "$SPARKLE"; do
+    EXTRA=()
+    [[ "$ITEM" == *Downloader.xpc ]] && EXTRA=(--preserve-metadata=entitlements)
+    codesign --force --options runtime --timestamp "${EXTRA[@]}" -s "$DEVELOPER_ID" "$ITEM"
+  done
+  codesign --force --options runtime --timestamp --entitlements mac/CouchSubs/CouchSubs.entitlements -s "$DEVELOPER_ID" "$APP"
   codesign --verify --deep --strict "$APP" || { echo "İmza doğrulanamadı."; exit 1; }
 fi
 [[ -x "$APP/Contents/MacOS/couchsubs-tv-helper" ]] || { echo "TV kurulum yardımcısı pakette yok."; exit 1; }
@@ -77,6 +98,54 @@ if [[ -n "$DEVELOPER_ID" && -n "$NOTARY_PROFILE" ]]; then
   spctl --assess --type execute --verbose "$APP"
   rm -f "$ZIP" && ditto -c -k --keepParent "$APP" "$ZIP"
   echo "İmzalandı ve onaylandı."
+  # İlk kurulum için DMG: açınca "Uygulamalar klasörüne sürükle".
+  DMG=dist/CouchSubs-macos.dmg
+  STAGE="$BUILD-dmg"
+  rm -rf "$STAGE" "$DMG" && mkdir -p "$STAGE"
+  ditto "$APP" "$STAGE/CouchSubs.app"
+  ln -s /Applications "$STAGE/Applications"
+  hdiutil create -volname CouchSubs -srcfolder "$STAGE" -ov -format UDZO -quiet "$DMG"
+  codesign --force --timestamp -s "$DEVELOPER_ID" "$DMG"
+  xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" "${KEYCHAIN_ARGS[@]}" --wait | tee "$BUILD-notary-dmg.log"
+  grep -q "status: Accepted" "$BUILD-notary-dmg.log" || { echo "DMG Apple onayı reddedildi, ayrıntı: $BUILD-notary-dmg.log"; exit 1; }
+  xcrun stapler staple "$DMG"
+  echo "Hazır: $DMG"
+
+  # Sparkle appcast'i: güncelleme bu sürümün etiketindeki CouchSubs-macos.zip'i indirir, imzayı doğrular.
+  SPARKLE_KEY="${SPARKLE_KEY:-$HOME/Library/Application Support/CouchSubs-release/sparkle-ed25519.pem}"
+  OPENSSL=/opt/homebrew/opt/openssl@3/bin/openssl
+  if [[ -f "$SPARKLE_KEY" && -x "$OPENSSL" ]]; then
+    # İmza Info.plist'teki açık anahtarla doğrulanır; yanlış anahtarla imzalanmış appcast güncellemeyi kırar.
+    PUBLIC=$(/usr/libexec/PlistBuddy -c "Print SUPublicEDKey" "$APP/Contents/Info.plist")
+    [[ "$("$OPENSSL" pkey -in "$SPARKLE_KEY" -pubout -outform DER | tail -c 32 | base64)" == "$PUBLIC" ]] \
+      || { echo "Sparkle anahtarı uygulamadaki açık anahtarla eşleşmiyor."; exit 1; }
+    SIGNATURE=$("$OPENSSL" pkeyutl -sign -inkey "$SPARKLE_KEY" -rawin -in "$ZIP" | base64)
+    LENGTH=$(stat -f %z "$ZIP")
+    PUBDATE=$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")
+    PAGE="https://github.com/yorulmazsinan/couchsubs/releases/tag/v$APP_VERSION"
+    {
+      echo '<?xml version="1.0" encoding="utf-8"?>'
+      echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
+      echo '  <channel>'
+      echo '    <title>CouchSubs</title>'
+      echo '    <item>'
+      echo "      <title>CouchSubs $APP_VERSION</title>"
+      echo "      <pubDate>$PUBDATE</pubDate>"
+      echo "      <sparkle:version>$BUILD_NUMBER</sparkle:version>"
+      echo "      <sparkle:shortVersionString>$APP_VERSION</sparkle:shortVersionString>"
+      echo '      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>'
+      echo "      <link>$PAGE</link>"
+      echo "      <sparkle:fullReleaseNotesLink>$PAGE</sparkle:fullReleaseNotesLink>"
+      echo "      <enclosure url=\"https://github.com/yorulmazsinan/couchsubs/releases/download/v$APP_VERSION/CouchSubs-macos.zip\""
+      echo "                 length=\"$LENGTH\" type=\"application/octet-stream\" sparkle:edSignature=\"$SIGNATURE\" />"
+      echo '    </item>'
+      echo '  </channel>'
+      echo '</rss>'
+    } > dist/appcast.xml
+    echo "Hazır: dist/appcast.xml (sürüm $APP_VERSION, yapı $BUILD_NUMBER)"
+  else
+    echo "Uyarı: Sparkle anahtarı yok, appcast üretilmedi ($SPARKLE_KEY)."
+  fi
 elif [[ -n "$DEVELOPER_ID" ]]; then
   echo "Uyarı: imzalı ama Apple onaysız. İlk açılışta Sistem Ayarları › Gizlilik ve Güvenlik › Yine de Aç gerekir."
 else

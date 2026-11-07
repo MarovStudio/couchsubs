@@ -26,5 +26,11 @@
 	<string>AGPL-3.0. Uses chiaki-ng (AGPL-3.0).</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>CouchSubs finds your PS5 and TV on the local network to send translated subtitles.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/yorulmazsinan/couchsubs/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>GRsdOlnDQSm2yPnUTF/VoD/0202u2J0GPmJ8CCzVdfc=</string>
 </dict>
 </plist>

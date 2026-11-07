@@ -20,10 +20,13 @@ https://github.com/user-attachments/assets/bb8569d8-115d-49c7-a772-da2d9e171c17
 
 | Bilgisayarınız | Tek tıkla indirin |
 |---|---|
-| **Mac** (Apple Silicon, macOS 26+) | **[CouchSubs-macos.zip](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip)** |
-| **Windows** 10 / 11 (64 bit) | **[CouchSubs-windows-x64.zip](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip)** |
+| **Mac** (Apple Silicon, macOS 26+) | **[CouchSubs-macos.dmg](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg)** |
+| **Windows** 10 / 11 (64 bit) | **[CouchSubs-windows-Setup.exe](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe)** |
 
-TV uygulamasını ayrıca indirmeniz gerekmez: bilgisayar uygulaması TV'nize kendisi kurar.
+TV uygulamasını ayrıca indirmeniz gerekmez: bilgisayar uygulaması TV'nize kendisi kurar. Uygulama yeni sürümleri
+kendisi bulur ve tek tıkla günceller. Kurulum istemeyenler için zip paketleri de duruyor:
+[Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) ·
+[Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip).
 
 > **Beta.** Uygulama deneme aşamasındadır ve denemeniz bize çok yardımcı olur. Sorunları ve önerileri
 > [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından bildirebilirsiniz.
@@ -67,9 +70,10 @@ yalnız altyazıyı okumak için kullanır. Siz oyunu HDMI'dan, gecikmesiz oynam
 ## Kurulum
 
 1. Yukarıdan bilgisayarınıza uygun dosyayı indirin.
-   - **Mac:** zip'i açın, CouchSubs'ı **Uygulamalar** klasörüne taşıyıp açın. Uygulama Apple onaylıdır.
-   - **Windows:** zip'i bir klasöre çıkarın ve `CouchSubs.exe`'yi açın. "Windows bilgisayarınızı korudu" uyarısı çıkarsa
-     **Ek bilgi › Yine de çalıştır**'a basın. Güvenlik duvarı sorarsa **Özel ağlar**'a izin verin.
+   - **Mac:** DMG'yi açın, CouchSubs'ı **Uygulamalar** klasörüne sürükleyip açın. Uygulama Apple onaylıdır.
+   - **Windows:** `CouchSubs-windows-Setup.exe`'yi açın; yönetici izni istemeden kurulur, Başlat menüsüne ve masaüstüne
+     kısayol koyar. "Windows bilgisayarınızı korudu" uyarısı çıkarsa **Ek bilgi › Yine de çalıştır**'a basın. Güvenlik
+     duvarı sorarsa **Özel ağlar**'a izin verin.
 2. Kurulum sihirbazını izleyin: ikinci PSN hesabıyla giriş, PS5 eşleme, TV seçimi.
 3. TV adımında uygulama, TV'nizin markasına göre geliştirici modunu nasıl açacağınızı gösterir. Açtığınızda TV
    uygulamasını kendisi kurar:
@@ -160,7 +164,7 @@ or 11 PC.
 Grundig and Philips (not tested on real TVs yet). CouchSubs installs the TV app on all of them. Mac is tested on real hardware; Windows is not
 tested on a real PC yet.
 
-**Download:** [Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) · [Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip)
+**Download:** [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe). The app finds new versions and updates itself.
 
 **Setup:** open the app and follow the setup assistant. On the TV step it shows how to turn on developer mode for your
 TV brand and then installs the TV app by itself (LG: type the on-screen passphrase once; Samsung: sign in with a

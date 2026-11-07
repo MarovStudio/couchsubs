@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import Sparkle
 import SwiftUI
 
 @main
 struct CouchSubsApp: App {
     @State private var model = Self.makeModel()
+    /// Sparkle: açılışta ve günde bir GitHub'daki son sürüme bakar; testlerde başlamaz.
+    private let updater = SPUStandardUpdaterController(
+        startingUpdater: ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+        updaterDelegate: nil, userDriverDelegate: nil)
 
     /// Testler uygulamanın içinde çalışır. Gerçek Anahtarlığa dokunmazlar: imza farklı olunca macOS parola sorar ve test takılır.
     private static func makeModel() -> AppModel {
@@ -25,6 +30,7 @@ struct CouchSubsApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About CouchSubs") { model.showAbout = true }
+                Button("Check for Updates…") { updater.checkForUpdates(nil) }
             }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings") { model.showSettings = true }

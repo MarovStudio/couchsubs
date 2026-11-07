@@ -73,6 +73,7 @@ Samsung, uygulamanın her TV için ayrı imzalanmasını ister. CouchSubs bunu s
 
 1. TV'de **Uygulamalar** ekranını açın.
 2. Kumandayla `1 2 3 4 5` tuşlarına basın (ya da ekran klavyesiyle `12345` yazın). Geliştirici modu penceresi açılır.
+   Bazı yeni modellerde (ör. 2025 QN90F) bu, **Uygulamalar › Uygulama Ayarları** ekranında çalışır.
 3. **Developer mode**'u **On** yapın.
 4. **Host PC IP** alanına bilgisayarınızın adresini yazıp **OK**'e basın. Adresi CouchSubs TV adımında gösterir.
 5. TV'yi yeniden başlatın. Uygulamalar ekranında **Develop Mode** yazısı görünür.
