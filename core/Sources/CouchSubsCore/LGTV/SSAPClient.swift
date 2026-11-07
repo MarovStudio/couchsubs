@@ -32,6 +32,7 @@ public struct LGTV: Codable, Hashable, Sendable {
 public protocol TVControlling: AnyObject {
     func launch(appId: String, params: [String: Any]) async throws
     func foregroundAppId() async throws -> String
+    func close()
 }
 
 /// LG TV ile SSAP (WebSocket) üzerinden konuşur. İlk bağlantıda TV ekranında izin sorulur;
@@ -190,13 +191,23 @@ public final class TVKeeper: @unchecked Sendable {
     private let connect: () async throws -> TVControlling
     private let appId: String
     private let params: [String: Any]
+    private let appConnected: (@Sendable () -> Bool)?
+    private let relaunchInterval: Duration
     private var control: TVControlling?
     private var loop: Task<Void, Never>?
+    private var lastLaunch: ContinuousClock.Instant?
 
-    public init(connect: @escaping () async throws -> TVControlling, appId: String, params: [String: Any]) {
+    /// `appConnected` verilirse (Samsung) TV'ye yalnız TV uygulaması bilgisayara bağlı değilken ve en çok
+    /// `relaunchInterval`'da bir dokunulur: uygulama açılır, bağlantı hemen kapatılır. Samsung önplandaki uygulamayı
+    /// söylemediği için sürekli açık "uzaktan kumanda" bağlantısı gereksizdi; birkaç saniyede bir yeniden kurulan
+    /// bağlantı TV'de "uzaktan kumanda bağlandı" bildirimi çıkarıyor, PS5 kolunu düşürüyordu (#5).
+    public init(connect: @escaping () async throws -> TVControlling, appId: String, params: [String: Any],
+                appConnected: (@Sendable () -> Bool)? = nil, relaunchInterval: Duration = .seconds(30)) {
         self.connect = connect
         self.appId = appId
         self.params = params
+        self.appConnected = appConnected
+        self.relaunchInterval = relaunchInterval
     }
 
     /// Kullanıcının bilerek açtığı uygulamalara (Netflix vb.) dokunulmaz; yalnız giriş ve yayın ekranları.
@@ -206,6 +217,10 @@ public final class TVKeeper: @unchecked Sendable {
 
     /// Bir kontrol. Hata fırlatmaz; bağlantı sorununda bir sonraki kontrolde yeniden dener.
     public func tick() async {
+        if let appConnected {
+            await launchIfAppIsAway(appConnected())
+            return
+        }
         do {
             if control == nil {
                 let fresh = try await connect()
@@ -217,9 +232,18 @@ public final class TVKeeper: @unchecked Sendable {
             let current = try await control.foregroundAppId()
             if Self.isInputOrLiveTV(current) { try await control.launch(appId: appId, params: params) }
         } catch {
-            (control as? SSAPClient)?.close()
+            control?.close()
             control = nil
         }
+    }
+
+    private func launchIfAppIsAway(_ connected: Bool) async {
+        guard !connected else { return }
+        if let lastLaunch, ContinuousClock.now - lastLaunch < relaunchInterval { return }
+        lastLaunch = .now
+        guard let fresh = try? await connect() else { return }
+        defer { fresh.close() }
+        try? await fresh.launch(appId: appId, params: params)
     }
 
     public func start(interval: Duration = .seconds(5)) {
@@ -234,14 +258,15 @@ public final class TVKeeper: @unchecked Sendable {
 
     /// Mac uykudan uyandığında: bağlantıyı yenile.
     public func reconnect() {
-        (control as? SSAPClient)?.close()
+        control?.close()
         control = nil
+        lastLaunch = nil
     }
 
     public func stop() {
         loop?.cancel()
         loop = nil
-        (control as? SSAPClient)?.close()
+        control?.close()
         control = nil
     }
 

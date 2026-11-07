@@ -71,7 +71,9 @@ protocol AppServices: AnyObject {
     func pairTV(_ tv: LGTV, key: String?, server: String) async throws -> TVPairing
     func makeStream(console: RegisteredConsole, accountId: Data) -> StreamControlling
     /// `onMoved`: TV ağda yeni bir adreste bulununca çağrılır.
-    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], onMoved: @escaping (LGTV) -> Void) -> KeeperControlling
+    /// `appConnected`: TV uygulaması bilgisayara bağlı mı (Samsung'da bağlıyken TV'ye dokunulmaz).
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], appConnected: @escaping @Sendable () -> Bool,
+                    onMoved: @escaping (LGTV) -> Void) -> KeeperControlling
     /// Uygulamayla gelen TV paketinin sürümü (geliştirici derlemesinde paket olmayabilir).
     var bundledTVAppVersion: String? { get }
     func isDevModeOn(host: String) async -> Bool
@@ -179,7 +181,8 @@ final class LiveServices: AppServices {
         StreamSession(console: console, accountId: accountId)
     }
 
-    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], onMoved: @escaping (LGTV) -> Void) -> KeeperControlling {
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], appConnected: @escaping @Sendable () -> Bool,
+                    onMoved: @escaping (LGTV) -> Void) -> KeeperControlling {
         switch tv.brand {
         case .androidTV:
             return IdleKeeper()
@@ -194,7 +197,8 @@ final class LiveServices: AppServices {
                 }
                 return client
             }, search: { await SamsungDiscovery.search() }, onMoved: onMoved)
-            return TVKeeper(connect: { try await locator.connect() }, appId: AppIdentity.samsungAppId, params: params)
+            return TVKeeper(connect: { try await locator.connect() }, appId: AppIdentity.samsungAppId, params: params,
+                            appConnected: appConnected)
         case .lg:
             break
         }
@@ -698,7 +702,9 @@ final class AppModel {
         self.session = session
 
         // TV uygulamasını başlat ve açık tut; TV kapalıysa açıldığında bağlanır.
-        let keeper = services.makeKeeper(tv: tv, key: store.load(String.self, for: StoreKey.tvKey), params: ["server": serverAddress(for: tv)]) { [weak self] moved in
+        let server = self.server
+        let keeper = services.makeKeeper(tv: tv, key: store.load(String.self, for: StoreKey.tvKey), params: ["server": serverAddress(for: tv)],
+                                         appConnected: { server.connectedClients > 0 }) { [weak self] moved in
             Task { @MainActor in self?.tvMoved(to: moved) }
         }
         keeper.start(interval: .seconds(5))

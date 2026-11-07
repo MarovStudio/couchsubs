@@ -52,7 +52,8 @@ final class FakeServices: AppServices {
         streams.append(stream)
         return stream
     }
-    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], onMoved: @escaping (LGTV) -> Void) -> KeeperControlling {
+    func makeKeeper(tv: LGTV, key: String?, params: [String: Any], appConnected: @escaping @Sendable () -> Bool,
+                    onMoved: @escaping (LGTV) -> Void) -> KeeperControlling {
         let keeper = FakeKeeper()
         keepers.append(keeper)
         self.onMoved = onMoved

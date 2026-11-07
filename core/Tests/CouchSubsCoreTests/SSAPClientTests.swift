@@ -161,7 +161,9 @@ final class TVKeeperTests: XCTestCase {
         var foreground: [String]
         var launches: [(String, [String: String])] = []
         var failNext = false
+        var closes = 0
         init(foreground: [String]) { self.foreground = foreground }
+        func close() { closes += 1 }
         func foregroundAppId() async throws -> String {
             if failNext { failNext = false; throw URLError(.networkConnectionLost) }
             return foreground.isEmpty ? "com.couchsubs.tv" : foreground.removeFirst()
@@ -202,5 +204,35 @@ final class TVKeeperTests: XCTestCase {
         await keeper.tick()                     // yeniden bağlanır ve tekrar başlatır
         XCTAssertEqual(attempts, 3)
         XCTAssertEqual(control.launches.count, 2)
+        XCTAssertEqual(control.closes, 1, "kopan bağlantı kapatılır")
+    }
+
+    func testSamsungIsLeftAloneWhileTheAppIsConnected() async throws {
+        let control = FakeControl(foreground: [])
+        let connected = Flag()
+        var connects = 0
+        let keeper = TVKeeper(connect: { connects += 1; return control }, appId: "com.couchsubs.tv", params: [:],
+                              appConnected: { connected.value }, relaunchInterval: .milliseconds(200))
+        await keeper.tick()                     // uygulama bağlı değil → aç ve bağlantıyı kapat
+        XCTAssertEqual(control.launches.count, 1)
+        XCTAssertEqual(control.closes, 1)
+        await keeper.tick()                     // hemen yeniden açmaya çalışmaz
+        XCTAssertEqual(connects, 1)
+        connected.value = true
+        try await Task.sleep(for: .milliseconds(250))
+        for _ in 0..<5 { await keeper.tick() }  // uygulama bağlıyken TV'ye hiç dokunulmaz
+        XCTAssertEqual(connects, 1)
+        connected.value = false
+        await keeper.tick()                     // uygulama kapandı → bir kez daha aç
+        XCTAssertEqual(control.launches.count, 2)
+    }
+}
+
+private final class Flag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored = false
+    var value: Bool {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
     }
 }

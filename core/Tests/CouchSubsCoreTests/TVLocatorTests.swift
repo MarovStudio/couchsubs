@@ -8,6 +8,7 @@ final class TVLocatorTests: XCTestCase {
     final class Control: TVControlling {
         func launch(appId: String, params: [String: Any]) async throws {}
         func foregroundAppId() async throws -> String { "" }
+        func close() {}
     }
 
     private let saved = LGTV(name: "Salon", host: "192.168.1.153")

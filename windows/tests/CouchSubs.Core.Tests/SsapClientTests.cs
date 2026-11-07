@@ -165,7 +165,30 @@ public class TvKeeperTests
             return Task.CompletedTask;
         }
 
-        public void Dispose() { }
+        public int Disposals { get; private set; }
+        public void Dispose() => Disposals++;
+    }
+
+    [Fact]
+    public async Task SamsungIsLeftAloneWhileTheAppIsConnected()
+    {
+        var control = new FakeControl();
+        var connected = false;
+        var connects = 0;
+        var keeper = new TvKeeper(() => { connects++; return Task.FromResult<ITvControl>(control); }, "com.couchsubs.tv",
+            new Dictionary<string, string>(), () => connected, TimeSpan.FromMilliseconds(200));
+        await keeper.TickAsync(); // uygulama bağlı değil → aç ve bağlantıyı kapat
+        Assert.Single(control.Launches);
+        Assert.Equal(1, control.Disposals);
+        await keeper.TickAsync(); // hemen yeniden açmaya çalışmaz
+        Assert.Equal(1, connects);
+        connected = true;
+        await Task.Delay(250);
+        for (var i = 0; i < 5; i++) await keeper.TickAsync(); // uygulama bağlıyken TV'ye dokunulmaz
+        Assert.Equal(1, connects);
+        connected = false;
+        await keeper.TickAsync(); // uygulama kapandı → bir kez daha aç
+        Assert.Equal(2, control.Launches.Count);
     }
 
     [Fact]

@@ -113,7 +113,7 @@ internal sealed class FakeServices : IAppServices
         Streams.Add(stream);
         return stream;
     }
-    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved)
+    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Func<bool> appConnected, Action<LgTv> onMoved)
     {
         var keeper = new FakeKeeper();
         Keepers.Add(keeper);

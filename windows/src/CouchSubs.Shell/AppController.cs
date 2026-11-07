@@ -533,8 +533,9 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             session = stream;
 
             // TV uygulamasını başlat ve açık tut; TV kapalıysa açıldığında bağlanır.
+            var running = server;
             var tvKeeper = services.MakeKeeper(tv, store.Load<string>(StoreKeys.TvKey), new Dictionary<string, string> { ["server"] = ServerAddress(tv) },
-                moved => post(() => TvMoved(moved)));
+                () => running.ConnectedClients > 0, moved => post(() => TvMoved(moved)));
             tvKeeper.Start(TimeSpan.FromSeconds(5));
             keeper = tvKeeper;
             _ = RefreshTvAppAsync();

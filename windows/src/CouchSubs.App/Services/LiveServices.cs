@@ -65,7 +65,7 @@ public sealed class LiveServices : IAppServices
 
     public IStreamSession MakeStream(RegisteredConsole console, byte[] accountId) => new StreamSession(console, accountId);
 
-    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved)
+    public IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Func<bool> appConnected, Action<LgTv> onMoved)
     {
         if (tv.Brand == TvBrand.AndroidTv) return new IdleKeeper();
         if (tv.Brand == TvBrand.Samsung)
@@ -84,7 +84,7 @@ public sealed class LiveServices : IAppServices
                     throw;
                 }
             }, () => SamsungDiscovery.SearchAsync(), onMoved);
-            return new Keeper(new TvKeeper(samsungLocator.ConnectAsync, SamsungClient.AppId, parameters));
+            return new Keeper(new TvKeeper(samsungLocator.ConnectAsync, SamsungClient.AppId, parameters, appConnected));
         }
         var locator = new TvLocator(tv, async target =>
         {

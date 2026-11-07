@@ -77,8 +77,9 @@ public interface IAppServices
     /// <summary>TV ile eşleşir ve TV uygulamasını sunucu adresiyle başlatmayı dener.</summary>
     Task<TvPairing> PairTvAsync(LgTv tv, string? key, string server);
     IStreamSession MakeStream(RegisteredConsole console, byte[] accountId);
+    /// <param name="appConnected">TV uygulaması bilgisayara bağlı mı (Samsung'da bağlıyken TV'ye dokunulmaz).</param>
     /// <param name="onMoved">TV ağda yeni bir adreste bulununca çağrılır.</param>
-    IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Action<LgTv> onMoved);
+    IKeeper MakeKeeper(LgTv tv, string? key, IReadOnlyDictionary<string, string> parameters, Func<bool> appConnected, Action<LgTv> onMoved);
     /// <summary>Uygulamayla gelen TV paketinin sürümü (geliştirici derlemesinde paket olmayabilir).</summary>
     string? BundledTvAppVersion { get; }
     Task<bool> IsDevModeOnAsync(string host);

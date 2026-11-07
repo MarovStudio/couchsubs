@@ -6,11 +6,18 @@ namespace CouchSubs.Core.LgTv;
 /// TV uygulamasını açık tutar: TV kendi HDMI ya da yayın girişine geçerse (SimpLink/CEC) uygulamayı
 /// yeniden öne getirir. TV kapalıysa ya da bağlantı koparsa bir sonraki kontrolde yeniden bağlanır.
 /// </summary>
-public sealed class TvKeeper(Func<Task<ITvControl>> connect, string appId, IReadOnlyDictionary<string, string> parameters) : IDisposable
+/// <param name="appConnected">
+/// Verilirse (Samsung) TV'ye yalnız TV uygulaması bilgisayara bağlı değilken ve en çok <paramref name="relaunchInterval"/>'da
+/// bir dokunulur: uygulama açılır, bağlantı hemen kapatılır. Samsung önplandaki uygulamayı söylemediği için sürekli açık
+/// "uzaktan kumanda" bağlantısı gereksizdi; yeniden kurulan bağlantı TV'de bildirim çıkarıp PS5 kolunu düşürüyordu (#5).
+/// </param>
+public sealed class TvKeeper(Func<Task<ITvControl>> connect, string appId, IReadOnlyDictionary<string, string> parameters,
+                             Func<bool>? appConnected = null, TimeSpan? relaunchInterval = null) : IDisposable
 {
     private readonly SemaphoreSlim tickLock = new(1, 1);
     private ITvControl? control;
     private CancellationTokenSource? loop;
+    private DateTime? lastLaunch;
 
     /// <summary>Kullanıcının bilerek açtığı uygulamalara (Netflix vb.) dokunulmaz; yalnız giriş ve yayın ekranları.</summary>
     public static bool IsInputOrLiveTv(string appId) =>
@@ -24,6 +31,11 @@ public sealed class TvKeeper(Func<Task<ITvControl>> connect, string appId, IRead
         await tickLock.WaitAsync();
         try
         {
+            if (appConnected is not null)
+            {
+                await LaunchIfAppIsAwayAsync(appConnected());
+                return;
+            }
             if (control is null)
             {
                 var fresh = await connect();
@@ -42,6 +54,22 @@ public sealed class TvKeeper(Func<Task<ITvControl>> connect, string appId, IRead
         finally
         {
             tickLock.Release();
+        }
+    }
+
+    private async Task LaunchIfAppIsAwayAsync(bool connected)
+    {
+        if (connected) return;
+        if (lastLaunch is { } last && DateTime.UtcNow - last < (relaunchInterval ?? TimeSpan.FromSeconds(30))) return;
+        lastLaunch = DateTime.UtcNow;
+        try
+        {
+            using var fresh = await connect();
+            await fresh.LaunchAsync(appId, parameters);
+        }
+        catch (Exception)
+        {
+            // TV kapalı ya da ulaşılamıyor; bir sonraki denemede yeniden.
         }
     }
 
@@ -66,6 +94,7 @@ public sealed class TvKeeper(Func<Task<ITvControl>> connect, string appId, IRead
     {
         control?.Dispose();
         control = null;
+        lastLaunch = null;
     }
 
     public void Stop()
