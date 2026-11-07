@@ -62,6 +62,10 @@ public class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         // Türkçe dublaj: bilgisayardan gelen ses kumandaya basılmadan çalabilsin.
         settings.setMediaPlaybackRequiresUserGesture(false);
+        // Sayfanın 1920 piksellik viewport'u kullanılır ve ekrana sığdırılır (bkz. index.html); yoksa yazılar iki kat büyük.
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
+        webView.setInitialScale(0);
         webView.addJavascriptInterface(new Bridge(), "AndroidTV");
         root.addView(webView);
         setContentView(root);
