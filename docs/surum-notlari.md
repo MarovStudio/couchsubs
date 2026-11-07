@@ -4,11 +4,10 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bu sürümde yeni**
 
-- **Kurulum dosyaları ve otomatik güncelleme.** Windows'ta tek bir `CouchSubs-windows-Setup.exe`: yönetici izni istemeden kurulur, Başlat menüsüne ve masaüstüne kısayol koyar. Mac'te `CouchSubs-macos.dmg`: CouchSubs'ı Uygulamalar klasörüne sürükleyin. Bundan sonra uygulama yeni sürümleri kendisi bulur: Windows'ta ana ekranda **Şimdi güncelle**, Mac'te **CouchSubs › Güncellemeleri denetle…** Önceki sürümü zip'ten kullananların bu sürümü bir kez elle kurması gerekir.
-- **Windows'ta Türkçe dublaj.** Mac'teki dublaj Windows'a da geldi: 3 kadın, 3 erkek ses; her karakter kendi sesiyle, duygu cümleden. **Ayarlar › Türkçe dublaj** bölümünden açılır, sesler bir kez indirilir (440 MB). Ses TV'den ya da bilgisayardan çalar.
-- **Samsung: PS5 kolu artık düşmez.** Çeviri sürerken CouchSubs Samsung TV'ye birkaç saniyede bir bağlanıp TV'de "uzaktan kumanda bağlandı" bildirimi çıkarıyor, PS5 kolunu kapatıyordu. Artık TV uygulaması bilgisayara bağlıyken TV'ye hiç dokunulmuyor.
-- **Samsung kurulumu Windows'ta yarıda kalmaz.** Bazı bilgisayarlarda (ör. Samsung M7 monitör) Samsung girişinden sonra "TV uygulaması kurulamadı" çıkıyordu; sebep, kurulumdan sonra geçici dosyanın silinememesiydi.
-- Samsung'un bazı yeni modellerinde (ör. 2025 QN90F) geliştirici modu **Uygulamalar › Uygulama Ayarları** ekranında `12345` ile açılır; rehbere eklendi.
+- **Android TV / Google TV'de yazılar doğru boyutta.** Bazı TV'lerde (ör. TCL C6K) altyazı ve TV uygulamasının ekranları, "Küçük" seçilse bile iki kat büyük çıkıyordu. TV uygulaması 0.9.1 oldu; CouchSubs açılınca TV'deki uygulamayı kendisi günceller.
+- beta.10'dan güncelleyenler için: bu sürüm uygulama içinden gelir (Windows'ta ana ekrandaki **Şimdi güncelle**, Mac'te **CouchSubs › Güncellemeleri denetle…**).
+
+**beta.10'da gelenler:** Windows kurulum dosyası ve Mac DMG, uygulama içi güncelleme, Windows'ta Türkçe dublaj, Samsung'da PS5 kolunun düşmemesi ve Windows'ta Samsung kurulumunun yarıda kalmaması.
 
 **İndirme**
 
@@ -34,4 +33,4 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 ---
 
-New beta. Installers and in-app updates: a Windows `Setup.exe` (no admin rights needed) and a Mac DMG; from now on CouchSubs finds new versions and updates itself (zip users need to install this version once by hand). Turkish dubbing now also on Windows. Samsung: the PS5 controller no longer drops while translating, and installing the TV app on Windows no longer fails after Samsung sign-in. Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
+New beta. Android TV / Google TV: subtitles and TV app screens no longer show at double size (e.g. TCL C6K); TV app 0.9.1, updated by CouchSubs itself. Users of beta.10 get this version through the in-app updater. Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
