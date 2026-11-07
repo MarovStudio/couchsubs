@@ -101,10 +101,18 @@ public sealed partial class SamsungTvInstaller(string host, string profilesDirec
             var log = await CaptureAsync(() => new TizenInstaller(staged, device, toolPath).InstallApp());
             if (InstallFailed(log))
             {
-                // Başka sertifikayla kurulmuş eski kopya varsa kaldırıp bir kez daha dene.
-                await device.ShellCommandAsync($"0 vd_appuninstall {PackageId}", cancellationToken);
+                // Başka sertifikayla kurulmuş eski kopya varsa ("Author certificate not match") kaldırıp bir kez daha
+                // dene. TV sürümüne göre kaldırma uygulama kimliğini ya da paket kimliğini bekliyor; ikisi de denenir.
+                Progress?.Invoke("uninstalling");
+                var removal = "";
+                foreach (var id in new[] { AppId, PackageId })
+                {
+                    try { removal += await device.ShellCommandAsync($"0 vd_appuninstall {id}", cancellationToken) + "\n"; }
+                    catch (Exception error) when (error is not OperationCanceledException) { removal += error.Message + "\n"; }
+                }
                 log = await CaptureAsync(() => new TizenInstaller(staged, device, toolPath).InstallApp());
-                if (InstallFailed(log)) throw new SamsungInstallException(SamsungInstallError.InstallFailed, Tail(log));
+                if (InstallFailed(log))
+                    throw new SamsungInstallException(SamsungInstallError.InstallFailed, Tail(log) + "\nuninstall: " + Tail(removal));
             }
         }
         finally
