@@ -73,10 +73,18 @@ final class Dubber {
     func speak(_ lines: [SpokenLine]) {
         guard !lines.isEmpty else { return }
         publishVoices()
-        // Yeni altyazı geldiyse öncekilerin bekleyen cümleleri artık geç kalmıştır; dublaj altyazıyla birlikte kalsın.
+        // Yeni altyazı geldiyse öncekilerin cümleleri artık geç kalmıştır: bekleyenler atılır, çalan da kesilir.
+        // Ses yazının gerisinde kalıp oyunu karıştırmasın; dublaj hep ekrandaki altyazıyı söyler.
+        if worker != nil {
+            worker?.cancel()
+            worker = nil
+            player?.stop()
+            player = nil
+            server.stopSpeech()
+        }
         queue = lines
         if queue.count > Self.backlog { queue.removeFirst(queue.count - Self.backlog) }
-        if worker == nil { startWorker() }
+        startWorker()
     }
 
     private func startWorker() {

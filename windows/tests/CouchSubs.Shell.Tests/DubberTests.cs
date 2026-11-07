@@ -12,10 +12,13 @@ public class DubberTests
     {
         public List<(string Text, Uri Voice)> Calls { get; } = [];
         public TimeSpan Delay { get; init; }
+        /// <summary>Verilirse her seslendirme bu açılana kadar bekler: testler süreye değil sıraya dayanır.</summary>
+        public TaskCompletionSource? Gate { get; set; }
         public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public async Task<SpeechAudio> SynthesizeAsync(string text, Uri voice, CancellationToken cancellationToken = default)
         {
             lock (Calls) Calls.Add((text, voice));
+            if (Gate is { } gate) await gate.Task;
             if (Delay > TimeSpan.Zero) await Task.Delay(Delay, cancellationToken);
             // 0,05 sn ses: testler hızlı biter.
             return new SpeechAudio([.. Enumerable.Range(0, 1200).Select(i => MathF.Sin(i * 0.1f) * 0.5f)], 24000);
@@ -35,8 +38,9 @@ public class DubberTests
     private sealed class FakeAudio : IAudioOutput
     {
         public int Played;
+        public int Stopped;
         public void Play(byte[] wav) => Interlocked.Increment(ref Played);
-        public void Stop() { }
+        public void Stop() => Interlocked.Increment(ref Stopped);
     }
 
     private static async Task WaitUntil(Func<bool> condition)
@@ -92,15 +96,38 @@ public class DubberTests
     [Fact]
     public async Task NewSubtitleDropsPendingLinesOfOlderOnes()
     {
-        var synth = new FakeSynth { Delay = TimeSpan.FromMilliseconds(150) };
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var synth = new FakeSynth { Gate = gate };
         var audio = new FakeAudio();
         using var server = new SubtitleServer(0);
         var dubber = new Dubber(new FakeModel(synth), audio, () => server, () => 8787, action => action()) { Output = DubbingOutput.Computer };
         dubber.Speak([new SpokenLine("One.", "Bir."), new SpokenLine("Two.", "İki."), new SpokenLine("Three.", "Üç.")]);
-        await Task.Delay(50);
+        await WaitUntil(() => { lock (synth.Calls) return synth.Calls.Count == 1; });
         dubber.Speak([new SpokenLine("Next.", "Sonraki.")]);
+        gate.SetResult();
         await WaitUntil(() => synth.Calls.Any(call => call.Text == "sonraki."));
         lock (synth.Calls) Assert.DoesNotContain(synth.Calls, call => call.Text is "iki." or "üç.");
+        await dubber.DisposeAsync();
+    }
+
+    /// <summary>Dublaj yazının gerisinde kalmaz: yeni altyazı gelince çalan eski cümle kesilir.</summary>
+    [Fact]
+    public async Task NewSubtitleCutsTheLineStillPlaying()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var synth = new FakeSynth { Gate = gate };
+        var audio = new FakeAudio();
+        using var server = new SubtitleServer(0);
+        var dubber = new Dubber(new FakeModel(synth), audio, () => server, () => 8787, action => action()) { Output = DubbingOutput.Computer };
+        dubber.Speak([new SpokenLine("One.", "Bir.")]);
+        await WaitUntil(() => { lock (synth.Calls) return synth.Calls.Count == 1; });
+        dubber.Speak([new SpokenLine("Next.", "Sonraki.")]);
+        Assert.Equal(1, audio.Stopped);
+        gate.SetResult();
+        await WaitUntil(() => audio.Played == 1);
+        await Task.Delay(300);
+        Assert.Equal(1, audio.Played);
+        lock (synth.Calls) Assert.Contains(synth.Calls, call => call.Text == "sonraki.");
         await dubber.DisposeAsync();
     }
 

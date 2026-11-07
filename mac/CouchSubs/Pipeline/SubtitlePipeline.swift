@@ -72,8 +72,8 @@ final class SubtitlePipeline {
         // Kumanda ipuçları ("R2 Swing") altyazı değildir; çevrilmez, yeri de altyazının yerine katılmaz.
         // Yazı tanımanın uydurduğu sözcük çöpleri ("ou$3e") de çevirmene gitmez.
         // Alandaki menü ve köşe göstergeleri de altyazı değildir; yalnız altyazı bloğu çevrilir ve kutusu ona göre olur.
-        let area = TextBox(left: region.left, top: region.top, right: region.right, bottom: region.bottom)
-        let reading = lastReading.withoutButtonPrompts().withoutOcrNoise().subtitleBlock(in: area)
+        let place = TextBox(left: region.left, top: region.top, right: region.right, bottom: region.bottom)
+        let reading = lastReading.withoutButtonPrompts().withoutOcrNoise().subtitleBlock(in: place)
         switch stabilizer.feed(reading.text) {
         case .none:
             break
@@ -84,7 +84,7 @@ final class SubtitlePipeline {
             lastRequested += 1
             let number = lastRequested, current = session
             lineOnScreen = number
-            let box = reading.box?.placed(in: area)
+            let box = reading.box?.placed(in: place)
             translations[number] = Task { [weak self] in
                 await self?.translate(source, box: box, number: number, session: current)
                 self?.translations[number] = nil

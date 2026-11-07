@@ -63,6 +63,7 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
     private ISpeechSynthesizer? synthesizer;
     private bool working;
     private int generation;
+    private int Generation { get { lock (gate) return generation; } }
     private SubtitleServer? publishedOn;
 
     public VoiceCast Cast { get; set; } = new();
@@ -87,16 +88,25 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
     {
         if (lines.Count == 0) return;
         PublishVoices();
+        bool interrupt;
+        int number;
         lock (gate)
         {
-            // Yeni altyazı geldiyse öncekilerin bekleyen cümleleri artık geç kalmıştır; dublaj altyazıyla birlikte kalsın.
+            // Yeni altyazı geldiyse öncekilerin cümleleri artık geç kalmıştır: bekleyenler atılır, çalan da kesilir.
+            // Ses yazının gerisinde kalıp oyunu karıştırmasın; dublaj hep ekrandaki altyazıyı söyler.
             queue.Clear();
             foreach (var line in lines) queue.Enqueue((line, null));
             while (queue.Count > Backlog) queue.Dequeue();
-            if (working) return;
+            interrupt = working;
             working = true;
+            // Sıra ile kuşak aynı kilit altında değişir; eski döngü yeni cümleyi alamaz.
+            number = ++generation;
         }
-        var number = Interlocked.Increment(ref generation);
+        if (interrupt)
+        {
+            audio.Stop();
+            server().StopSpeech();
+        }
         _ = Task.Run(() => RunAsync(number));
     }
 
@@ -105,12 +115,13 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
     {
         Stop();
         PublishVoices();
+        int number;
         lock (gate)
         {
             queue.Enqueue((new SpokenLine("Listen.", PreviewText), voice));
             working = true;
+            number = ++generation;
         }
-        var number = Interlocked.Increment(ref generation);
         _ = Task.Run(() => RunAsync(number));
     }
 
@@ -120,8 +131,8 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
         {
             queue.Clear();
             working = false;
+            generation++;
         }
-        Interlocked.Increment(ref generation);
         audio.Stop();
         server().StopSpeech();
     }
@@ -143,16 +154,17 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
 
     private async Task RunAsync(int number)
     {
-        Task<(SpeechAudio Audio, bool Preview)?>? next = Next();
+        Task<(SpeechAudio Audio, bool Preview)?>? next = Next(number);
         while (next is not null)
         {
             var result = await next;
-            if (number != Volatile.Read(ref generation)) return;
+            // Bu arada yeni altyazı geldiyse eski cümle hiç çalınmaz.
+            if (number != Generation) return;
             if (result is not { } ready) break;
             // Bu cümle çalarken sonraki hazırlanır.
-            next = Next();
+            next = Next(number);
             await PlayAsync(ready.Audio, ready.Preview ? DubbingOutput.Computer : Output);
-            if (number != Volatile.Read(ref generation)) return;
+            if (number != Generation) return;
         }
         lock (gate)
         {
@@ -163,13 +175,14 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
         await RunAsync(number);
     }
 
-    private Task<(SpeechAudio, bool)?>? Next()
+    private Task<(SpeechAudio, bool)?>? Next(int number)
     {
         SpokenLine line;
         DubbingVoice? preview;
         lock (gate)
         {
-            if (queue.Count == 0) return null;
+            // Geç başlayan eski döngü yeni altyazının cümlesini alıp atmasın.
+            if (queue.Count == 0 || number != generation) return null;
             (line, preview) = queue.Dequeue();
         }
         DubbingVoice voice;

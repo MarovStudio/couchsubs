@@ -4,13 +4,14 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bu sürümde yeni**
 
-- **Windows'ta altyazılar daha doğru okunuyor.** Parlak sahnelerde (kum, gökyüzü) beyaz altyazı "CESAREiVJütt'h" gibi okunuyordu. Her kare artık bir de yalnız beyaz yazı bırakılarak okunur, daha anlamlı okuma seçilir.
-- **TV'de altyazılar üst üste binmiyor.** Önceki satırı gösteren ikinci kutu kaldırıldı; yeni satır eskisinin yerine geçer. Altyazı yokken kalan boş siyah kutu da çıkmıyor (TV uygulaması 0.9.3).
-- **Dublaj altyazıyla birlikte geliyor.** Yeni altyazı gelince eski cümlelerin bekleyen sesleri atlanır; seslendirme işlemciyi altyazı okuma ve çeviriden sonra kullanır.
-- **Kurulum hatasında sebep görünüyor.** TV uygulaması kurulamazsa "boş alanı kontrol edin" yerine TV'nin verdiği asıl sebep yazar.
-- **Samsung kurulum notları** [TV kurulum rehberine](https://github.com/yorulmazsinan/couchsubs/blob/main/docs/tv-kurulum.md#samsung-tv) eklendi.
+- **Windows'ta İngilizce yazı tanıma paketi uyarısı.** Paket yüklü değilse Windows altyazıyı Türkçe okuyordu ("T hıs", "NiÖlence") ve çeviri anlamsızlaşıyordu. CouchSubs artık bunu ana ekranda söyler; **Yazı tanımayı kur** düğmesi paketi Windows'un izniyle kurar.
+- **Menü, gösterge ve kumanda ipuçları altyazıya karışmıyor.** Durdurma menüsü ("MAP / HELP / SETTINGS"), "PHOTO MODE L1 + R1", "23m" mesafe işareti ve satır başına yapışan sayılar çevrilmez. TV'deki koyu kutu yalnız altyazının kendisini kaplar.
+- **Dublaj yazının gerisinde kalmıyor.** Yeni altyazı gelince eski cümlenin sesi kesilir, sıra hemen yeni altyazıya geçer.
+- **Windows'ta altyazı alanı fareyle çiziliyor** ve ek bölgeler (görev paneli, notlar) Num 1/2/3 ile bir kez okunup çevriliyor; Num 0 canlı altyazıyı duraklatır. Katkı: [sadumqn](https://github.com/sadumqn).
+- **Samsung'da eski kurulum yeni sürümü engellemiyor.** Başka sertifikayla kurulmuş eski uygulama kaldırılıp yeniden kurulur ("Author certificate not match").
+- TV uygulaması 0.9.4.
 
-**beta.12'de gelenler:** Android TV'de altyazının yeniden görünmesi, yazı boyutu kaydırıcısı, aynı cümlenin iki kez çıkmaması, anlamsız harflerin ayıklanması.
+**beta.13'te gelenler:** parlak sahnede doğru okuma, üst üste binen ve boş kalan kutuların kalkması, kurulum hatasında TV'nin verdiği sebep.
 
 **İndirme**
 
@@ -36,4 +37,4 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 ---
 
-New beta. Windows reads subtitles on bright scenes much better (each frame is also read with only the white text kept). The TV no longer shows two overlapping boxes or an empty black box (TV app 0.9.3). Dubbing stays with the subtitle instead of lagging behind. A failed TV install now shows the TV's own reason. Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
+New beta. Windows now warns when the English text recognition pack is missing (it was reading English subtitles as Turkish, which garbled translations) and installs it with one button. Menus, gauges, distance markers and button prompts no longer mix into subtitles, and the TV box covers only the subtitle. Dubbing is cut when a new subtitle arrives so it never lags behind. Windows gets mouse-drawn areas and extra regions (Num 1/2/3, Num 0 pause) contributed by sadumqn. Samsung reinstalls over an old copy signed with another certificate. TV app 0.9.4. Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
