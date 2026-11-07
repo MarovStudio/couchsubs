@@ -13,6 +13,22 @@ namespace CouchSubs.TvInstall.Tests;
 
 public class SamsungTests
 {
+
+    /// <summary>TizenInstaller gibi: dosyayı açar, kapatmadan bırakır.</summary>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static void OpenAndForget(string path) => _ = File.OpenRead(path);
+
+    [Fact]
+    public void StagedPackageIsDeletedEvenWhenALibraryLeftItOpen()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"couchsubs-test-{Guid.NewGuid():N}.wgt");
+        File.WriteAllBytes(path, [1, 2, 3]);
+        OpenAndForget(path);
+        Assert.True(SamsungTvInstaller.DeleteStaged(path));
+        Assert.False(File.Exists(path));
+        Assert.True(SamsungTvInstaller.DeleteStaged(path), "olmayan dosya sorun değil");
+    }
+
     [Fact]
     public void SignInCallbackCarriesTheAccount()
     {

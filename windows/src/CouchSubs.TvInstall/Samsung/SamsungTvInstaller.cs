@@ -91,6 +91,7 @@ public sealed partial class SamsungTvInstaller(string host, string profilesDirec
         }
 
         Progress?.Invoke("signing");
+        DeleteLeftovers(Path.GetTempPath());
         var staged = Path.Combine(Path.GetTempPath(), $"couchsubs-{Guid.NewGuid():N}.wgt");
         File.Copy(wgtPath, staged);
         try
@@ -108,9 +109,43 @@ public sealed partial class SamsungTvInstaller(string host, string profilesDirec
         }
         finally
         {
-            File.Delete(staged);
+            DeleteStaged(staged);
         }
         try { await device.ShellCommandAsync($"0 execute {AppId}", cancellationToken); } catch (Exception) { /* açmak isteğe bağlı */ }
+    }
+
+    /// <summary>
+    /// TizenSdb'nin TizenInstaller'ı paketi açıp kapatmıyor; Windows açık dosyanın silinmesine izin vermiyor. Silme
+    /// hatası kurulumun asıl sonucunu örtmesin diye tutamak çöp toplayıcıyla bırakılır, yine silinemezse dosya geçici
+    /// klasörde kalır (bir sonraki kurulumda temizlenir).
+    /// </summary>
+    internal static bool DeleteStaged(string path)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                File.Delete(path);
+                return true;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Önceki kurulumlardan geçici klasörde kalmış paketler.</summary>
+    internal static void DeleteLeftovers(string directory)
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(directory, "couchsubs-*.wgt"))
+                if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddMinutes(-10)) DeleteStaged(file);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { /* temizlik isteğe bağlı */ }
     }
 
     private string ProfileDirectory(string duid) => Path.Combine(profilesDirectory, SafeName().Replace(duid, "_"));
