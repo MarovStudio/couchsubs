@@ -249,6 +249,7 @@ public sealed class StreamSession : IStreamSession
                 break;
             case NativeMethods.EventQuit:
                 var reason = DisconnectReasons.FromNative(quitReason, text);
+                RemotePlayLog.Write(1, $"Oturum kapandı: neden {quitReason} ({reason.Kind}) {text}");
                 queue.Post(() =>
                 {
                     // Eski bir oturumun (ör. ReconnectNow ile kapatılanın) kapanma olayı yeni oturumu etkilemez.

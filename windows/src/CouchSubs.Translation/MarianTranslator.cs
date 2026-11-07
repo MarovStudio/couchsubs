@@ -3,6 +3,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using CouchSubs.Core;
+using CouchSubs.Core.Dubbing;
 
 namespace CouchSubs.Translation;
 
@@ -20,6 +21,8 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
     private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.Ordinal);
     /// <summary>Konuşmacı etiketlerinden öğrenilen adlar (küçük harfle); cümle içinde de büyük harfle kalırlar.</summary>
     private readonly ConcurrentDictionary<string, byte> _names = new(StringComparer.Ordinal);
+    /// <summary>Altyazı → seslendirilecek cümleler (dublaj).</summary>
+    private readonly ConcurrentDictionary<string, IReadOnlyList<SpokenLine>> _speech = new(StringComparer.Ordinal);
     // Model tek seferde bir cümle çevirir: paralel çalıştırmak çekirdekleri paylaştırıp her satırı yavaşlatır.
     private readonly SemaphoreSlim _gate = new(1, 1);
     private ISentenceEngine? _engine;
@@ -57,21 +60,30 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
         foreach (var name in pieces.Select(SubtitleSegmenter.LabelName).OfType<string>())
             foreach (var word in name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length >= 2))
                 _names[word.ToLowerInvariant()] = 0;
+        var translations = new List<string?>(pieces.Count);
         foreach (var piece in pieces)
         {
             if (!piece.Translate)
             {
                 builder.Append(piece.Text);
+                translations.Add(null);
                 continue;
             }
             if (!_cache.TryGetValue(piece.Text, out var sentence))
                 sentence = await TranslateUncachedAsync(piece.Text, cancellationToken).ConfigureAwait(false);
             builder.Append(sentence);
+            translations.Add(sentence);
         }
+        if (_speech.Count >= 512) _speech.Clear();
+        _speech[text] = SpeechScript.Lines(pieces, translations);
         var result = builder.ToString();
         Remember(text, result);
         return result;
     }
+
+    public IReadOnlyList<SpokenLine> SpokenLines(string text) =>
+        _speech.TryGetValue(text, out var lines) ? lines
+        : _cache.TryGetValue(text, out var translation) ? [new SpokenLine(text, translation)] : [];
 
     private void Remember(string source, string translation)
     {

@@ -42,6 +42,7 @@ public partial class App : Application
             ScreenRenderer.Run(this, renderFolder);
             return;
         }
+        RemotePlayDiagnostics.Start();
         ThemeManager.Apply(Resources);
         ThemeManager.Follow(Resources);
         var controller = new AppController(new LiveServices(), new DpapiAppStore(), new FileSettingsStore(), new WindowsSleepGuard(),

@@ -43,6 +43,18 @@ public class MarianTranslatorTests
     }
 
     [Fact]
+    public async Task SpokenLinesKeepTheirSpeakers()
+    {
+        var (translator, _) = Create();
+        await translator.TranslateAsync("KRATOS: We go now. Stay close.\nATREUS: Okay.\n- Where?\n- Home.");
+        var lines = translator.SpokenLines("KRATOS: We go now. Stay close.\nATREUS: Okay.\n- Where?\n- Home.");
+        Assert.Equal(["KRATOS", "KRATOS", "ATREUS", null, null], lines.Select(line => line.Speaker));
+        Assert.Equal([false, false, false, true, true], lines.Select(line => line.NewTurn));
+        Assert.Equal("We go now.", lines[0].English);
+        Assert.Equal("WE GO NOW.", lines[0].Turkish);
+    }
+
+    [Fact]
     public async Task CachesExactInput()
     {
         var (translator, engine) = Create();

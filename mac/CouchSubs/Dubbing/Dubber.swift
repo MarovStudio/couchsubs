@@ -37,6 +37,8 @@ final class Dubber {
     private var serverPort: UInt16
     private var queue: [SpokenLine] = []
     private var worker: Task<Void, Never>?
+    /// Her yeni okuma işi bir numara alır; durdurulan eski iş, yerine başlayanın kaydını silmesin.
+    private var generation = 0
     private var player: AVAudioPlayer?
     private var voicesPublished = false
 
@@ -73,7 +75,13 @@ final class Dubber {
         publishVoices()
         queue += lines
         if queue.count > Self.backlog { queue.removeFirst(queue.count - Self.backlog) }
-        if worker == nil { worker = Task { await run() } }
+        if worker == nil { startWorker() }
+    }
+
+    private func startWorker() {
+        generation += 1
+        let current = generation
+        worker = Task { await run(current) }
     }
 
     /// Ayarlardaki "Dinle" düğmesi.
@@ -90,9 +98,10 @@ final class Dubber {
         queue.removeAll()
         worker?.cancel()
         worker = nil
+        generation += 1
         player?.stop()
         player = nil
-        if output == .tv { server.stopSpeech() }
+        server.stopSpeech()
     }
 
     func shutdown() async {
@@ -100,23 +109,26 @@ final class Dubber {
         await engine.stop()
     }
 
-    private func run() async {
-        var next: Task<(SpeechAudio, SpokenLine)?, Never>? = makeNext()
+    private func run(_ number: Int) async {
+        var next: Task<(SpeechAudio, Bool)?, Never>? = makeNext()
         while let current = next {
-            guard let (audio, _) = await current.value, !Task.isCancelled else { break }
+            guard let (audio, preview) = await current.value, !Task.isCancelled, number == generation else { break }
             // Bu cümle çalarken sonraki hazırlanır.
             next = makeNext()
-            await play(audio)
-            if Task.isCancelled { next?.cancel(); break }
+            // Ayarlardaki deneme her zaman Mac'ten çalar: kullanıcı o an Mac'in başında.
+            await play(audio, on: preview ? .computer : output)
+            if Task.isCancelled || number != generation { next?.cancel(); break }
         }
+        guard number == generation else { return }
         worker = nil
-        if !queue.isEmpty, !Task.isCancelled { worker = Task { await run() } }
+        if !queue.isEmpty, !Task.isCancelled { startWorker() }
     }
 
-    private func makeNext() -> Task<(SpeechAudio, SpokenLine)?, Never>? {
+    private func makeNext() -> Task<(SpeechAudio, Bool)?, Never>? {
         guard !queue.isEmpty else { return nil }
         let line = queue.removeFirst()
         let voice: DubbingVoice
+        let preview = previewVoice != nil
         if let previewVoice {
             voice = previewVoice
             self.previewVoice = nil
@@ -129,7 +141,7 @@ final class Dubber {
         let url = URL(string: "http://127.0.0.1:\(serverPort)/voices/\(voice.rawValue).wav")!
         return Task { [engine, weak self] in
             do {
-                return (try await engine.synthesize(text, voice: url).tightened(), line)
+                return (try await engine.synthesize(text, voice: url).tightened(), preview)
             } catch {
                 if !Task.isCancelled { await MainActor.run { self?.onError?(error.localizedDescription) } }
                 return nil
@@ -137,17 +149,19 @@ final class Dubber {
         }
     }
 
-    private func play(_ audio: SpeechAudio) async {
+    private func play(_ audio: SpeechAudio, on output: DubbingOutput) async {
         let wav = audio.wav
         let milliseconds = Int(audio.duration * 1000)
         switch output {
         case .tv:
             server.sendSpeech(wav, durationMs: milliseconds)
+            // TV sesi ağdan alıp çalmaya biraz geç başlar; sıradaki cümle bunu kesmesin.
+            try? await Task.sleep(for: .milliseconds(milliseconds + 250))
         case .computer:
             player = try? AVAudioPlayer(data: wav)
             player?.play()
+            try? await Task.sleep(for: .milliseconds(milliseconds + 60))
         }
-        try? await Task.sleep(for: .milliseconds(milliseconds + 60))
     }
 
     /// pocket-tts sesleri altyazı sunucusundan alır (`/voices/<ad>.wav`).

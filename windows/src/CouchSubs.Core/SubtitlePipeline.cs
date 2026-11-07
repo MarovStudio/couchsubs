@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
+using CouchSubs.Core.Dubbing;
+
 namespace CouchSubs.Core;
 
 /// <summary>Kare → bölge → yazı tanıma → kararlılık → çeviri → TV.</summary>
@@ -31,6 +33,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
 
     /// <summary>Yeni çeviri gösterilince çağrılır (kaynak, çeviri).</summary>
     public event Action<string, string>? PairShown;
+    /// <summary>TV'ye giden her yeni altyazının seslendirilecek cümleleri (dublaj).</summary>
+    public event Action<IReadOnlyList<SpokenLine>>? SpeechReady;
     /// <summary>Her çeviri denemesinden sonra çağrılır (başarılıysa null).</summary>
     public event Action<TranslatorStatus?>? TranslationResult;
 
@@ -143,6 +147,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
             LastBox = box;
         }
         PairShown?.Invoke(source, translated);
+        if (SpeechReady is { } speech) speech(translator.SpokenLines(source));
     }
 
     /// <summary>Okuma durunca TV'deki son altyazıyı kaldırır.</summary>

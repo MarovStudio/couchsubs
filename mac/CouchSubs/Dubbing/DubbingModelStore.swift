@@ -85,6 +85,8 @@ enum DubbingModelStore {
 private final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     private let onProgress: @Sendable (Int64) -> Void
     private var continuation: CheckedContinuation<URL, Error>?
+    /// İlerleme her 2 MB'de bir bildirilir; her küçük parçada arayüz güncellenmesin.
+    private var reported: Int64 = 0
 
     private init(onProgress: @escaping @Sendable (Int64) -> Void) {
         self.onProgress = onProgress
@@ -106,6 +108,8 @@ private final class Downloader: NSObject, URLSessionDownloadDelegate, @unchecked
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64,
                     totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        guard totalBytesWritten - reported >= 2 << 20 || totalBytesWritten == totalBytesExpectedToWrite else { return }
+        reported = totalBytesWritten
         onProgress(totalBytesWritten)
     }
 
