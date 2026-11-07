@@ -3,16 +3,54 @@
 import Foundation
 import Network
 
+/// TV'de çevirinin oyundaki İngilizce altyazıya göre yeri.
+public enum SubtitlePlacement: String, Codable, CaseIterable, Sendable {
+    /// İngilizce altyazının üstüne, onu örterek.
+    case cover
+    /// İngilizce altyazının hemen üstünde.
+    case above
+    /// İngilizce altyazının hemen altında.
+    case below
+    /// Ekranda sabit bir yükseklikte (`bottomPercent`).
+    case fixed
+}
+
 /// TV'de altyazının görünümü.
 public struct SubtitleStyle: Codable, Equatable, Sendable {
-    /// 36 (küçük), 46 (orta), 58 (büyük)
+    /// 36 (küçük), 46 (orta), 58 (büyük), 72 (çok büyük)
     public var fontSize: Int
-    /// Altyazının ekranın altından uzaklığı, yüzde.
+    /// Sabit yerleşimde altyazının ekranın altından uzaklığı, yüzde.
     public var bottomPercent: Int
+    public var placement: SubtitlePlacement
+    /// Yazının arkasındaki siyah zeminin koyuluğu, yüzde (0: zemin yok).
+    public var background: Int
+    public var bold: Bool
 
-    public init(fontSize: Int = 46, bottomPercent: Int = 7) {
+    public init(fontSize: Int = 46, bottomPercent: Int = 7, placement: SubtitlePlacement = .cover, background: Int = 72, bold: Bool = false) {
         self.fontSize = fontSize
         self.bottomPercent = bottomPercent
+        self.placement = placement
+        self.background = background
+        self.bold = bold
+    }
+
+    private enum CodingKeys: String, CodingKey { case fontSize, bottomPercent, placement, background, bold }
+
+    /// Eski sürümün kaydettiği ayarlarda yeni alanlar yoktur; eksikler varsayılanla dolar.
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = SubtitleStyle()
+        fontSize = try values.decodeIfPresent(Int.self, forKey: .fontSize) ?? defaults.fontSize
+        bottomPercent = try values.decodeIfPresent(Int.self, forKey: .bottomPercent) ?? defaults.bottomPercent
+        placement = (try? values.decodeIfPresent(SubtitlePlacement.self, forKey: .placement)) ?? defaults.placement
+        background = try values.decodeIfPresent(Int.self, forKey: .background) ?? defaults.background
+        bold = try values.decodeIfPresent(Bool.self, forKey: .bold) ?? defaults.bold
+    }
+
+    /// TV'ye giden `style` olayının gövdesi.
+    var json: [String: Any] {
+        ["fontSize": fontSize, "bottomPercent": bottomPercent, "placement": placement.rawValue,
+         "background": max(0, min(100, background)), "bold": bold]
     }
 }
 
@@ -87,9 +125,18 @@ public final class SubtitleServer: @unchecked Sendable {
         }
     }
 
-    public func sendSubtitle(_ text: String, durationMs: Int = 15000) {
+    /// `box`: oyundaki İngilizce altyazının ekrandaki yeri (kenarlara oranla); TV çeviriyi buna göre yerleştirir.
+    public func sendSubtitle(_ text: String, durationMs: Int = 15000, box: TextBox? = nil) {
         let at = Int(Date().timeIntervalSince1970 * 1000)
-        broadcast(event: "subtitle", json: ["text": text, "duration": durationMs, "at": at])
+        var json: [String: Any] = ["text": text, "duration": durationMs, "at": at]
+        if let box { json["box"] = Self.json(box) }
+        broadcast(event: "subtitle", json: json)
+    }
+
+    /// Dört basamağa yuvarlanır; Decimal, JSON'da 0.80000000000000004 yerine 0.8 yazılsın diye.
+    static func json(_ box: TextBox) -> [String: Decimal] {
+        let round = { (value: Double) in Decimal(Int((max(0, min(1, value)) * 10000).rounded())) / 10000 }
+        return ["left": round(box.left), "top": round(box.top), "right": round(box.right), "bottom": round(box.bottom)]
     }
 
     public func clear() {
@@ -98,7 +145,7 @@ public final class SubtitleServer: @unchecked Sendable {
 
     public func sendStyle(_ style: SubtitleStyle) {
         queue.async { self.lastStyle = style }
-        broadcast(event: "style", json: ["fontSize": style.fontSize, "bottomPercent": style.bottomPercent])
+        broadcast(event: "style", json: style.json)
     }
 
     // MARK: - Bağlantılar
@@ -154,7 +201,7 @@ public final class SubtitleServer: @unchecked Sendable {
         head += "Access-Control-Allow-Origin: *\r\n\r\n"
         head += "retry: 2000\n\n"
         if let style = lastStyle {
-            head += Self.frame(event: "style", json: ["fontSize": style.fontSize, "bottomPercent": style.bottomPercent])
+            head += Self.frame(event: "style", json: style.json)
         }
         connection.send(content: Data(head.utf8), completion: .contentProcessed { _ in })
 

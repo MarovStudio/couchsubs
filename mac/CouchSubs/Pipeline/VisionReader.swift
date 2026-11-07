@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import CoreGraphics
+import CouchSubsCore
 import Foundation
 import Vision
 
@@ -8,75 +9,90 @@ protocol TextReader: Sendable {
     func read(_ image: CGImage) throws -> String
     /// `deep` false ise boş bölgede büyütülmüş okuma denenmez (işlemciyi çok daha az yorar).
     func read(_ image: CGImage, deep: Bool) throws -> String
+    /// Satırlar ayrı ayrı ve görüntüdeki yerleriyle.
+    func readLines(_ image: CGImage, deep: Bool) throws -> Reading
 }
 
 extension TextReader {
     func read(_ image: CGImage, deep: Bool) throws -> String { try read(image) }
+    func readLines(_ image: CGImage, deep: Bool) throws -> Reading { Reading(text: try read(image, deep: deep)) }
 }
 
-/// Apple Vision ile cihaz üstünde yazı tanıma. Satırlar yukarıdan aşağı birleştirilir.
+/// Apple Vision ile cihaz üstünde yazı tanıma. Satırlar yukarıdan aşağı sıralanır.
 struct VisionReader: TextReader {
     var language = "en"
 
     func read(_ image: CGImage) throws -> String {
-        try Self.firstReading(of: image, using: recognize)
+        try readLines(image, deep: true).lines.map(\.text).joined(separator: " ")
     }
 
     func read(_ image: CGImage, deep: Bool) throws -> String {
-        deep ? try read(image) : try recognize(image)
+        try readLines(image, deep: deep).lines.map(\.text).joined(separator: " ")
+    }
+
+    func readLines(_ image: CGImage, deep: Bool) throws -> Reading {
+        deep ? try Self.firstLines(of: image, using: recognize) : try recognize(image)
+    }
+
+    /// Satırsız eski biçim (testler için): bulunan yazı tek metin olarak döner.
+    static func firstReading(of image: CGImage, using recognize: @escaping @Sendable (CGImage) throws -> String) throws -> String {
+        try firstLines(of: image) { Reading(text: try recognize($0)) }.text
     }
 
     /// Vision geniş bölgede "Go!" gibi kısa satırları sık sık hiç bulmaz. Bölgede yazı çıkmazsa
     /// ortadaki şerit (altyazılar ortalıdır) ve bölgenin tamamı büyütülerek aynı anda yeniden okunur;
     /// ikisi de yazı bulursa şeridinki seçilir. Aynı anda okumak, boş karede yeni satırı geç fark etmeyi önler.
-    static func firstReading(of image: CGImage, using recognize: @Sendable (CGImage) throws -> String) throws -> String {
-        let text = try recognize(image)
-        guard text.isEmpty else { return text }
+    static func firstLines(of image: CGImage, using recognize: @escaping @Sendable (CGImage) throws -> Reading) throws -> Reading {
+        let reading = try recognize(image)
+        guard reading.lines.isEmpty else { return reading }
 
-        let fallbacks: [@Sendable () -> CGImage?] = [
-            { centerStrip(of: image, widthFraction: 0.4).flatMap { scaled($0, by: 2) } },
-            { scaled(image, by: 2) },
+        // Şeritte bulunan satırın yeri şeridin değil bölgenin tamamının oranlarıyla verilir.
+        let strip = stripRect(of: image, widthFraction: 0.4)
+        let stripArea = TextBox(left: strip.minX / Double(image.width), top: 0, right: strip.maxX / Double(image.width), bottom: 1)
+        let fallbacks: [@Sendable () throws -> Reading?] = [
+            { try image.cropping(to: strip).flatMap { scaled($0, by: 2) }.map { try recognize($0).placed(in: stripArea) } },
+            { try scaled(image, by: 2).map(recognize) },
         ]
         let results = Results(count: fallbacks.count)
         DispatchQueue.concurrentPerform(iterations: fallbacks.count) { index in
-            guard let variant = fallbacks[index]() else { return }
-            results.set(index, Result { try recognize(variant) })
+            results.set(index, Result { try fallbacks[index]() ?? .empty })
         }
         for result in results.all {
-            if let text = try result?.get(), !text.isEmpty { return text }
+            if let reading = try result?.get(), !reading.lines.isEmpty { return reading }
         }
-        return ""
+        return .empty
     }
 
     /// Aynı anda yapılan okumaların sonuçları.
     private final class Results: @unchecked Sendable {
         private let lock = NSLock()
-        private var values: [Result<String, Error>?]
+        private var values: [Result<Reading, Error>?]
         init(count: Int) { values = Array(repeating: nil, count: count) }
-        func set(_ index: Int, _ value: Result<String, Error>) { lock.withLock { values[index] = value } }
-        var all: [Result<String, Error>?] { lock.withLock { values } }
+        func set(_ index: Int, _ value: Result<Reading, Error>) { lock.withLock { values[index] = value } }
+        var all: [Result<Reading, Error>?] { lock.withLock { values } }
     }
 
-    private func recognize(_ image: CGImage) throws -> String {
+    private func recognize(_ image: CGImage) throws -> Reading {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.recognitionLanguages = [language]
         request.usesLanguageCorrection = true
         try VNImageRequestHandler(cgImage: image).perform([request])
-        return (request.results ?? [])
-            .compactMap { observation -> (CGFloat, String)? in
+        let lines = (request.results ?? [])
+            .compactMap { observation -> TextLine? in
                 guard let candidate = observation.topCandidates(1).first, candidate.confidence >= 0.5 else { return nil }
-                return (observation.boundingBox.midY, candidate.string)
+                // Vision'ın kutusu sol alttan ölçülür; burada üstten ölçülür.
+                let box = observation.boundingBox
+                return TextLine(candidate.string.trimmingCharacters(in: .whitespacesAndNewlines),
+                                box: TextBox(left: box.minX, top: 1 - box.maxY, right: box.maxX, bottom: 1 - box.minY))
             }
-            .sorted { $0.0 > $1.0 }
-            .map(\.1)
-            .joined(separator: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .sorted { ($0.box?.top ?? 0) < ($1.box?.top ?? 0) }
+        return Reading(lines: lines)
     }
 
-    private static func centerStrip(of image: CGImage, widthFraction: Double) -> CGImage? {
+    private static func stripRect(of image: CGImage, widthFraction: Double) -> CGRect {
         let width = Double(image.width) * widthFraction
-        return image.cropping(to: CGRect(x: (Double(image.width) - width) / 2, y: 0, width: width, height: Double(image.height)).integral)
+        return CGRect(x: (Double(image.width) - width) / 2, y: 0, width: width, height: Double(image.height)).integral
     }
 
     private static func scaled(_ image: CGImage, by factor: Int) -> CGImage? {

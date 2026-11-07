@@ -30,6 +30,15 @@ html, body {
 
 #subtitle.hidden { opacity: 0; }
 
+/* "Üstünü örtsün" yerleşiminde oyundaki İngilizce altyazıyı kapatan zemin. */
+#subtitle-cover {
+  position: absolute;
+  z-index: 9;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.97);
+}
+#subtitle-cover.hidden { display: none; }
+
 /* Hızlı konuşmada önceki satır kısa süre yeni satırın üstünde, daha soluk durur. */
 #subtitle-prev { margin-bottom: 10px; opacity: 0.7; }
 #subtitle-prev.hidden { display: none; }

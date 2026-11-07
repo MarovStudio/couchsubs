@@ -257,6 +257,22 @@
         }
       }
     },
+    "Above the English subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Above the English subtitle"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İngilizce altyazının üstünde"
+          }
+        }
+      }
+    },
     "Accept the request on the TV…": {
       "localizations": {
         "en": {
@@ -317,6 +333,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geri"
+          }
+        }
+      }
+    },
+    "Background": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arka plan"
+          }
+        }
+      }
+    },
+    "Below the English subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Below the English subtitle"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İngilizce altyazının altında"
+          }
+        }
+      }
+    },
+    "Bold text": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bold text"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalın yazı"
           }
         }
       }
@@ -785,6 +849,38 @@
         }
       }
     },
+    "Extra large": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extra large"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çok büyük"
+          }
+        }
+      }
+    },
+    "Fixed position": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixed position"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sabit yerde"
+          }
+        }
+      }
+    },
     "Free and open source under the GNU AGPL-3.0 license.": {
       "localizations": {
         "en": {
@@ -893,6 +989,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Görmüyorsanız CouchSubs TV uygulamasının açık olduğundan emin olun ve TV'yi yeniden bağlayın."
+          }
+        }
+      }
+    },
+    "In fixed position you can also move subtitles with the ▲ and ▼ buttons on the TV remote.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In fixed position you can also move subtitles with the ▲ and ▼ buttons on the TV remote."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sabit yerdeyken altyazıyı TV kumandasının ▲ ve ▼ tuşlarıyla da taşıyabilirsiniz."
           }
         }
       }
@@ -1217,6 +1329,22 @@
         }
       }
     },
+    "None": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yok"
+          }
+        }
+      }
+    },
     "Not connected": {
       "localizations": {
         "en": {
@@ -1377,6 +1505,22 @@
         }
       }
     },
+    "Over the English subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over the English subtitle"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İngilizce altyazının üstünü örtsün"
+          }
+        }
+      }
+    },
     "PS5": {
       "localizations": {
         "en": {
@@ -1405,6 +1549,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Passphrase"
+          }
+        }
+      }
+    },
+    "Placement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Placement"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeri"
           }
         }
       }
@@ -1805,6 +1965,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Küçük"
+          }
+        }
+      }
+    },
+    "Solid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solid"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tam"
           }
         }
       }
@@ -2305,6 +2481,22 @@
         }
       }
     },
+    "The translation follows where the game shows its own subtitle.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The translation follows where the game shows its own subtitle."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çeviri, oyunun kendi altyazısı nerede çıkarsa oraya yerleşir."
+          }
+        }
+      }
+    },
     "The translation model is not downloaded yet.": {
       "localizations": {
         "en": {
@@ -2605,22 +2797,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Evet, görüyorum"
-          }
-        }
-      }
-    },
-    "You can also move subtitles with the ▲ and ▼ buttons on the TV remote.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You can also move subtitles with the ▲ and ▼ buttons on the TV remote."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Altyazıyı TV kumandasının ▲ ve ▼ tuşlarıyla da taşıyabilirsiniz."
           }
         }
       }

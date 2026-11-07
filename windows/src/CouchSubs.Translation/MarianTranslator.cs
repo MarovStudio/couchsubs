@@ -18,6 +18,8 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
     private readonly Func<ISentenceEngine> _engineFactory;
     private readonly Func<bool> _isInstalled;
     private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.Ordinal);
+    /// <summary>Konuşmacı etiketlerinden öğrenilen adlar (küçük harfle); cümle içinde de büyük harfle kalırlar.</summary>
+    private readonly ConcurrentDictionary<string, byte> _names = new(StringComparer.Ordinal);
     // Model tek seferde bir cümle çevirir: paralel çalıştırmak çekirdekleri paylaştırıp her satırı yavaşlatır.
     private readonly SemaphoreSlim _gate = new(1, 1);
     private ISentenceEngine? _engine;
@@ -50,7 +52,12 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
         if (_cache.TryGetValue(text, out var cached)) return cached;
 
         var builder = new StringBuilder();
-        foreach (var piece in SubtitleSegmenter.Split(text))
+        var pieces = SubtitleSegmenter.Split(text);
+        // "OLD MAN: " → "old", "man": çok sözcüklü adın her sözcüğü ayrıca tanınır.
+        foreach (var name in pieces.Select(SubtitleSegmenter.LabelName).OfType<string>())
+            foreach (var word in name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length >= 2))
+                _names[word.ToLowerInvariant()] = 0;
+        foreach (var piece in pieces)
         {
             if (!piece.Translate)
             {
@@ -82,7 +89,7 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
             if (_cache.TryGetValue(sentence, out var cached)) return cached;
             var engine = _engine ??= CreateEngine();
             // Çıkarım CPU'yu saniyenin onda biri kadar tutar; çağıranın (arayüz) iş parçacığını bloklamasın.
-            var input = SubtitleSegmenter.NormalizeCase(sentence);
+            var input = SubtitleSegmenter.NormalizeCase(sentence, _names.Keys.ToHashSet(StringComparer.Ordinal));
             var translation = await Task.Run(() => engine.Translate(input, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
             // Sıra bırakılmadan önce önbelleğe yazılır; sırada bekleyen aynı cümle yeniden çevrilmez.

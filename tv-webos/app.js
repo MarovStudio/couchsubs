@@ -17,6 +17,12 @@
   var hdmiPort = savedPort || 1;
 
   var bottomPercent = 7;
+  // Çevirinin yeri: oyundaki İngilizce altyazının üstünü örterek (cover), üstünde (above), altında (below)
+  // ya da sabit yükseklikte (fixed). Yeri bildirmeyen eski CouchSubs sürümlerinde sabit kalır.
+  var PLACEMENTS = { cover: 1, above: 1, below: 1, fixed: 1 };
+  var placement = 'fixed';
+  // Gösterilen satırın oyundaki İngilizce altyazının yeri (ekrana oranla), bilinmiyorsa null.
+  var currentBox = null;
 
   // Önceki satır bu süreden kısa göründüyse okunamamış olabilir; yeni satırın üstünde bir süre daha kalır.
   var PREVIOUS_HOLD_MS = 2500;
@@ -92,14 +98,27 @@
 
   // --- Altyazı ---
 
-  function showSubtitle(text, duration) {
+  // Kutunun sayıları geçerli mi (0–1 arası, sağ soldan, alt üstten büyük).
+  function validBox(box) {
+    if (!box || typeof box !== 'object') return null;
+    var keys = ['left', 'top', 'right', 'bottom'];
+    for (var i = 0; i < keys.length; i++) {
+      var value = box[keys[i]];
+      if (typeof value !== 'number' || value < 0 || value > 1) return null;
+    }
+    return box.right > box.left && box.bottom > box.top ? box : null;
+  }
+
+  function showSubtitle(text, duration, box) {
     var current = $('subtitle-text').textContent;
     var now = Date.now();
     if ($('subtitle').className !== 'hidden' && current && current !== text && now - shownAt < PREVIOUS_HOLD_MS) {
       showPrevious(current);
     }
     shownAt = now;
+    currentBox = validBox(box);
     $('subtitle-text').textContent = text;
+    layout();
     $('subtitle').className = '';
     clearTimeout(hideTimer);
     var ms = duration || Math.min(8000, 2000 + text.length * 60);
@@ -109,6 +128,7 @@
   function hideSubtitle() {
     clearTimeout(hideTimer);
     $('subtitle').className = 'hidden';
+    $('subtitle-cover').className = 'hidden';
     hidePrevious();
   }
 
@@ -128,7 +148,50 @@
   // seçilen konum, uygulamadaki ayar değişene kadar korunur (son değiştiren geçerlidir).
   function setBottom(percent) {
     bottomPercent = Math.max(0, Math.min(85, percent));
-    $('subtitle').style.bottom = bottomPercent + '%';
+    layout();
+  }
+
+  // Altyazıyı seçilen yerleşime göre konumlar. İngilizce altyazının yeri bilinmiyorsa sabit yükseklik kullanılır.
+  function layout() {
+    var el = $('subtitle');
+    var cover = $('subtitle-cover');
+    var box = placement === 'fixed' ? null : currentBox;
+    el.style.left = '8%';
+    el.style.right = '8%';
+    el.style.top = 'auto';
+    el.style.bottom = bottomPercent + '%';
+    cover.className = 'hidden';
+    if (!box) return;
+
+    var height = window.innerHeight || 1080;
+    var gap = Math.round(height * 0.012);
+    var mode = placement;
+    // Ekranın kenarında yer yoksa öbür yana geçilir.
+    if (mode === 'below' && box.bottom > 0.88) mode = 'above';
+    if (mode === 'above' && box.top < 0.12) mode = 'below';
+
+    // Yatayda İngilizce satırın ortasına hizalanır.
+    var center = (box.left + box.right) / 2;
+    var half = Math.max(0.3, Math.min(center, 1 - center));
+    el.style.left = (Math.max(0.02, center - half) * 100) + '%';
+    el.style.right = (Math.max(0.02, 1 - center - half) * 100) + '%';
+
+    if (mode === 'cover') {
+      // İngilizce yazı koyu bir zeminle örtülür, çeviri onun ortasına gelir.
+      var pad = 0.012;
+      cover.style.left = ((box.left - pad) * 100) + '%';
+      cover.style.top = ((box.top - pad) * 100) + '%';
+      cover.style.width = ((box.right - box.left + 2 * pad) * 100) + '%';
+      cover.style.height = ((box.bottom - box.top + 2 * pad) * 100) + '%';
+      cover.className = '';
+      var middle = (1 - (box.top + box.bottom) / 2) * height;
+      el.style.bottom = Math.max(0, Math.round(middle - $('subtitle-text').offsetHeight / 2)) + 'px';
+    } else if (mode === 'above') {
+      el.style.bottom = Math.round((1 - box.top) * height + gap) + 'px';
+    } else {
+      el.style.bottom = 'auto';
+      el.style.top = Math.round(box.bottom * height + gap) + 'px';
+    }
   }
 
   function applyStyle(style) {
@@ -136,6 +199,17 @@
       $('subtitle-text').style.fontSize = style.fontSize + 'px';
       $('subtitle-prev-text').style.fontSize = Math.round(style.fontSize * 0.8) + 'px';
     }
+    if (PLACEMENTS[style.placement]) placement = style.placement;
+    if (typeof style.background === 'number') {
+      var alpha = Math.max(0, Math.min(100, style.background)) / 100;
+      $('subtitle-text').style.background = 'rgba(0, 0, 0, ' + alpha + ')';
+      $('subtitle-prev-text').style.background = 'rgba(0, 0, 0, ' + (alpha * 0.83).toFixed(2) + ')';
+    }
+    if (typeof style.bold === 'boolean') {
+      $('subtitle-text').style.fontWeight = style.bold ? '700' : '600';
+      $('subtitle-prev-text').style.fontWeight = style.bold ? '700' : '600';
+    }
+    layout();
     if (style.bottomPercent >= 0 && String(style.bottomPercent) !== load('appBottom')) {
       save('appBottom', style.bottomPercent);
       save('bottom', '');
@@ -144,6 +218,8 @@
   }
 
   function nudgeSubtitle(step) {
+    // Yer oyundaki altyazıya bağlıysa kumandayla taşınmaz.
+    if (placement !== 'fixed') return;
     setBottom(bottomPercent + step);
     save('bottom', bottomPercent);
     // Nereye gittiği görülsün diye yazı yoksa örnek gösterilir.
@@ -183,7 +259,7 @@
       // Bilgisayarın adresi değişmiş olabilir.
       scheduleScan();
     };
-    onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration); });
+    onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration, data.box); });
     onEvent('clear', hideSubtitle);
     onEvent('style', applyStyle);
   }

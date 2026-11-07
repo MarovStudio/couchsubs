@@ -5,18 +5,40 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CouchSubs.Core;
 
-/// <summary>TV'de altyazının görünümü.</summary>
-/// <param name="FontSize">36 (küçük), 46 (orta), 58 (büyük)</param>
-/// <param name="BottomPercent">Altyazının ekranın altından uzaklığı, yüzde.</param>
-public sealed record SubtitleStyle(int FontSize = 46, int BottomPercent = 7);
+/// <summary>TV'de çevirinin oyundaki İngilizce altyazıya göre yeri.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<SubtitlePlacement>))]
+public enum SubtitlePlacement
+{
+    /// <summary>İngilizce altyazının üstüne, onu örterek.</summary>
+    Cover,
+    /// <summary>İngilizce altyazının hemen üstünde.</summary>
+    Above,
+    /// <summary>İngilizce altyazının hemen altında.</summary>
+    Below,
+    /// <summary>Ekranda sabit bir yükseklikte (<see cref="SubtitleStyle.BottomPercent"/>).</summary>
+    Fixed,
+}
+
+/// <summary>TV'de altyazının görünümü. Eski sürümün kaydettiği ayarlarda olmayan alanlar varsayılanla dolar.</summary>
+/// <param name="FontSize">36 (küçük), 46 (orta), 58 (büyük), 72 (çok büyük)</param>
+/// <param name="BottomPercent">Sabit yerleşimde altyazının ekranın altından uzaklığı, yüzde.</param>
+/// <param name="Background">Yazının arkasındaki siyah zeminin koyuluğu, yüzde (0: zemin yok).</param>
+public sealed record SubtitleStyle(
+    int FontSize = 46,
+    int BottomPercent = 7,
+    SubtitlePlacement Placement = SubtitlePlacement.Cover,
+    int Background = 72,
+    bool Bold = false);
 
 /// <summary>Altyazıları TV'ye ileten taraf (gerçekte <see cref="SubtitleServer"/>).</summary>
 public interface ISubtitleSender
 {
-    void SendSubtitle(string text, int durationMs = 15000);
+    /// <param name="box">Oyundaki İngilizce altyazının ekrandaki yeri (kenarlara oranla); TV çeviriyi buna göre yerleştirir.</param>
+    void SendSubtitle(string text, int durationMs = 15000, TextBox? box = null);
     void Clear();
 }
 
@@ -82,13 +104,28 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
 
     public void Dispose() => Stop();
 
-    public void SendSubtitle(string text, int durationMs = 15000) =>
-        Broadcast(Frame("subtitle", new SortedDictionary<string, object>
+    public void SendSubtitle(string text, int durationMs = 15000, TextBox? box = null)
+    {
+        var json = new SortedDictionary<string, object>
         {
             ["at"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             ["duration"] = durationMs,
             ["text"] = text,
-        }));
+        };
+        if (box is { } b)
+        {
+            json["box"] = new SortedDictionary<string, object>
+            {
+                ["bottom"] = Round(b.Bottom), ["left"] = Round(b.Left), ["right"] = Round(b.Right), ["top"] = Round(b.Top),
+            };
+        }
+        Broadcast(Frame("subtitle", json));
+    }
+
+    /// <summary>Dört basamağa yuvarlanır (decimal: JSON'da 0.8 olarak yazılsın).</summary>
+    /// Bölme sondaki sıfırları atar (0.8750 → 0.875).
+    private static decimal Round(double value) =>
+        Math.Round((decimal)Math.Clamp(value, 0, 1), 4) / 1.000000000000000000000000000000000m;
 
     public void Clear() => Broadcast(Frame("clear", new SortedDictionary<string, object>()));
 
@@ -241,7 +278,14 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
     }
 
     private static string StyleFrame(SubtitleStyle style) =>
-        Frame("style", new SortedDictionary<string, object> { ["bottomPercent"] = style.BottomPercent, ["fontSize"] = style.FontSize });
+        Frame("style", new SortedDictionary<string, object>
+        {
+            ["background"] = Math.Clamp(style.Background, 0, 100),
+            ["bold"] = style.Bold,
+            ["bottomPercent"] = style.BottomPercent,
+            ["fontSize"] = style.FontSize,
+            ["placement"] = style.Placement.ToString().ToLowerInvariant(),
+        });
 
     private static string Frame(string name, SortedDictionary<string, object> json) =>
         $"event: {name}\ndata: {JsonSerializer.Serialize(json, JsonOptions)}\n\n";

@@ -1,0 +1,103 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+namespace CouchSubs.Core;
+
+/// <summary>Yazının yeri, içinde bulunduğu alanın kenarlarına oranla (0–1, üstten ve soldan).</summary>
+public readonly record struct TextBox(double Left, double Top, double Right, double Bottom)
+{
+    public TextBox Union(TextBox other) =>
+        new(Math.Min(Left, other.Left), Math.Min(Top, other.Top), Math.Max(Right, other.Right), Math.Max(Bottom, other.Bottom));
+
+    /// <summary>Bu kutu <paramref name="area"/> içindeki oranlarsa, aynı yerin <paramref name="area"/>'yı içeren çerçevedeki oranları.</summary>
+    public TextBox PlacedIn(TextBox area)
+    {
+        var width = area.Right - area.Left;
+        var height = area.Bottom - area.Top;
+        return new(area.Left + (Left * width), area.Top + (Top * height), area.Left + (Right * width), area.Top + (Bottom * height));
+    }
+}
+
+/// <summary>Yazı tanımanın bulduğu bir satır; kutu okunan alana göredir, bilinmiyorsa null.</summary>
+public sealed record TextLine(string Text, TextBox? Box = null);
+
+/// <summary>Bir karenin okunan satırları, yukarıdan aşağı (Mac: CouchSubsCore/Reading.swift).</summary>
+public sealed class Reading
+{
+    public static readonly Reading Empty = new([]);
+
+    public Reading(IEnumerable<TextLine> lines) =>
+        Lines = [.. lines.Where(line => !string.IsNullOrWhiteSpace(line.Text))];
+
+    public IReadOnlyList<TextLine> Lines { get; }
+
+    /// <summary>Satırları ayrı ayrı bilinmeyen okuyucular için: her satır sonu bir satırdır.</summary>
+    public static Reading FromText(string text) =>
+        new(text.Replace("\r\n", "\n").Split('\n').Select(line => new TextLine(line.Trim())));
+
+    public string Text => string.Join('\n', Lines.Select(line => line.Text));
+
+    /// <summary>Bütün satırları içine alan kutu; hiçbir satırın yeri bilinmiyorsa null.</summary>
+    public TextBox? Box
+    {
+        get
+        {
+            TextBox? total = null;
+            foreach (var line in Lines)
+                if (line.Box is { } box) total = total?.Union(box) ?? box;
+            return total;
+        }
+    }
+
+    /// <summary>Oyunun düğme ipuçları ("R2 Swing", "△ Pick up") çıkarılmış hali; bunlar altyazı değildir.</summary>
+    public Reading WithoutButtonPrompts() => new(Lines.Where(line => !ButtonPrompts.IsPrompt(line.Text)));
+
+    /// <summary>Satır kutularını <paramref name="area"/> içindeki oranlardan dış çerçevenin oranlarına taşır.</summary>
+    public Reading PlacedIn(TextBox area) => new(Lines.Select(line => line with { Box = line.Box?.PlacedIn(area) }));
+}
+
+/// <summary>
+/// Oyunların ekranda gösterdiği kumanda ipuçlarını tanır: "R2 Swing", "L1 + R1 Spartan Rage", "△ Pick up",
+/// "Press ✕ to jump". Konuşma satırları dokunulmadan kalır (Mac'teki ButtonPrompts ile aynı kurallar).
+/// </summary>
+public static class ButtonPrompts
+{
+    /// <summary>Her zaman kumanda düğmesi olan simgeler ve adlar (yazı tanıma bazen köşeli parantezle okur).</summary>
+    private static readonly HashSet<string> Buttons = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "R1", "R2", "R3", "L1", "L2", "L3", "OPTIONS", "TOUCHPAD",
+        "✕", "×", "⨯", "✖", "○", "◯", "●", "□", "▢", "◻", "■", "△", "▲", "⨂",
+    };
+
+    /// <summary>Simge yazı tanımada harfe dönüşebilir; yalnız ipucu kalıbında düğme sayılır.</summary>
+    private static readonly HashSet<string> Lookalikes = new(StringComparer.Ordinal) { "X", "O" };
+
+    private static readonly HashSet<string> Verbs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "press", "hold", "tap", "push", "use", "mash", "release",
+    };
+
+    private static readonly char[] Separators = [' ', '\t', '+', '/'];
+    private static readonly char[] Brackets = ['(', ')', '[', ']', '{', '}', '<', '>', '「', '」'];
+
+    public static bool IsPrompt(string line)
+    {
+        var tokens = line.Split(Separators, StringSplitOptions.RemoveEmptyEntries)
+            .Select(token => token.Trim(Brackets))
+            .Where(token => token.Length > 0)
+            .ToList();
+        if (tokens.Count == 0) return false;
+        var first = tokens[0];
+        var words = tokens.Count(token => !Buttons.Contains(token) && token.Any(char.IsLetter));
+
+        // "R2 Swing", "△ Pick up", "L1 R1 Spartan Rage"
+        if (Buttons.Contains(first)) return words <= 5;
+        // "X Interact", "O Back": ardından kısa, büyük harfle başlayan, noktalamasız bir eylem gelir.
+        if (Lookalikes.Contains(first) && tokens.Count is >= 2 and <= 4 && char.IsUpper(tokens[1][0]) &&
+            !SubtitleStabilizer.EndsSentence(line))
+            return true;
+        // "Press ✕ to jump", "Hold R2 to aim"
+        if (Verbs.Contains(first) && tokens.Count is >= 2 and <= 10)
+            return Buttons.Contains(tokens[1]) || Lookalikes.Contains(tokens[1]);
+        return false;
+    }
+}

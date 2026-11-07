@@ -20,8 +20,12 @@ public partial class SettingsWindow : Window
         this.controller = controller;
         InitializeComponent();
         var settings = controller.Settings;
-        (settings.Style.FontSize switch { 36 => Small, 58 => Large, _ => Medium }).IsChecked = true;
+        (settings.Style.FontSize switch { 36 => Small, 58 => Large, 72 => ExtraLarge, _ => Medium }).IsChecked = true;
         Position.Value = settings.Style.BottomPercent;
+        Placement.SelectedItem = Placement.Items.Cast<ComboBoxItem>().First(item => (string)item.Tag == settings.Style.Placement.ToString());
+        ShowPlacement(settings.Style.Placement);
+        BackgroundOpacity.Value = settings.Style.Background;
+        Bold.IsChecked = settings.Style.Bold;
         // Yalnız çeviri modeli olan diller listelenir; tek dil varsa seçim gösterilmez.
         foreach (var (code, name) in Languages.Where(l => controller.SupportsLanguage(l.Code)))
             GameLanguage.Items.Add(new ComboBoxItem { Content = Localizer.Current[name], Tag = code, IsSelected = code == settings.SourceLanguage });
@@ -46,6 +50,28 @@ public partial class SettingsWindow : Window
         Update(s => s with { Style = s.Style with { BottomPercent = (int)Math.Round(e.NewValue) } });
 
     private void OnPositionStart(object sender, System.Windows.Input.MouseButtonEventArgs e) => controller.SendTestSubtitle();
+
+    private void OnPlacement(object sender, SelectionChangedEventArgs e)
+    {
+        if (Placement.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        var placement = Enum.Parse<SubtitlePlacement>(tag);
+        ShowPlacement(placement);
+        Update(s => s with { Style = s.Style with { Placement = placement } });
+    }
+
+    /// <summary>Elle ayarlanan yükseklik yalnız sabit yerleşimde anlamlıdır.</summary>
+    private void ShowPlacement(SubtitlePlacement placement)
+    {
+        var isFixed = placement == SubtitlePlacement.Fixed;
+        FixedPanel.Visibility = isFixed ? Visibility.Visible : Visibility.Collapsed;
+        FollowsHint.Visibility = isFixed ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void OnBackground(object sender, RoutedPropertyChangedEventArgs<double> e) =>
+        Update(s => s with { Style = s.Style with { Background = (int)Math.Round(e.NewValue) } });
+
+    private void OnBold(object sender, RoutedEventArgs e) =>
+        Update(s => s with { Style = s.Style with { Bold = Bold.IsChecked == true } });
 
     private void OnLanguage(object sender, SelectionChangedEventArgs e)
     {

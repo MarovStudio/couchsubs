@@ -42,13 +42,14 @@ public class SubtitleServerTests
         Assert.StartsWith("text/event-stream", response.Content.Headers.ContentType?.ToString());
 
         await WaitUntil(() => server.ConnectedClients == 1);
-        server.SendSubtitle("Merhaba", 4000);
+        server.SendSubtitle("Merhaba", 4000, new TextBox(0.25, 0.8, 0.75, 0.87499));
         server.Clear();
 
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
         var lines = await ReadLines(reader, "event: clear");
         Assert.Contains("event: subtitle", lines);
-        Assert.Contains(lines, l => l.StartsWith("data:") && l.Contains("\"text\":\"Merhaba\"") && l.Contains("\"duration\":4000"));
+        Assert.Contains(lines, l => l.StartsWith("data:") && l.Contains("\"text\":\"Merhaba\"") && l.Contains("\"duration\":4000")
+            && l.Contains("\"box\":{\"bottom\":0.875,\"left\":0.25,\"right\":0.75,\"top\":0.8}"));
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class SubtitleServerTests
     {
         using var server = new SubtitleServer(0);
         var port = await server.StartAsync();
-        server.SendStyle(new SubtitleStyle(58, 10));
+        server.SendStyle(new SubtitleStyle(58, 10, SubtitlePlacement.Above, 40, true));
 
         using var response = await Http.GetAsync($"http://127.0.0.1:{port}/events", HttpCompletionOption.ResponseHeadersRead);
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
@@ -79,6 +80,18 @@ public class SubtitleServerTests
             if (line.StartsWith("data:")) { data = line; break; }
         Assert.Contains("\"fontSize\":58", data);
         Assert.Contains("\"bottomPercent\":10", data);
+        Assert.Contains("\"placement\":\"above\"", data);
+        Assert.Contains("\"background\":40", data);
+        Assert.Contains("\"bold\":true", data);
+    }
+
+    [Fact]
+    public void OldSavedStyleGetsNewDefaults()
+    {
+        var style = System.Text.Json.JsonSerializer.Deserialize<SubtitleStyle>("{\"FontSize\":58,\"BottomPercent\":12}");
+        Assert.Equal(new SubtitleStyle(58, 12, SubtitlePlacement.Cover, 72, false), style);
+        var again = System.Text.Json.JsonSerializer.Deserialize<SubtitleStyle>(System.Text.Json.JsonSerializer.Serialize(style! with { Placement = SubtitlePlacement.Below }));
+        Assert.Equal(SubtitlePlacement.Below, again!.Placement);
     }
 
     [Fact]

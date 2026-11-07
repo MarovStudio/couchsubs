@@ -106,6 +106,8 @@ public interface ITextReader
     string Read(Frame image);
     /// <summary><paramref name="deep"/> false ise boş bölgede büyütülmüş okuma denenmez (işlemciyi çok daha az yorar).</summary>
     string Read(Frame image, bool deep) => Read(image);
+    /// <summary>Satırlar ayrı ayrı ve görüntüdeki yerleriyle.</summary>
+    Reading ReadLines(Frame image, bool deep) => Reading.FromText(Read(image, deep));
 }
 
 /// <summary>
@@ -115,26 +117,33 @@ public interface ITextReader
 /// </summary>
 public static class ReadingFallback
 {
-    public static string FirstReading(Frame image, Func<Frame, string> recognize)
-    {
-        var text = recognize(image);
-        if (text.Length > 0) return text;
+    /// <summary>Satırsız eski biçim: bulunan yazı tek metin olarak döner.</summary>
+    public static string FirstReading(Frame image, Func<Frame, string> recognize) =>
+        FirstLines(image, frame => Reading.FromText(recognize(frame))).Text;
 
-        Func<Frame>[] fallbacks =
+    public static Reading FirstLines(Frame image, Func<Frame, Reading> recognize)
+    {
+        var reading = recognize(image);
+        if (reading.Lines.Count > 0) return reading;
+
+        // Şeritte bulunan satırın yeri şeridin değil bölgenin tamamının oranlarıyla verilir.
+        var (x, width) = CenterStrip(image, 0.4);
+        var stripArea = new TextBox((double)x / image.Width, 0, (double)(x + width) / image.Width, 1);
+        Func<Reading>[] fallbacks =
         [
-            () => CenterStrip(image, 0.4).Scaled(2),
-            () => image.Scaled(2),
+            () => recognize(image.Crop(x, 0, width, image.Height).Scaled(2)).PlacedIn(stripArea),
+            () => recognize(image.Scaled(2)),
         ];
-        var results = new string[fallbacks.Length];
-        Parallel.For(0, fallbacks.Length, index => results[index] = recognize(fallbacks[index]()));
-        return results.FirstOrDefault(r => r.Length > 0) ?? "";
+        var results = new Reading[fallbacks.Length];
+        Parallel.For(0, fallbacks.Length, index => results[index] = fallbacks[index]());
+        return results.FirstOrDefault(r => r.Lines.Count > 0) ?? Reading.Empty;
     }
 
-    private static Frame CenterStrip(Frame image, double widthFraction)
+    private static (int X, int Width) CenterStrip(Frame image, double widthFraction)
     {
         var width = image.Width * widthFraction;
         var left = (image.Width - width) / 2;
         var x = (int)Math.Floor(left);
-        return image.Crop(x, 0, (int)Math.Ceiling(left + width) - x, image.Height);
+        return (x, (int)Math.Ceiling(left + width) - x);
     }
 }

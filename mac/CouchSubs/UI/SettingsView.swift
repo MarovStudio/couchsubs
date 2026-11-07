@@ -26,20 +26,42 @@ struct SettingsView: View {
                             Text("Small").tag(36)
                             Text("Medium").tag(46)
                             Text("Large").tag(58)
+                            Text("Extra large").tag(72)
                         }
                         .pickerStyle(.segmented)
-                        // Sürüklerken TV'de örnek altyazı görünür; böylece yeri doğrudan ekranda ayarlanır.
-                        Slider(value: Binding(get: { Double(model.settings.style.bottomPercent) },
-                                              set: { model.settings.style.bottomPercent = Int($0.rounded()) }), in: 0...85) {
-                            Text("Position on screen")
+                        Picker("Placement", selection: $model.settings.style.placement) {
+                            Text("Over the English subtitle").tag(SubtitlePlacement.cover)
+                            Text("Above the English subtitle").tag(SubtitlePlacement.above)
+                            Text("Below the English subtitle").tag(SubtitlePlacement.below)
+                            Text("Fixed position").tag(SubtitlePlacement.fixed)
+                        }
+                        if model.settings.style.placement == .fixed {
+                            // Sürüklerken TV'de örnek altyazı görünür; böylece yeri doğrudan ekranda ayarlanır.
+                            Slider(value: Binding(get: { Double(model.settings.style.bottomPercent) },
+                                                  set: { model.settings.style.bottomPercent = Int($0.rounded()) }), in: 0...85) {
+                                Text("Position on screen")
+                            } minimumValueLabel: {
+                                Text("Bottom").font(.csCallout).foregroundStyle(Color.csSecondary)
+                            } maximumValueLabel: {
+                                Text("Top").font(.csCallout).foregroundStyle(Color.csSecondary)
+                            } onEditingChanged: { editing in
+                                if editing { model.sendTestSubtitle() }
+                            }
+                            HintText(text: "In fixed position you can also move subtitles with the ▲ and ▼ buttons on the TV remote.")
+                        } else {
+                            HintText(text: "The translation follows where the game shows its own subtitle.")
+                        }
+                        Slider(value: Binding(get: { Double(model.settings.style.background) },
+                                              set: { model.settings.style.background = Int($0.rounded()) }), in: 0...100) {
+                            Text("Background")
                         } minimumValueLabel: {
-                            Text("Bottom").font(.csCallout).foregroundStyle(Color.csSecondary)
+                            Text("None").font(.csCallout).foregroundStyle(Color.csSecondary)
                         } maximumValueLabel: {
-                            Text("Top").font(.csCallout).foregroundStyle(Color.csSecondary)
+                            Text("Solid").font(.csCallout).foregroundStyle(Color.csSecondary)
                         } onEditingChanged: { editing in
                             if editing { model.sendTestSubtitle() }
                         }
-                        HintText(text: "You can also move subtitles with the ▲ and ▼ buttons on the TV remote.")
+                        Toggle("Bold text", isOn: $model.settings.style.bold)
                         Button("Send test subtitle") { model.sendTestSubtitle() }.buttonStyle(.secondary)
                     }
                     Card(title: "Language") {

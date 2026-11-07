@@ -25,6 +25,9 @@ public class SubtitleSegmenterTests
     [InlineData("ATREUS: Look! KRATOS: Stay behind me.", "ATREUS: [Look!] KRATOS: [Stay behind me.]")]
     [InlineData("SINDRI JR.: Hello there.", "SINDRI JR.: [Hello there.]")]
     [InlineData("Note: this is not a label.", "[Note: this is not a label.]")]
+    [InlineData("Kratos: Stay close.", "Kratos: [Stay close.]")]
+    [InlineData("Old Man: Who goes there?", "Old Man: [Who goes there?]")]
+    [InlineData("Objective: Find the gate.", "[Objective: Find the gate.]")]
     public void KeepsSpeakerLabels(string text, string expected) => Assert.Equal(expected, Render(text));
 
     [Fact]
@@ -58,4 +61,9 @@ public class SubtitleSegmenterTests
     [InlineData("NASA is here.", "NASA is here.")]
     public void NormalizesAllCapsSentences(string sentence, string expected) =>
         Assert.Equal(expected, SubtitleSegmenter.NormalizeCase(sentence));
+
+    [Fact]
+    public void KnownNamesStayCapitalized() =>
+        Assert.Equal("The gate will not hold, Atreus.",
+            SubtitleSegmenter.NormalizeCase("THE GATE WILL NOT HOLD, ATREUS.", new HashSet<string> { "atreus" }));
 }

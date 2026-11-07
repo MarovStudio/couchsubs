@@ -16,6 +16,14 @@ private final class FakeReader: TextReader, @unchecked Sendable {
     }
 }
 
+/// Satırları yerleriyle döndüren okuyucu.
+private struct LinesReader: TextReader {
+    let reading: Reading
+    init(_ reading: Reading) { self.reading = reading }
+    func read(_ image: CGImage) throws -> String { reading.text }
+    func readLines(_ image: CGImage, deep: Bool) throws -> Reading { reading }
+}
+
 private final class FakeTranslator: TextTranslator {
     var error: Error?
     var failuresLeft = 0
@@ -55,8 +63,9 @@ private final class Counter: @unchecked Sendable {
 private final class FakeSender: SubtitleSending {
     var sent: [String] = []
     var durations: [Int] = []
+    var boxes: [TextBox?] = []
     var clears = 0
-    func sendSubtitle(_ text: String, durationMs: Int) { sent.append(text); durations.append(durationMs) }
+    func sendSubtitle(_ text: String, durationMs: Int, box: TextBox?) { sent.append(text); durations.append(durationMs); boxes.append(box) }
     func clear() { clears += 1 }
 }
 
@@ -75,6 +84,27 @@ final class SubtitlePipelineTests: XCTestCase {
         for _ in 0..<3 { await pipeline.process(frame, region: CropRegion()); await pipeline.waitForTranslations() }
         XCTAssertEqual(sender.sent, ["TR: Hold the gate"])
         XCTAssertEqual(pipeline.lastPair?.source, "Hold the gate")
+    }
+
+    func testButtonPromptsAreNotTranslated() async {
+        let sender = FakeSender()
+        let pipeline = SubtitlePipeline(reader: FakeReader(["R2 Swing", "R2 Swing", "Hold the gate\nR2 Swing", "Hold the gate\nR2 Swing"]),
+                                        translator: FakeTranslator(), server: sender)
+        for _ in 0..<4 { await pipeline.process(frame, region: CropRegion()); await pipeline.waitForTranslations() }
+        XCTAssertEqual(sender.sent, ["TR: Hold the gate"])
+    }
+
+    func testSubtitleBoxIsSentInFrameCoordinates() async {
+        let sender = FakeSender()
+        let reading = Reading(lines: [TextLine("Hold the gate.", box: TextBox(left: 0.25, top: 0.5, right: 0.75, bottom: 1))])
+        let pipeline = SubtitlePipeline(reader: LinesReader(reading), translator: FakeTranslator(), server: sender)
+        await pipeline.process(frame, region: CropRegion(top: 0.6, bottom: 1.0, left: 0.1, right: 0.9))
+        await pipeline.waitForTranslations()
+        let box = try? XCTUnwrap(sender.boxes.first ?? nil)
+        XCTAssertEqual(box?.left ?? 0, 0.3, accuracy: 1e-9)
+        XCTAssertEqual(box?.top ?? 0, 0.8, accuracy: 1e-9)
+        XCTAssertEqual(box?.right ?? 0, 0.7, accuracy: 1e-9)
+        XCTAssertEqual(box?.bottom ?? 0, 1.0, accuracy: 1e-9)
     }
 
     func testTextRecognitionRunsOffTheMainThread() async {

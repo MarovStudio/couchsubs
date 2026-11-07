@@ -77,6 +77,16 @@ public class MarianTranslatorTests
     }
 
     [Fact]
+    public async Task NamesFromLabelsStayCapitalizedInLaterSentences()
+    {
+        var (translator, engine) = Create();
+
+        await translator.TranslateAsync("ATREUS: Father, look!");
+        await translator.TranslateAsync("THE GATE WILL NOT HOLD, ATREUS.");
+        Assert.Equal("The gate will not hold, Atreus.", engine.Calls[^1]);
+    }
+
+    [Fact]
     public async Task ThrowsNeedsDownloadWhenModelMissing()
     {
         var created = false;

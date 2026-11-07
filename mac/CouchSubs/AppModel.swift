@@ -368,6 +368,8 @@ final class AppModel {
     private var keeper: KeeperControlling?
     private var sleepActivity: NSObjectProtocol?
     private var pipeline: SubtitlePipeline?
+    /// Oyundaki altyazının son görüldüğü yer; deneme altyazısı TV'de oraya yerleşir.
+    private var lastSubtitleBox: TextBox?
     private var processing = false
     private var wakeObserver: NSObjectProtocol?
 
@@ -634,7 +636,10 @@ final class AppModel {
 
     func sendTestSubtitle() {
         server.sendStyle(settings.style)
-        server.sendSubtitle(String(localized: "This is a test subtitle. Can you see it on top of the game?"), durationMs: 8000)
+        // Oyunda henüz altyazı görülmediyse altyazı bölgesinin altına yakın tipik bir yer kullanılır.
+        let region = settings.region
+        let box = lastSubtitleBox ?? TextBox(left: 0.3, top: region.bottom - 0.1, right: 0.7, bottom: region.bottom - 0.03)
+        server.sendSubtitle(String(localized: "This is a test subtitle. Can you see it on top of the game?"), durationMs: 8000, box: box)
     }
 
     /// Kurulumu baştan başlatır (kayıtlı her şeyi siler).
@@ -700,9 +705,10 @@ final class AppModel {
         let pipeline = SubtitlePipeline(reader: VisionReader(language: settings.sourceLanguage),
                                         translator: Translator(source: settings.sourceLanguage, target: settings.targetLanguage),
                                         server: server, scheduler: ReadScheduler())
-        pipeline.onPair = { [weak self] source, translation in
+        pipeline.onPair = { [weak self, weak pipeline] source, translation in
             self?.lastSource = source
             self?.lastTranslation = translation
+            if let box = pipeline?.lastBox { self?.lastSubtitleBox = box }
         }
         // Dil paketi bu arada indirilmiş olabilir; her çeviri sonucu durumu günceller.
         pipeline.onTranslationResult = { [weak self] error in

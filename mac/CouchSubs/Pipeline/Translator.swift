@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import CouchSubsCore
 import Foundation
 import Translation
 
@@ -17,11 +18,14 @@ enum TranslatorStatus: Equatable {
 }
 
 /// Apple'ın cihaz üstü çevirisi. Dil paketi yüklü olmalı; değilse `needsDownload` atar.
+/// Altyazı cümle cümle çevrilir: alt alta sarılmış satırlar birleşir, konuşmacı adları ("ATREUS:") çevrilmez,
+/// tümü büyük harfli cümleler önce cümle düzenine getirilir (öğrenilen adlar büyük harfle kalır).
 final class Translator: TextTranslator {
     private let source: Locale.Language
     private let target: Locale.Language
     private var session: TranslationSession?
     private var cache: [String: String] = [:]
+    private let names = SpeakerNames()
 
     init(source: String = "en", target: String = "tr") {
         self.source = Locale.Language(identifier: source)
@@ -38,6 +42,24 @@ final class Translator: TextTranslator {
 
     func translate(_ text: String) async throws -> String {
         if let cached = cache[text] { return cached }
+        let pieces = SubtitleSegmenter.split(text)
+        names.learn(from: pieces)
+        var result = ""
+        for piece in pieces {
+            result += piece.translate ? try await translateSentence(piece.text) : piece.text
+        }
+        remember(text, result)
+        return result
+    }
+
+    /// Önbellek sınırsız büyümesin; dolunca boşaltmak bir oturum için yeterli.
+    private func remember(_ source: String, _ translation: String) {
+        if cache.count >= 4096 { cache.removeAll() }
+        cache[source] = translation
+    }
+
+    private func translateSentence(_ sentence: String) async throws -> String {
+        if let cached = cache[sentence] { return cached }
         if session == nil {
             switch await LanguageAvailability().status(from: source, to: target) {
             case .installed: session = TranslationSession(installedSource: source, target: target)
@@ -45,8 +67,8 @@ final class Translator: TextTranslator {
             default: throw TranslatorError.unsupported
             }
         }
-        let result = try await session!.translate(text).targetText
-        cache[text] = result
+        let result = try await session!.translate(SubtitleSegmenter.normalizeCase(sentence, names: names.all)).targetText
+        remember(sentence, result)
         return result
     }
 }

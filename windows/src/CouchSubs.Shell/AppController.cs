@@ -58,6 +58,8 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private IStreamSession? session;
     private IKeeper? keeper;
     private SubtitlePipeline? pipeline;
+    /// <summary>Oyundaki altyazının son görüldüğü yer; deneme altyazısı TV'de oraya yerleşir.</summary>
+    private TextBox? lastSubtitleBox;
     private int processing;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -483,7 +485,10 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public void SendTestSubtitle()
     {
         server.SendStyle(settings.Style);
-        server.SendSubtitle(text["This is a test subtitle. Can you see it on top of the game?"], 8000);
+        // Oyunda henüz altyazı görülmediyse altyazı bölgesinin altına yakın tipik bir yer kullanılır.
+        var region = settings.Region;
+        var box = lastSubtitleBox ?? new TextBox(0.3, region.Bottom - 0.1, 0.7, region.Bottom - 0.03);
+        server.SendSubtitle(text["This is a test subtitle. Can you see it on top of the game?"], 8000, box);
     }
 
     /// <summary>Kurulumu baştan başlatır (kayıtlı her şeyi siler).</summary>
@@ -602,11 +607,16 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         OcrMissing = reader is null;
         if (reader is null) return;
         var built = new SubtitlePipeline(reader, MakeTranslator(), server, new ReadScheduler());
-        built.PairShown += (source, translation) => post(() =>
+        built.PairShown += (source, translation) =>
         {
-            LastSource = source;
-            LastTranslation = translation;
-        });
+            var box = built.LastBox;
+            post(() =>
+            {
+                LastSource = source;
+                LastTranslation = translation;
+                if (box is not null) lastSubtitleBox = box;
+            });
+        };
         // Model bu arada inmiş olabilir; her çeviri sonucu durumu günceller.
         built.TranslationResult += error => post(() => TranslatorStatus = error ?? TranslatorStatus.Ready);
         pipeline = built;

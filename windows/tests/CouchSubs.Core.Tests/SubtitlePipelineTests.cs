@@ -15,6 +15,13 @@ internal sealed class FakeReader(params string[] texts) : ITextReader
     }
 }
 
+/// <summary>Satırları yerleriyle döndüren okuyucu.</summary>
+internal sealed class LinesReader(Reading reading) : ITextReader
+{
+    public string Read(Frame image) => reading.Text;
+    public Reading ReadLines(Frame image, bool deep) => reading;
+}
+
 internal sealed class FakeTranslator : ITextTranslator
 {
     public Exception? Error { get; set; }
@@ -71,8 +78,12 @@ internal sealed class FakeSender : ISubtitleSender
 {
     public List<string> Sent { get; } = [];
     public List<int> Durations { get; } = [];
+    public List<TextBox?> Boxes { get; } = [];
     public int Clears { get; private set; }
-    public void SendSubtitle(string text, int durationMs = 15000) { lock (Sent) { Sent.Add(text); Durations.Add(durationMs); } }
+    public void SendSubtitle(string text, int durationMs = 15000, TextBox? box = null)
+    {
+        lock (Sent) { Sent.Add(text); Durations.Add(durationMs); Boxes.Add(box); }
+    }
     public void Clear() => Clears++;
 }
 
@@ -87,6 +98,43 @@ public class SubtitlePipelineTests
             await pipeline.ProcessAsync(Image, new CropRegion());
             if (waitEach) await pipeline.WaitForTranslationsAsync();
         }
+    }
+
+    [Fact]
+    public async Task ButtonPromptsAreNotTranslated()
+    {
+        var sender = new FakeSender();
+        var pipeline = new SubtitlePipeline(
+            new FakeReader("R2 Swing", "R2 Swing", "Hold the gate\nR2 Swing", "Hold the gate\nR2 Swing"), new FakeTranslator(), sender);
+        await Run(pipeline, 4);
+        Assert.Equal(["TR: Hold the gate"], sender.Sent);
+    }
+
+    [Fact]
+    public async Task SubtitleBoxIsSentInFrameCoordinates()
+    {
+        var sender = new FakeSender();
+        var reading = new Reading([new TextLine("Hold the gate.", new TextBox(0.25, 0.5, 0.75, 1))]);
+        var pipeline = new SubtitlePipeline(new LinesReader(reading), new FakeTranslator(), sender);
+        await pipeline.ProcessAsync(Image, new CropRegion(Top: 0.6, Bottom: 1.0, Left: 0.1, Right: 0.9));
+        await pipeline.WaitForTranslationsAsync();
+        var box = Assert.Single(sender.Boxes)!.Value;
+        Assert.Equal(0.3, box.Left, 9);
+        Assert.Equal(0.8, box.Top, 9);
+        Assert.Equal(0.7, box.Right, 9);
+        Assert.Equal(1.0, box.Bottom, 9);
+    }
+
+    [Fact]
+    public void CenterStripLinesAreReportedInRegionCoordinates()
+    {
+        var reading = ReadingFallback.FirstLines(Image, candidate => candidate.Width == 64
+            ? Reading.Empty
+            : new Reading([new TextLine("Go!", new TextBox(0, 0.5, 1, 1))]));
+        var box = reading.Box!.Value;
+        Assert.Equal(19.0 / 64, box.Left, 9);
+        Assert.Equal(45.0 / 64, box.Right, 9);
+        Assert.Equal(0.5, box.Top, 9);
     }
 
     [Fact]

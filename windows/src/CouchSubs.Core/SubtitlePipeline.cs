@@ -21,8 +21,12 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     private int? lineOnScreen;
     /// <summary>Okuma durdurulunca artar; önceki oturumdan dönen çeviriler gösterilmez.</summary>
     private int session;
+    /// <summary>Son okunan satırlar; kare değişmediyse yeniden okunmaz, bunlar kullanılır.</summary>
+    private Reading lastReading = Reading.Empty;
 
     public (string Source, string Translation)? LastPair { get; private set; }
+    /// <summary>Son gösterilen çevirinin oyundaki altyazısının karedeki yeri.</summary>
+    public TextBox? LastBox { get; private set; }
     public TranslatorStatus? LastError { get; private set; }
 
     /// <summary>Yeni çeviri gösterilince çağrılır (kaynak, çeviri).</summary>
@@ -34,24 +38,33 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     public async Task ProcessAsync(Frame frame, CropRegion region)
     {
         // Yazı tanıma uzun sürebilir; çağıranı (arayüzü) bekletmemek için iş parçacığı havuzunda yapılır.
-        var text = await Task.Run(() =>
+        var raw = await Task.Run(() =>
         {
             try
             {
                 var area = RegionCropper.Crop(frame, region);
                 ReadPlan plan;
-                lock (gate) plan = schedule.Plan(RegionCropper.Signature(area));
-                if (plan.Reuse) return plan.Text;
-                var read = reader.Read(area, plan.Deep);
-                lock (gate) schedule.Record(read);
+                lock (gate)
+                {
+                    plan = schedule.Plan(RegionCropper.Signature(area));
+                    if (plan.Reuse) return lastReading;
+                }
+                var read = reader.ReadLines(area, plan.Deep);
+                lock (gate)
+                {
+                    schedule.Record(read.Text);
+                    lastReading = read;
+                }
                 return read;
             }
-            catch { return ""; }
+            catch { return Reading.Empty; }
         });
+        // Kumanda ipuçları ("R2 Swing") altyazı değildir; çevrilmez, yeri de altyazının yerine katılmaz.
+        var reading = raw.WithoutButtonPrompts();
 
         lock (gate)
         {
-            var action = stabilizer.Feed(text);
+            var action = stabilizer.Feed(reading.Text);
             switch (action.Kind)
             {
                 case StabilizerKind.Clear:
@@ -64,7 +77,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     lineOnScreen = number;
                     // Çevirmen burada, istek sırasıyla çağrılır (ayrı görevle başlatılsa sıra karışabilirdi).
                     // Çeviri hemen bittiyse kendini zaten listeden çıkarmıştır; yeniden eklenmez.
-                    var task = TranslateAndForget(action.Text!, number, current);
+                    var box = reading.Box?.PlacedIn(new TextBox(region.Left, region.Top, region.Right, region.Bottom));
+                    var task = TranslateAndForget(action.Text!, box, number, current);
                     if (!task.IsCompleted) translations[number] = task;
                     break;
             }
@@ -86,13 +100,13 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// <summary>Satır ekrandan kalktıktan sonra gelen çevirinin TV'de kalacağı süre (TV uygulamasıyla aynı kural).</summary>
     public static int ReadingTime(string text) => Math.Min(8000, 2000 + (text.Length * 60));
 
-    private async Task TranslateAndForget(string source, int number, int current)
+    private async Task TranslateAndForget(string source, TextBox? box, int number, int current)
     {
-        await Translate(source, number, current);
+        await Translate(source, box, number, current);
         lock (gate) translations.Remove(number);
     }
 
-    private async Task Translate(string source, int number, int current)
+    private async Task Translate(string source, TextBox? box, int number, int current)
     {
         string translated;
         try
@@ -124,8 +138,9 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
             if (number <= lastShown || !stabilizer.ShouldSend(source, translated)) return;
             lastShown = number;
             // Satır hâlâ ekrandaysa kalkınca silinir; kalktıysa okunacak kadar gösterilir.
-            sender.SendSubtitle(translated, number == lineOnScreen ? 15000 : ReadingTime(translated));
+            sender.SendSubtitle(translated, number == lineOnScreen ? 15000 : ReadingTime(translated), box);
             LastPair = (source, translated);
+            LastBox = box;
         }
         PairShown?.Invoke(source, translated);
     }
@@ -137,6 +152,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         {
             session++;
             lineOnScreen = null;
+            lastReading = Reading.Empty;
             schedule.Reset();
             if (stabilizer.Reset() == StabilizerAction.Clear) sender.Clear();
         }
