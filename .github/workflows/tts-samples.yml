@@ -1,0 +1,54 @@
+# Türkçe dublaj denemesi: Kyutai'nin pocket-tts programıyla (MIT) Pocket TTS Turkish modelinin (CC-BY-4.0) altı
+# sesini oyun replikleriyle seslendirir, Mac (Apple Silicon) ve Windows'ta hızını ölçer. Elle çalıştırılır.
+name: tts-samples
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  samples:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            asset: pocket-tts-3.3.0-aarch64-apple-darwin.tar.gz
+            sha256: ee9ca6c7c000ee72c5846e3a8ba01d08f56636d94a614d2259c3f12b8fd69afa
+          - os: windows-latest
+            asset: pocket-tts-3.3.0-x86_64-pc-windows-msvc.zip
+            sha256: 98753041f2e65744b989776f87bccb93f1f574a08afe1890c5427ec94cd6309c
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: pocket-tts programı
+        run: |
+          mkdir -p tts && cd tts
+          curl -sfL -o "${{ matrix.asset }}" "https://github.com/kyutai-labs/pocket-tts/releases/download/v4.0.1/${{ matrix.asset }}"
+          echo "${{ matrix.sha256 }}  ${{ matrix.asset }}" | sha256sum -c - 2>/dev/null || echo "${{ matrix.sha256 }}  ${{ matrix.asset }}" | shasum -a 256 -c -
+          case "${{ matrix.asset }}" in *.zip) unzip -q "${{ matrix.asset }}" ;; *) tar xzf "${{ matrix.asset }}" ;; esac
+          find . -type f -name 'pocket-tts*' ! -name '*.tar.gz' ! -name '*.zip'
+
+      - name: Model ayarı ve sesler
+        run: |
+          cd tts
+          curl -sfL -o tr.yaml https://huggingface.co/wite-tech/pocket-tts-turkish/resolve/main/config.yaml
+          # Türkçe modeli küçük harfle başlayan cümlelerle eğitilmiş: ilk harf büyütülmez.
+          printf '\ncapitalize_first_letter: false\n' >> tr.yaml
+          for v in female_1 female_2 female_3 male_1 male_2 male_3; do
+            curl -sfL -o "$v.wav" "https://huggingface.co/wite-tech/pocket-tts-turkish/resolve/main/voices/$v.wav"
+          done
+
+      - name: Seslendir
+        run: scripts/tts-samples.sh "$(find tts -type f \( -name pocket-tts -o -name pocket-tts.exe \) | head -1)" tts out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tts-samples-${{ runner.os }}
+          path: out
