@@ -18,6 +18,9 @@ public partial class DubbingCard : UserControl
     public DubbingCard()
     {
         InitializeComponent();
+        // Kesme işaretli metinler XAML biçimlendirme uzantısına yazılamıyor.
+        SetupHint.Text = Localizer.Current["In the game's audio settings, turn the dialogue (voice) volume down; keep music and effects. If the game can show speaker names in subtitles, turn them on: every character then speaks with its own voice."];
+        Credits.Text = Localizer.Current["Voices: Pocket TTS Turkish (wite-tech, CC BY 4.0) with Kyutai's pocket-tts. The voices are synthetic, not real people."];
         Unloaded += (_, _) =>
         {
             if (controller is not null) controller.PropertyChanged -= OnChanged;
