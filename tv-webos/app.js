@@ -109,13 +109,16 @@
     return box.right > box.left && box.bottom > box.top ? box : null;
   }
 
-  function showSubtitle(text, duration, box) {
+  // paragraphs: görev paneli gibi başlık ve maddeli yazılar satır satır, sola yaslı gösterilir.
+  function showSubtitle(text, duration, box, paragraphs) {
     // Önceki satır artık ayrıca gösterilmez: iki kutu üst üste binmiş gibi görünüyor, aynı cümlenin iki okunuşu
     // da ikinci çeviri gibi duruyordu. Yeni satır eskisinin yerine geçer.
     hidePrevious();
     shownAt = Date.now();
     currentBox = validBox(box);
     $('subtitle-text').textContent = text;
+    $('subtitle-text').style.whiteSpace = paragraphs ? 'pre-line' : '';
+    $('subtitle-text').style.textAlign = paragraphs ? 'left' : '';
     $('subtitle').className = '';
     layout();
     clearTimeout(hideTimer);
@@ -258,7 +261,7 @@
       // Bilgisayarın adresi değişmiş olabilir.
       scheduleScan();
     };
-    onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration, data.box); });
+    onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration, data.box, data.paragraphs === true); });
     onEvent('clear', hideSubtitle);
     onEvent('style', applyStyle);
     onEvent('speech', function (data) { if (data.url) playSpeech(server + data.url); });
