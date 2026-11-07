@@ -35,7 +35,19 @@ public sealed class WindowsOcrReader : ITextReader
 
     public Reading ReadLines(Frame image, bool deep) => deep ? ReadingFallback.FirstLines(image, Recognize) : Recognize(image);
 
+    /// <summary>
+    /// Kare hem olduğu gibi hem de yalnız beyaz yazısı bırakılarak okunur; daha sözcüğe benzeyen okuma seçilir.
+    /// Parlak sahnelerde ikincisi, renkli altyazılarda birincisi kazanır.
+    /// </summary>
     private Reading Recognize(Frame image)
+    {
+        var raw = RecognizeOnce(image);
+        if (image.Width < 40 || image.Height < 40) return raw;
+        var whiteText = RecognizeOnce(TextImage.WhiteTextOnly(image));
+        return OcrNoise.Score(whiteText.Text) > OcrNoise.Score(raw.Text) ? whiteText : raw;
+    }
+
+    private Reading RecognizeOnce(Frame image)
     {
         // OCR motoru çok küçük ya da çok büyük görüntüyü reddeder.
         if (image.Width < 40 || image.Height < 40 || image.Width > OcrEngine.MaxImageDimension || image.Height > OcrEngine.MaxImageDimension)

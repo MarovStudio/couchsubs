@@ -36,3 +36,39 @@ public class OcrNoiseTests
         Assert.Equal("We go now.", reading.Text);
     }
 }
+
+public class ReadingChoiceTests
+{
+    [Fact]
+    public void CleanReadingScoresHigherThanGarbled()
+    {
+        Assert.True(OcrNoise.Score("CESARE: Wait for me!") > OcrNoise.Score("- CESAREiVJütt'h!"));
+        Assert.True(OcrNoise.Score("We go to McDonald's now.") > 0);
+        Assert.True(OcrNoise.Score("T hats the[lil Should be quiet now.") < OcrNoise.Score("That should be quiet now."));
+    }
+
+    /// Koyu kenarlı beyaz yazı siyaha, parlak zemin ve kenar beyaza döner.
+    [Fact]
+    public void WhiteTextOnlyKeepsOutlinedWhiteAndDropsBrightBackground()
+    {
+        var frame = Frame.Blank(60, 20);
+        void Paint(int x0, int x1, byte value)
+        {
+            for (var y = 0; y < 20; y++)
+                for (var x = x0; x < x1; x++)
+                {
+                    var i = y * frame.Stride + x * 4;
+                    frame.Pixels[i] = frame.Pixels[i + 1] = frame.Pixels[i + 2] = value;
+                    frame.Pixels[i + 3] = 255;
+                }
+        }
+        Paint(0, 30, 230);   // parlak kum: yakınında koyu yok
+        Paint(40, 44, 20);   // yazının koyu kenarı
+        Paint(44, 48, 250);  // beyaz harf
+        var result = TextImage.WhiteTextOnly(frame, radius: 3);
+        byte At(int x) => result.Pixels[10 * result.Stride + x * 4];
+        Assert.Equal(255, At(5));   // zemin
+        Assert.Equal(0, At(45));    // harf
+        Assert.Equal(255, At(41));  // kenar
+    }
+}

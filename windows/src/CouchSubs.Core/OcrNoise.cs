@@ -31,6 +31,34 @@ public static partial class OcrNoise
         return string.Join(' ', kept);
     }
 
+    /// <summary>
+    /// Bir okumanın ne kadar sözcük gibi göründüğü: düzgün sözcüklerin harfleri artı, çöp ve karışık büyük-küçük
+    /// harfli parçalar ("CESAREiVJütt'h") eksi sayılır. Aynı karenin iki okumasından iyisini seçmek için.
+    /// </summary>
+    public static int Score(string text)
+    {
+        var score = 0;
+        foreach (var token in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var core = Split(token).Core;
+            var letters = core.Count(char.IsLetter);
+            if (letters == 0) continue;
+            // Sözcük ortasındaki parantez ("the[lil") de okuma karışıklığıdır.
+            var clean = CleanCore(core) == core && NormalCase(core) && core.IndexOfAny(['[', ']', '(', ')']) < 0;
+            score += clean ? letters : -2 * letters;
+        }
+        return score;
+    }
+
+    /// <summary>"word", "WORD", "Word", "McDonald", "don't": büyük harf yalnız başta ya da baştan bir dizi.</summary>
+    private static bool NormalCase(string core)
+    {
+        var letters = core.Where(char.IsLetter).ToArray();
+        if (letters.All(char.IsUpper) || letters.Skip(1).All(char.IsLower)) return true;
+        // Tek iç büyük harf ("McDonald", "iPhone") olağan; daha fazlası OCR karışıklığıdır.
+        return letters.Skip(1).Count(char.IsUpper) == 1 && letters.Count(char.IsLower) >= 2;
+    }
+
     /// <summary>Sözcüğün kendisi; null ise tamamen çöptür.</summary>
     private static string? CleanCore(string core)
     {

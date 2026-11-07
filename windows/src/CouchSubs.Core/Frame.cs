@@ -67,6 +67,57 @@ public sealed class Frame(byte[] pixels, int width, int height, int stride)
 }
 
 /// <summary>Görüntüde altyazının arandığı bölge, kenarlara oranla (0–1, üstten ve soldan).</summary>
+/// <summary>Yazı tanıma öncesi görüntü hazırlığı.</summary>
+public static class TextImage
+{
+    /// <summary>
+    /// Oyun altyazıları çoğunlukla koyu kenarlı ya da gölgeli beyaz yazıdır. Parlak zeminde (kum, gökyüzü) Windows'un
+    /// yazı tanıması harfleri zeminden ayıramıyor ve "CESAREiVJütt'h" gibi okuyordu. Burada yakınında koyu piksel olan
+    /// beyaza yakın pikseller siyah yazı, geri kalanı beyaz zemin olur; yazı tanıma en iyi bu biçimi okur.
+    /// </summary>
+    public static Frame WhiteTextOnly(Frame image, int radius = 5)
+    {
+        int width = image.Width, height = image.Height;
+        var bright = new bool[width * height];
+        // Koyu piksellerin toplamlı tablosu: bir pencerede koyu piksel var mı tek adımda bulunur.
+        var dark = new int[(width + 1) * (height + 1)];
+        for (var y = 0; y < height; y++)
+        {
+            var rowSum = 0;
+            for (var x = 0; x < width; x++)
+            {
+                var i = (y * image.Stride) + (x * 4);
+                int b = image.Pixels[i], g = image.Pixels[i + 1], r = image.Pixels[i + 2];
+                int min = Math.Min(r, Math.Min(g, b)), max = Math.Max(r, Math.Max(g, b));
+                bright[(y * width) + x] = min >= 200 && max - min <= 45;
+                rowSum += (r * 3 + g * 6 + b) / 10 < 110 ? 1 : 0;
+                dark[((y + 1) * (width + 1)) + x + 1] = dark[(y * (width + 1)) + x + 1] + rowSum;
+            }
+        }
+        var result = new Frame(new byte[width * height * 4], width, height, width * 4);
+        for (var y = 0; y < height; y++)
+        {
+            int top = Math.Max(0, y - radius), bottom = Math.Min(height, y + radius + 1);
+            for (var x = 0; x < width; x++)
+            {
+                var text = false;
+                if (bright[(y * width) + x])
+                {
+                    int left = Math.Max(0, x - radius), right = Math.Min(width, x + radius + 1);
+                    var darkCount = dark[(bottom * (width + 1)) + right] - dark[(top * (width + 1)) + right]
+                                    - dark[(bottom * (width + 1)) + left] + dark[(top * (width + 1)) + left];
+                    text = darkCount > 0;
+                }
+                var value = (byte)(text ? 0 : 255);
+                var o = (y * result.Stride) + (x * 4);
+                result.Pixels[o] = result.Pixels[o + 1] = result.Pixels[o + 2] = value;
+                result.Pixels[o + 3] = 255;
+            }
+        }
+        return result;
+    }
+}
+
 public sealed record CropRegion(double Top = 0.62, double Bottom = 0.97, double Left = 0.14, double Right = 0.86);
 
 public static class RegionCropper
