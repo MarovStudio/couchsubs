@@ -8,7 +8,7 @@ kendisi bekler; bu sayfa aynı adımların ayrıntılı hâlidir. Önce TV'nizin
 |---|---|---|
 | **LG** (webOS 4 ve üstü) | Gerçek TV'de denendi. CouchSubs TV uygulamasını kendisi kurar | [LG](#lg-tv) |
 | **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de denendi (75" Neo QLED). CouchSubs kendisi kurar, bir kez Samsung girişi ister | [Samsung](#samsung-tv) |
-| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi. CouchSubs ağ üzerinden kendisi kurar | [Android TV](#android-tv--google-tv) |
+| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de denendi. CouchSubs ağ üzerinden kendisi kurar | [Android TV](#android-tv--google-tv) |
 | **Vestel, Arçelik, Beko, Grundig'in Linux modelleri, Philips Saphi ve Titan OS** | Desteklenmiyor: bu TV'lere uygulama kurmanın bir yolunu bulamadık | |
 
 **TV'm Android mi?** Ana ekranda Google Play Store ya da Google TV yazıyorsa Android'dir. Üreticinin kendi uygulama
@@ -116,7 +116,7 @@ tizen install -n KLASOR/CouchSubs.wgt -t TV_ADI
 
 ## Android TV / Google TV
 
-Gerçek TV'de henüz denenmedi. Bazı TV'ler HDMI görüntüsünü başka uygulamaya vermeyebilir; böyle bir durumda altyazılar
+Gerçek TV'de denendi. Bazı TV'ler HDMI görüntüsünü başka uygulamaya vermeyebilir; böyle bir durumda altyazılar
 görünür ama arkası siyah kalır. Lütfen [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından
 TV modelinizle birlikte yazın.
 

@@ -6,8 +6,8 @@ Developer mode is free and does not harm the TV. The desktop app shows these ste
 | TV | Status | Guide |
 |---|---|---|
 | **LG** (webOS 4+) | Tested on a real TV. CouchSubs installs the TV app itself | [LG](#lg-tv) |
-| **Samsung** (Tizen, 2019 and later) | Not tested on a real TV yet. CouchSubs installs it; asks for a Samsung sign-in once | [Samsung](#samsung-tv) |
-| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips and others) | Not tested on a real TV yet. CouchSubs installs it over the network | [Android TV](#android-tv--google-tv) |
+| **Samsung** (Tizen, 2019 and later) | Tested on a real TV (75" Neo QLED). CouchSubs installs it; asks for a Samsung sign-in once | [Samsung](#samsung-tv) |
+| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips and others) | Tested on a real TV. CouchSubs installs it over the network | [Android TV](#android-tv--google-tv) |
 | **Linux models of Vestel, Arçelik, Beko and Grundig, Philips Saphi and Titan OS** | Not supported: we found no way to install apps on them | |
 
 The computer and the TV must be on the same home network.
@@ -28,7 +28,7 @@ expires, developer mode turns off and the TV app is removed.
 ## Samsung TV
 
 Samsung requires apps to be signed for each TV. CouchSubs does this for you; you only sign in once with a free Samsung
-account. Not tested on a real TV yet.
+account. Tested on a 75" Neo QLED.
 
 1. In the TV's **Apps** screen press `1 2 3 4 5`, turn **Developer mode** on, enter your computer's address as
    **Host PC IP** (CouchSubs shows it) and restart the TV.
@@ -42,7 +42,7 @@ restart the TV. Manual install with Tizen Studio: see the [Turkish guide](tv-kur
 
 ## Android TV / Google TV
 
-Not tested on a real TV yet. Some TVs may not give the HDMI picture to other apps: subtitles appear but the picture stays
+Tested on a real TV. Some TVs may not give the HDMI picture to other apps: subtitles appear but the picture stays
 black. Please report your TV model in [Issues](https://github.com/yorulmazsinan/couchsubs/issues).
 
 1. In **Settings › Device Preferences › About** (Google TV: **Settings › System › About**) press OK on **Build** 7 times.

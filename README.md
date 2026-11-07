@@ -37,7 +37,7 @@ kendisi bulur ve tek tıkla günceller. Kurulum istemeyenler için zip paketleri
 |---|---|
 | **LG** (webOS 4 ve üstü) | Gerçek TV'de denendi. Uygulamayı CouchSubs kendisi kurar |
 | **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de denendi (75" Neo QLED). Uygulamayı CouchSubs kendisi kurar; bir kez Samsung hesabıyla giriş istenir |
-| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi. Uygulamayı CouchSubs ağ üzerinden kendisi kurar |
+| **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de denendi. Uygulamayı CouchSubs ağ üzerinden kendisi kurar |
 | Vestel, Arçelik, Beko, Grundig'in Linux modelleri, Philips Saphi ve Titan OS | Desteklenmiyor: uygulama kurmanın bir yolunu bulamadık |
 
 Bilgisayar tarafında Mac ve Windows gerçek cihazla denendi. Geri bildiriminiz çok değerli.
@@ -159,9 +159,8 @@ and translation run on your computer, and subtitles are never sent to the intern
 PlayStation Network account, and either a Mac with Apple Silicon on macOS 26+ or a 64-bit Windows 10 (2004)
 or 11 PC.
 
-**TVs:** LG (tested on a real TV), Samsung (2019 and later) and Android TV / Google TV such as Vestel, Arçelik, Beko,
-Grundig and Philips (not tested on real TVs yet). CouchSubs installs the TV app on all of them. Mac is tested on real hardware; Windows is not
-tested on a real PC yet.
+**TVs:** LG, Samsung (2019 and later) and Android TV / Google TV such as Vestel, Arçelik, Beko, Grundig and Philips,
+all tested on real TVs. CouchSubs installs the TV app on all of them. Mac and Windows are tested on real hardware.
 
 **Download:** [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe). The app finds new versions and updates itself.
 
