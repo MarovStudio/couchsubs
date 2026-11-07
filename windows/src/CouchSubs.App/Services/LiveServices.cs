@@ -236,8 +236,7 @@ public sealed class LiveServices : IAppServices
         }
     }
 
-    private static DevModeInstaller Installer(string host, string keyFile) =>
-        new(host, keyFile, new ProcessRunner(), DevModeTools.ForThisSystem());
+    private static DevModeInstaller Installer(string host, string keyFile) => DevModeInstaller.ForTv(host, keyFile);
 
     /// <summary>ssh anahtarı dosyadan okur; dosya yalnız komut süresince durur.</summary>
     private static async Task<T> WithKeyFileAsync<T>(string key, Func<string, Task<T>> body)

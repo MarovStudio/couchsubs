@@ -36,22 +36,23 @@ public sealed class DevModeException(DevModeError error, string? detail = null)
     public DevModeError Error { get; } = error;
 }
 
-/// <summary>ssh ve ssh-keygen'in yerleri.</summary>
-public sealed record DevModeTools(string Ssh, string SshKeygen, string NullDevice)
+/// <summary>Key Server'dan gelen anahtarın parolasını çözen ssh-keygen'in yeri.</summary>
+public sealed record DevModeTools(string SshKeygen)
 {
     public static DevModeTools ForThisSystem() => OperatingSystem.IsWindows()
-        ? new(Path.Combine(Environment.SystemDirectory, "OpenSSH", "ssh.exe"),
-              Path.Combine(Environment.SystemDirectory, "OpenSSH", "ssh-keygen.exe"), "NUL")
-        : new("/usr/bin/ssh", "/usr/bin/ssh-keygen", "/dev/null");
+        ? new(Path.Combine(Environment.SystemDirectory, "OpenSSH", "ssh-keygen.exe"))
+        : new("/usr/bin/ssh-keygen");
 }
 
 /// <summary>
 /// TV uygulamasını LG'nin geliştirici modu üzerinden kurar ve günceller.
 /// Geliştirici modu açık TV 9922 portunda SSH bekler; anahtar Key Server'dan bir kez alınır.
 /// </summary>
-public sealed class DevModeInstaller(string host, string keyFile, ICommandRunner runner, DevModeTools tools,
-                                     TimeSpan? pollInterval = null, TimeSpan? installTimeout = null)
+public sealed class DevModeInstaller(IRemoteShell shell, TimeSpan? pollInterval = null, TimeSpan? installTimeout = null)
 {
+    /// <summary>TV'ye uygulamanın içinden SSH ile bağlanan kurucu.</summary>
+    public static DevModeInstaller ForTv(string host, string keyFile) => new(new SshNetShell(host, Port, keyFile));
+
     public const int Port = 9922;
     private const string AppInfoPath = "/media/developer/apps/usr/palm/applications/com.couchsubs.tv/appinfo.json";
     private const string RemotePackage = "/media/developer/temp/couchsubs.ipk";
@@ -193,26 +194,7 @@ public sealed class DevModeInstaller(string host, string keyFile, ICommandRunner
         return match.Success ? int.Parse(match.Groups[1].Value) : null;
     }
 
-    private async Task<CommandResult> SshAsync(string command, string? input = null)
-    {
-        // Windows'un ssh.exe'si girişi bir boruya bağlıyken komutun çıktısını hiç vermeyebiliyor (Win32-OpenSSH);
-        // TV'deki sürüm boş okunuyor, kurulum hiç bitmemiş sanılıyordu. Girdi gönderilmeyen komutlarda -n ile
-        // ssh girişi hiç okumaz, ProcessRunner da girişi bağlamaz.
-        var result = await runner.RunAsync(tools.Ssh,
-        [
-            .. input is null ? new[] { "-n" } : [],
-            "-p", Port.ToString(), "-i", keyFile,
-            "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", "-o", "LogLevel=ERROR",
-            // TV'nin anahtarı her fabrika ayarında değişir ve eski türdedir.
-            "-o", "StrictHostKeyChecking=no", "-o", $"UserKnownHostsFile={tools.NullDevice}",
-            "-o", "HostKeyAlgorithms=+ssh-rsa", "-o", "PubkeyAcceptedAlgorithms=+ssh-rsa",
-            $"prisoner@{host}", command,
-        ], input);
-        if (result.Status == 255)
-            throw new DevModeException(result.Output.Contains("Permission denied", StringComparison.Ordinal)
-                ? DevModeError.KeyRefused : DevModeError.Unreachable);
-        return result;
-    }
+    private Task<CommandResult> SshAsync(string command, string? input = null) => shell.RunAsync(command, input);
 }
 
 /// <summary>Komutları <see cref="Process"/> ile çalıştırır; pencere açmaz.</summary>
@@ -222,7 +204,6 @@ public sealed class ProcessRunner : ICommandRunner
     {
         var start = new ProcessStartInfo(executable)
         {
-            // Girdi yoksa giriş bağlanmaz (bkz. DevModeInstaller.SshAsync).
             RedirectStandardInput = inputFile is not null,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -238,7 +219,7 @@ public sealed class ProcessRunner : ICommandRunner
         }
         catch (Win32Exception)
         {
-            // Windows'un OpenSSH istemcisi kaldırılmış olabilir.
+            // Windows'un OpenSSH istemcisi (ssh-keygen) kaldırılmış olabilir.
             throw new DevModeException(DevModeError.ToolMissing);
         }
         var output = process.StandardOutput.ReadToEndAsync();

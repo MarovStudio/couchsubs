@@ -13,4 +13,8 @@
     <EmbeddedResource Include="..\..\..\mac\CouchSubs\Resources\Localizable.xcstrings" LogicalName="Localizable.xcstrings" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+  </ItemGroup>
+
 </Project>

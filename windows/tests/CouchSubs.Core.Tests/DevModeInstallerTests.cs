@@ -7,18 +7,18 @@ namespace CouchSubs.Core.Tests;
 
 public class DevModeInstallerTests
 {
-    private sealed class FakeRunner : ICommandRunner
+    private sealed class FakeShell : IRemoteShell
     {
-        public List<(string Executable, IReadOnlyList<string> Arguments, string? Input)> Calls { get; } = [];
+        public List<(string Command, string? Input)> Calls { get; } = [];
         public Func<string, CommandResult?> Answer { get; set; } = _ => null;
-        public Task<CommandResult> RunAsync(string executable, IReadOnlyList<string> arguments, string? inputFile)
+        public Func<string, Exception?> Failure { get; set; } = _ => null;
+        public Task<CommandResult> RunAsync(string command, string? inputFile = null)
         {
-            Calls.Add((executable, arguments, inputFile));
-            return Task.FromResult(Answer(string.Join(' ', arguments)) ?? new CommandResult(0, ""));
+            Calls.Add((command, inputFile));
+            if (Failure(command) is { } error) throw error;
+            return Task.FromResult(Answer(command) ?? new CommandResult(0, ""));
         }
     }
-
-    private static readonly DevModeTools Tools = new("ssh", "ssh-keygen", "NUL");
 
     /// <summary>10 baytlık geçici paket; kurulum TV'deki boyutu bununla karşılaştırır.</summary>
     private static string Package()
@@ -28,8 +28,8 @@ public class DevModeInstallerTests
         return file;
     }
 
-    private static DevModeInstaller Installer(FakeRunner runner) =>
-        new("192.168.1.230", "key", runner, Tools, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(200));
+    private static DevModeInstaller Installer(FakeShell shell) =>
+        new(shell, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(200));
 
     [Fact]
     public void VersionIsReadFromThePackageName()
@@ -57,27 +57,23 @@ public class DevModeInstallerTests
     [Fact]
     public async Task MissingAppHasNoVersion()
     {
-        var runner = new FakeRunner { Answer = _ => new CommandResult(1, "No such file") };
-        Assert.Null(await Installer(runner).InstalledVersionAsync());
+        var shell = new FakeShell { Answer = _ => new CommandResult(1, "No such file") };
+        Assert.Null(await Installer(shell).InstalledVersionAsync());
     }
 
     [Fact]
-    public async Task RefusedKeyAndUnreachableTvAreDifferentProblems()
+    public async Task ConnectionProblemsReachTheCaller()
     {
-        var refused = new FakeRunner { Answer = _ => new CommandResult(255, "prisoner@tv: Permission denied (publickey).") };
+        var refused = new FakeShell { Failure = _ => new DevModeException(DevModeError.KeyRefused) };
         var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(refused).InstalledVersionAsync());
         Assert.Equal(DevModeError.KeyRefused, error.Error);
-
-        var off = new FakeRunner { Answer = _ => new CommandResult(255, "connect to host port 9922: timed out") };
-        error = await Assert.ThrowsAsync<DevModeException>(() => Installer(off).InstalledVersionAsync());
-        Assert.Equal(DevModeError.Unreachable, error.Error);
     }
 
     [Fact]
     public async Task InstallUploadsThenAsksTheTvToInstallAndWaitsForTheVersion()
     {
         var reads = 0;
-        var runner = new FakeRunner
+        var shell = new FakeShell
         {
             Answer = line =>
             {
@@ -87,19 +83,20 @@ public class DevModeInstallerTests
             },
         };
         var package = Package();
-        await Installer(runner).InstallAsync(package, "0.6.1");
-        Assert.Equal(package, runner.Calls[0].Input);
-        Assert.Contains("cat > /media/developer/temp/couchsubs.ipk", runner.Calls[0].Arguments[^1]);
-        Assert.Contains("wc -c < /media/developer/temp/couchsubs.ipk", runner.Calls[1].Arguments[^1]);
-        Assert.Contains("luna://com.webos.appInstallService/dev/install", runner.Calls[2].Arguments[^1]);
-        Assert.Contains("rm -f /media/developer/temp/couchsubs.ipk", runner.Calls[^1].Arguments[^1]);
+        await Installer(shell).InstallAsync(package, "0.6.1");
+        Assert.Equal(package, shell.Calls[0].Input);
+        Assert.Contains("cat > /media/developer/temp/couchsubs.ipk", shell.Calls[0].Command);
+        Assert.Contains("wc -c < /media/developer/temp/couchsubs.ipk", shell.Calls[1].Command);
+        Assert.Contains("luna://com.webos.appInstallService/dev/install", shell.Calls[2].Command);
+        Assert.Contains("rm -f /media/developer/temp/couchsubs.ipk", shell.Calls[^1].Command);
+        Assert.All(shell.Calls.Skip(1), call => Assert.Null(call.Input));
     }
 
     [Fact]
     public async Task InstallTimesOutWhenTheVersionNeverChanges()
     {
-        var runner = new FakeRunner { Answer = line => line.Contains("appinfo.json") ? new CommandResult(0, "\"version\": \"0.4.0\"") : null };
-        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync(Package(), "0.6.1"));
+        var shell = new FakeShell { Answer = line => line.Contains("appinfo.json") ? new CommandResult(0, "\"version\": \"0.4.0\"") : null };
+        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(shell).InstallAsync(Package(), "0.6.1"));
         Assert.Equal(DevModeError.InstallFailed, error.Error);
     }
 
@@ -107,44 +104,19 @@ public class DevModeInstallerTests
     public async Task IncompleteUploadIsReportedBeforeInstalling()
     {
         // Paket TV'ye eksik ulaştıysa kurulum denenmez; hata günlüğü iki boyutu da söyler.
-        var runner = new FakeRunner { Answer = line => line.Contains("wc -c") ? new CommandResult(0, "7\n") : null };
-        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync(Package(), "0.6.1"));
+        var shell = new FakeShell { Answer = line => line.Contains("wc -c") ? new CommandResult(0, "7\n") : null };
+        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(shell).InstallAsync(Package(), "0.6.1"));
         Assert.Equal(DevModeError.InstallFailed, error.Error);
         Assert.Contains("7/10", error.Message);
-        Assert.DoesNotContain(runner.Calls, call => call.Arguments[^1].Contains("appInstallService"));
+        Assert.DoesNotContain(shell.Calls, call => call.Command.Contains("appInstallService"));
     }
 
     [Fact]
     public async Task FailedUploadStopsBeforeInstalling()
     {
-        var runner = new FakeRunner { Answer = line => line.Contains("cat >") ? new CommandResult(1, "disk full") : null };
-        await Assert.ThrowsAsync<DevModeException>(() => Installer(runner).InstallAsync(Package(), "0.6.1"));
-        Assert.DoesNotContain(runner.Calls, call => call.Arguments[^1].Contains("appInstallService"));
-    }
-
-    [Fact]
-    public async Task SshUsesTheTvPortKeyAndOldKeyTypes()
-    {
-        var runner = new FakeRunner();
-        await Installer(runner).InstalledVersionAsync();
-        var arguments = runner.Calls[0].Arguments;
-        Assert.Equal("ssh", runner.Calls[0].Executable);
-        Assert.Contains("9922", arguments);
-        Assert.Contains("BatchMode=yes", arguments);
-        Assert.Contains("PubkeyAcceptedAlgorithms=+ssh-rsa", arguments);
-        Assert.Contains("UserKnownHostsFile=NUL", arguments);
-        Assert.Contains("prisoner@192.168.1.230", arguments);
-    }
-
-    [Fact]
-    public async Task OnlyTheUploadKeepsSshInputOpen()
-    {
-        // Windows'un ssh.exe'si girişi boruya bağlıyken çıktı vermeyebiliyor; girdi gönderilmeyen her komut -n alır.
-        var runner = new FakeRunner { Answer = line => line.Contains("appinfo.json") ? new CommandResult(0, "\"version\": \"0.6.1\"") : null };
-        await Installer(runner).InstallAsync(Package(), "0.6.1");
-        var upload = runner.Calls.Single(call => call.Input is not null);
-        Assert.DoesNotContain("-n", upload.Arguments);
-        Assert.All(runner.Calls.Where(call => call.Input is null), call => Assert.Equal("-n", call.Arguments[0]));
+        var shell = new FakeShell { Answer = line => line.Contains("cat >") ? new CommandResult(1, "disk full") : null };
+        await Assert.ThrowsAsync<DevModeException>(() => Installer(shell).InstallAsync(Package(), "0.6.1"));
+        Assert.DoesNotContain(shell.Calls, call => call.Command.Contains("appInstallService"));
     }
 
     [Fact]

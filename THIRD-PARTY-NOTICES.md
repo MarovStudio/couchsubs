@@ -45,6 +45,9 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 | Microsoft.ML.Tokenizers | MIT | https://github.com/dotnet/machinelearning |
 | System.Security.Cryptography.ProtectedData | MIT | https://github.com/dotnet/runtime |
 | Microsoft WebView2 SDK | BSD-3-Clause | https://www.nuget.org/packages/Microsoft.Web.WebView2 |
+| SSH.NET (LG TV connection) | MIT | https://github.com/sshnet/SSH.NET |
+| BouncyCastle.Cryptography (used by SSH.NET) | MIT | https://github.com/bcgit/bc-csharp |
+| Microsoft.Extensions.Logging.Abstractions (used by SSH.NET) | MIT | https://github.com/dotnet/runtime |
 
 FFmpeg is built from the unmodified upstream release with the configuration in
 `.github/workflows/windows.yml`. You can rebuild `couchsubs_native.dll` with your own FFmpeg build using
