@@ -2,13 +2,14 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **İndir:** [Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) · [Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip)
 
-**Bu sürümde düzeltilenler**
+**Bu sürümde yeni**
 
-- **Windows'ta program açılmıyordu.** Pencere simgesi pakete eklenmemişti; düzeldi. Bildiren herkese teşekkürler.
-- **Windows'ta PSN girişi sırasında çökme** (`BrowserMetrics… is denied`) düzeldi. Giriş başarılı olsa bile çökme yüzünden sonuç kayboluyordu.
-- **TV oyun oynarken uykuya geçiyordu.** Oyun kumandayla oynandığı için TV kendini boşta sanıp ekran koruyucuyu açıyor, sonra uykuya geçiyordu. LG ve Samsung TV uygulaması (0.7.1) artık buna izin vermiyor. CouchSubs açılınca TV'deki uygulamayı kendisi günceller.
-- **Samsung TV ağda bulunamıyordu.** TV araması artık bilgisayarın her ağ bağlantısından yapılıyor (VPN ya da sanal ağ bağdaştırıcısı olan bilgisayarlarda istek TV'ye gitmiyordu). TV yine yanıt vermezse ev ağı taranıp Samsung TV bulunuyor.
-- **Hatalar artık görünür.** Beklenmeyen bir hata olursa program kapanmak yerine pencerede gösteriyor ve `%LOCALAPPDATA%\CouchSubs\hata.log` dosyasına yazıyor (Windows). TV kurulumu başarısız olursa ayrıntısı da bu dosyaya yazılıyor; sorun bildirirken eklerseniz çok yardımcı olur.
+- **Çeviri İngilizce altyazının yerine oturur.** CouchSubs oyundaki altyazının ekrandaki yerini okur; Türkçe çeviri TV'de onun üstünü örter. İsterseniz ayarlardan İngilizcenin hemen üstüne, altına ya da eskisi gibi sabit bir yere alabilirsiniz.
+- **Kumanda ipuçları çevrilmez.** "R2 Swing", "△ Pick up", "Press ✕ to jump" gibi satırlar artık altyazı sanılıp çevrilmiyor.
+- **Karakter adları çevrilmez.** "Kratos:", "ATREUS:" gibi konuşmacı adları olduğu gibi kalıyor; CouchSubs bu adları öğrenip cümle içinde de koruyor.
+- **Daha düzgün çeviri.** Alt alta sarılmış satırlar tek cümle olarak çevriliyor; tümü büyük harfli satırlar da düzgün çevriliyor (Mac'te de artık cümle cümle çeviri).
+- **Yeni görünüm ayarları:** "Çok büyük" yazı boyutu, arka plan koyuluğu ve kalın yazı.
+- TV uygulaması 0.8.0 oldu (LG, Samsung, Android TV). CouchSubs açılınca TV'deki uygulamayı kendisi günceller.
 
 **İndirme**
 
@@ -23,7 +24,7 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bilinen durumlar**
 
-- Windows'ta LG TV'ye kurulum bazı bilgisayarlarda "TV uygulaması kurulamadı" diyor; nedenini arıyoruz. Bu sürüm ayrıntıyı `hata.log` dosyasına yazıyor, dosyayı [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasına eklerseniz hızla çözeriz. Mac'te LG kurulumu sorunsuz.
+- Altyazının yeri, oyunun altyazısı ekrandayken okunur. Oyun altyazıyı çok kısa gösterirse çeviri bir an sabit yerde görünebilir.
 - Ekran koruyucuyu engelleme LG'de TV'nin güç servisine yanıt vererek, Samsung'da Samsung'un resmî API'siyle yapılıyor; bazı eski modellerde çalışmayabilir. TV yine uykuya geçerse modelinizi yazın.
 - Samsung ve Android TV kurulumu gerçek TV'de henüz az denendi. Sorun olursa TV modelinizle birlikte [Issues](https://github.com/yorulmazsinan/couchsubs/issues) sayfasından yazın; elle kurulum yolları [rehberde](https://github.com/yorulmazsinan/couchsubs/blob/main/docs/tv-kurulum.md) duruyor.
 - Windows paketi imzasız: "Windows bilgisayarınızı korudu" uyarısında **Ek bilgi › Yine de çalıştır**. İlk açılışta çeviri modeli için yaklaşık 530 MB indirilir.
@@ -32,4 +33,4 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 ---
 
-New beta. Fixes: the Windows app did not open (missing window icon); a crash after PSN sign-in on Windows; the TV going to screen saver and sleep during play (LG and Samsung TV app 0.7.1; CouchSubs updates it by itself); Samsung TVs not being found on some networks (search now goes out on every network adapter and falls back to scanning the home network). Errors are now shown instead of the app closing silently, and written to `%LOCALAPPDATA%\CouchSubs\hata.log` on Windows. Known issue: LG install from Windows fails on some PCs; please attach `hata.log` to an issue. Download: [Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) · [Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip).
+New beta. The Turkish translation now sits where the game shows its own subtitle and covers it (or goes just above or below it, or stays at a fixed height, as you choose). Controller hints such as "R2 Swing" are no longer translated, and speaker names such as "Kratos:" are kept as they are. Lines wrapped over two rows are translated as one sentence. New settings: extra-large text, background darkness and bold text. TV app 0.8.0 (LG, Samsung, Android TV); CouchSubs updates it by itself. Download: [Mac](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.zip) · [Windows](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-x64.zip).
