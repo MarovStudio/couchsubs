@@ -9,6 +9,7 @@ import android.media.tv.TvInputInfo;
 import android.media.tv.TvInputManager;
 import android.media.tv.TvView;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -65,7 +66,9 @@ public class MainActivity extends Activity {
         // Sayfanın 1920 piksellik viewport'u kullanılır ve ekrana sığdırılır (bkz. index.html); yoksa yazılar iki kat büyük.
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
-        webView.setInitialScale(0);
+        settings.setSupportZoom(false);
+        // Ölçek fiziksel piksel başına yüzde: 1920 CSS pikseli ekranın tam genişliğine sığar (1080p'de %100).
+        webView.setInitialScale(fitScalePercent());
         webView.addJavascriptInterface(new Bridge(), "AndroidTV");
         root.addView(webView);
         setContentView(root);
@@ -81,6 +84,14 @@ public class MainActivity extends Activity {
             launchParams = params;
             evaluate("window.__onRelaunch(" + quoted(params) + ")");
         }
+    }
+
+    /** Sayfanın 1920 CSS piksellik genişliğini ekranın fiziksel genişliğine sığdıran WebView ölçeği (yüzde). */
+    private int fitScalePercent() {
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        int width = Math.max(metrics.widthPixels, metrics.heightPixels);
+        return width > 0 ? Math.max(1, Math.round(width * 100f / 1920f)) : 0;
     }
 
     private static String paramsOf(Intent intent) {
