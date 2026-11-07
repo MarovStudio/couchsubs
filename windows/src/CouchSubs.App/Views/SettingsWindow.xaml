@@ -18,14 +18,18 @@
                 <c:Card Title="{t:T 'On the TV'}">
                     <StackPanel>
                         <TextBlock Text="{t:T 'Text size'}" Margin="0,0,0,8" />
-                        <Border Style="{StaticResource SegmentGroup}" Margin="0,0,0,16">
-                            <StackPanel Orientation="Horizontal">
-                                <RadioButton x:Name="Small" Content="{t:T 'Small'}" GroupName="size" Style="{StaticResource SegmentButton}" Checked="OnSize" Tag="36" />
-                                <RadioButton x:Name="Medium" Content="{t:T 'Medium'}" GroupName="size" Style="{StaticResource SegmentButton}" Checked="OnSize" Tag="46" />
-                                <RadioButton x:Name="Large" Content="{t:T 'Large'}" GroupName="size" Style="{StaticResource SegmentButton}" Checked="OnSize" Tag="58" />
-                                <RadioButton x:Name="ExtraLarge" Content="{t:T 'Extra large'}" GroupName="size" Style="{StaticResource SegmentButton}" Checked="OnSize" Tag="72" />
-                            </StackPanel>
-                        </Border>
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{t:T 'Small'}" Style="{StaticResource HintText}" VerticalAlignment="Center" />
+                            <!-- 1920 piksellik TV ekranında yazı yüksekliği; sürüklerken TV'de örnek altyazı görünür. -->
+                            <Slider x:Name="TextSize" Grid.Column="1" Minimum="20" Maximum="80" Margin="12,0" IsMoveToPointEnabled="True"
+                                    ValueChanged="OnSize" PreviewMouseDown="OnPositionStart" />
+                            <TextBlock Grid.Column="2" Text="{t:T 'Large'}" Style="{StaticResource HintText}" VerticalAlignment="Center" />
+                        </Grid>
                         <TextBlock Text="{t:T 'Placement'}" Margin="0,0,0,8" />
                         <ComboBox x:Name="Placement" SelectionChanged="OnPlacement" Margin="0,0,0,8">
                             <ComboBoxItem Content="{t:T 'Over the English subtitle'}" Tag="Cover" />

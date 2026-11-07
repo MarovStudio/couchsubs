@@ -20,7 +20,7 @@ public partial class SettingsWindow : Window
         this.controller = controller;
         InitializeComponent();
         var settings = controller.Settings;
-        (settings.Style.FontSize switch { 36 => Small, 58 => Large, 72 => ExtraLarge, _ => Medium }).IsChecked = true;
+        TextSize.Value = settings.Style.FontSize;
         Position.Value = settings.Style.BottomPercent;
         Placement.SelectedItem = Placement.Items.Cast<ComboBoxItem>().First(item => (string)item.Tag == settings.Style.Placement.ToString());
         ShowPlacement(settings.Style.Placement);
@@ -44,8 +44,8 @@ public partial class SettingsWindow : Window
         if (!loading) controller.Settings = change(controller.Settings);
     }
 
-    private void OnSize(object sender, RoutedEventArgs e) =>
-        Update(s => s with { Style = s.Style with { FontSize = int.Parse((string)((RadioButton)sender).Tag) } });
+    private void OnSize(object sender, RoutedPropertyChangedEventArgs<double> e) =>
+        Update(s => s with { Style = s.Style with { FontSize = (int)Math.Round(e.NewValue) } });
 
     private void OnPosition(object sender, RoutedPropertyChangedEventArgs<double> e) =>
         Update(s => s with { Style = s.Style with { BottomPercent = (int)Math.Round(e.NewValue) } });

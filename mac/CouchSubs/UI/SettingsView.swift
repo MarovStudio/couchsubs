@@ -22,13 +22,17 @@ struct SettingsView: View {
             ScrollView {
                 VStack(spacing: Theme.space("l")) {
                     Card(title: "On the TV") {
-                        Picker("Text size", selection: $model.settings.style.fontSize) {
-                            Text("Small").tag(36)
-                            Text("Medium").tag(46)
-                            Text("Large").tag(58)
-                            Text("Extra large").tag(72)
+                        // 1920 piksellik TV ekranında yazı yüksekliği; sürüklerken TV'de örnek altyazı görünür.
+                        Slider(value: Binding(get: { Double(model.settings.style.fontSize) },
+                                              set: { model.settings.style.fontSize = Int($0.rounded()) }), in: 20...80) {
+                            Text("Text size")
+                        } minimumValueLabel: {
+                            Text("Small").font(.csCallout).foregroundStyle(Color.csSecondary)
+                        } maximumValueLabel: {
+                            Text("Large").font(.csCallout).foregroundStyle(Color.csSecondary)
+                        } onEditingChanged: { editing in
+                            if editing { model.sendTestSubtitle() }
                         }
-                        .pickerStyle(.segmented)
                         Picker("Placement", selection: $model.settings.style.placement) {
                             Text("Over the English subtitle").tag(SubtitlePlacement.cover)
                             Text("Above the English subtitle").tag(SubtitlePlacement.above)
