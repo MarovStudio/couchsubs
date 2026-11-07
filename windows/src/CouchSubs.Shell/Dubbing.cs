@@ -89,6 +89,8 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
         PublishVoices();
         lock (gate)
         {
+            // Yeni altyazı geldiyse öncekilerin bekleyen cümleleri artık geç kalmıştır; dublaj altyazıyla birlikte kalsın.
+            queue.Clear();
             foreach (var line in lines) queue.Enqueue((line, null));
             while (queue.Count > Backlog) queue.Dequeue();
             if (working) return;

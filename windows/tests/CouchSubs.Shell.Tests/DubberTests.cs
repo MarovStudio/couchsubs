@@ -11,12 +11,14 @@ public class DubberTests
     private sealed class FakeSynth : ISpeechSynthesizer
     {
         public List<(string Text, Uri Voice)> Calls { get; } = [];
+        public TimeSpan Delay { get; init; }
         public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<SpeechAudio> SynthesizeAsync(string text, Uri voice, CancellationToken cancellationToken = default)
+        public async Task<SpeechAudio> SynthesizeAsync(string text, Uri voice, CancellationToken cancellationToken = default)
         {
             lock (Calls) Calls.Add((text, voice));
+            if (Delay > TimeSpan.Zero) await Task.Delay(Delay, cancellationToken);
             // 0,05 sn ses: testler hızlı biter.
-            return Task.FromResult(new SpeechAudio([.. Enumerable.Range(0, 1200).Select(i => MathF.Sin(i * 0.1f) * 0.5f)], 24000));
+            return new SpeechAudio([.. Enumerable.Range(0, 1200).Select(i => MathF.Sin(i * 0.1f) * 0.5f)], 24000);
         }
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
@@ -83,6 +85,22 @@ public class DubberTests
         await Task.Delay(200);
         Assert.Equal(Dubber.Backlog, audio.Played);
         Assert.Equal("satır dört.", synth.Calls[0].Text);
+        await dubber.DisposeAsync();
+    }
+
+    /// Yeni altyazı geldiğinde eski altyazının bekleyen cümleleri seslendirilmez; dublaj geride kalmaz.
+    [Fact]
+    public async Task NewSubtitleDropsPendingLinesOfOlderOnes()
+    {
+        var synth = new FakeSynth { Delay = TimeSpan.FromMilliseconds(150) };
+        var audio = new FakeAudio();
+        using var server = new SubtitleServer(0);
+        var dubber = new Dubber(new FakeModel(synth), audio, () => server, () => 8787, action => action()) { Output = DubbingOutput.Computer };
+        dubber.Speak([new SpokenLine("One.", "Bir."), new SpokenLine("Two.", "İki."), new SpokenLine("Three.", "Üç.")]);
+        await Task.Delay(50);
+        dubber.Speak([new SpokenLine("Next.", "Sonraki.")]);
+        await WaitUntil(() => synth.Calls.Any(call => call.Text == "sonraki."));
+        lock (synth.Calls) Assert.DoesNotContain(synth.Calls, call => call.Text is "iki." or "üç.");
         await dubber.DisposeAsync();
     }
 

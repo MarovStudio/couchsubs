@@ -58,6 +58,8 @@ public sealed class PocketTtsServer(string executable, string config, string def
         {
             throw new PocketTtsException($"pocket-tts başlamadı: {error.Message}");
         }
+        // Seslendirme, altyazı okuma ve çeviriyle yarışıp onları geciktirmesin: işlemciyi en son o alır.
+        try { process.PriorityClass = ProcessPriorityClass.BelowNormal; } catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { }
         _process = process;
         _port = port;
         ChildProcessGuard.Attach(process);

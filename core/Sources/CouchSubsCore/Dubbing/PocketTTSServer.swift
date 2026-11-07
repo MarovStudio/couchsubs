@@ -56,6 +56,8 @@ public actor PocketTTSServer {
         child.environment = environment
         child.standardOutput = FileHandle.nullDevice
         child.standardError = FileHandle.nullDevice
+        // Seslendirme, altyazı okuma ve çeviriyle yarışıp onları geciktirmesin: işlemciyi en son o alır.
+        child.qualityOfService = .utility
         do { try child.run() } catch { throw ServerError.notReady }
         process.set(child)
         self.port = port
