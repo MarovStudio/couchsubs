@@ -110,16 +110,14 @@
   }
 
   function showSubtitle(text, duration, box) {
-    var current = $('subtitle-text').textContent;
-    var now = Date.now();
-    if ($('subtitle').className !== 'hidden' && current && current !== text && now - shownAt < PREVIOUS_HOLD_MS) {
-      showPrevious(current);
-    }
-    shownAt = now;
+    // Önceki satır artık ayrıca gösterilmez: iki kutu üst üste binmiş gibi görünüyor, aynı cümlenin iki okunuşu
+    // da ikinci çeviri gibi duruyordu. Yeni satır eskisinin yerine geçer.
+    hidePrevious();
+    shownAt = Date.now();
     currentBox = validBox(box);
     $('subtitle-text').textContent = text;
-    layout();
     $('subtitle').className = '';
+    layout();
     clearTimeout(hideTimer);
     var ms = duration || Math.min(8000, 2000 + text.length * 60);
     hideTimer = setTimeout(hideSubtitle, ms);
@@ -161,7 +159,8 @@
     el.style.top = 'auto';
     el.style.bottom = bottomPercent + '%';
     cover.className = 'hidden';
-    if (!box) return;
+    // Altyazı yokken (ör. ayar değişince yeniden yerleşirken) örtü tek başına boş siyah kutu olarak kalmasın.
+    if (!box || el.className === 'hidden') return;
 
     var height = window.innerHeight || 1080;
     var gap = Math.round(height * 0.012);
