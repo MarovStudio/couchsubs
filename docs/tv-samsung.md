@@ -1,6 +1,6 @@
 # Samsung TV (Tizen) uygulaması
 
-Durum: uygulama yazıldı, tarayıcıda sahte Tizen arayüzüyle denendi. **Gerçek Samsung TV'de denenmedi.** Kurulum
+Durum: gerçek Samsung TV'de (75" Neo QLED) kuruldu ve çalıştı. Kurulum
 adımları: [tv-kurulum.md](tv-kurulum.md#samsung-tv).
 
 ## Yapı

@@ -7,7 +7,7 @@ kendisi bekler; bu sayfa aynı adımların ayrıntılı hâlidir. Önce TV'nizin
 | TV | Durum | Rehber |
 |---|---|---|
 | **LG** (webOS 4 ve üstü) | Gerçek TV'de denendi. CouchSubs TV uygulamasını kendisi kurar | [LG](#lg-tv) |
-| **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de henüz denenmedi. CouchSubs kendisi kurar, bir kez Samsung girişi ister | [Samsung](#samsung-tv) |
+| **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de denendi (75" Neo QLED). CouchSubs kendisi kurar, bir kez Samsung girişi ister | [Samsung](#samsung-tv) |
 | **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi. CouchSubs ağ üzerinden kendisi kurar | [Android TV](#android-tv--google-tv) |
 | **Vestel, Arçelik, Beko, Grundig'in Linux modelleri, Philips Saphi ve Titan OS** | Desteklenmiyor: bu TV'lere uygulama kurmanın bir yolunu bulamadık | |
 

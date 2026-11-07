@@ -36,12 +36,11 @@ kendisi bulur ve tek tıkla günceller. Kurulum istemeyenler için zip paketleri
 | TV | Durum |
 |---|---|
 | **LG** (webOS 4 ve üstü) | Gerçek TV'de denendi. Uygulamayı CouchSubs kendisi kurar |
-| **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de henüz denenmedi. Uygulamayı CouchSubs kendisi kurar; bir kez Samsung hesabıyla giriş istenir |
+| **Samsung** (Tizen, 2019 ve sonrası) | Gerçek TV'de denendi (75" Neo QLED). Uygulamayı CouchSubs kendisi kurar; bir kez Samsung hesabıyla giriş istenir |
 | **Android TV / Google TV** (Vestel, Arçelik, Beko, Grundig, Philips ve diğerleri) | Gerçek TV'de henüz denenmedi. Uygulamayı CouchSubs ağ üzerinden kendisi kurar |
 | Vestel, Arçelik, Beko, Grundig'in Linux modelleri, Philips Saphi ve Titan OS | Desteklenmiyor: uygulama kurmanın bir yolunu bulamadık |
 
-Bilgisayar tarafında Mac gerçek cihazla denendi; Windows henüz gerçek bilgisayarda denenmedi. İlk deneyenlerin
-geri bildirimi çok değerli.
+Bilgisayar tarafında Mac ve Windows gerçek cihazla denendi. Geri bildiriminiz çok değerli.
 
 TV'de yapmanız gereken tek şey geliştirici modunu açmak. Adımları bilgisayar uygulaması ekranda gösterir ve TV'yi
 kendisi bekler. Resimli rehber isterseniz: [docs/tv-kurulum.md](docs/tv-kurulum.md)
