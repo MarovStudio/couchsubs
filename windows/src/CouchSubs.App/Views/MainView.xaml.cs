@@ -69,6 +69,32 @@ public partial class MainView : UserControl
 
     private void OnDownload(object sender, RoutedEventArgs e) => controller.StartModelDownload();
 
+    /// <summary>
+    /// Oyun dilinin Windows yazı tanıma paketini yönetici izniyle kurar (Add-WindowsCapability), sonra okumayı
+    /// yeni paketle yeniden başlatır.
+    /// </summary>
+    private async void OnInstallOcr(object sender, RoutedEventArgs e)
+    {
+        var language = controller.Settings.SourceLanguage;
+        var script = $"Get-WindowsCapability -Online | Where-Object {{ $_.Name -like 'Language.OCR~~~{language}-*' -and $_.State -ne 'Installed' }} | Select-Object -First 1 | Add-WindowsCapability -Online";
+        InstallOcr.IsEnabled = false;
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo("powershell.exe", $"-NoProfile -WindowStyle Hidden -Command \"{script}\"")
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden,
+            });
+            if (process is not null) await process.WaitForExitAsync();
+            if (!controller.IsRunning) return;
+            controller.Stop();
+            await controller.StartAsync();
+        }
+        catch (System.ComponentModel.Win32Exception) { /* izin verilmedi */ }
+        finally { InstallOcr.IsEnabled = true; }
+    }
+
     private void OnLanguageSettings(object sender, RoutedEventArgs e) =>
         Process.Start(new ProcessStartInfo("ms-settings:regionlanguage") { UseShellExecute = true });
 }

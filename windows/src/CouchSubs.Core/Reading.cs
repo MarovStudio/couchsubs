@@ -57,6 +57,51 @@ public sealed class Reading
     /// </summary>
     public Reading WithoutOcrNoise() => new(Lines.Select(line => line with { Text = OcrNoise.Clean(line.Text) }));
 
+    /// <summary>
+    /// Alandaki altyazı bloğu. Seçilen alanda altyazının yanında menü ("MAP / HELP / SETTINGS" alt alta), köşedeki
+    /// gösterge ("9", "PHOTO MODE") da okunuyordu; hepsi tek cümle gibi çevrilip TV'de bütün alanı kaplayan kutuyla
+    /// gösteriliyordu. Satırlar yerlerine göre bloklara ayrılır; ortalanmış ve menü olmayan en alttaki blok altyazıdır.
+    /// Ortalanmış blok yoksa en az üç sözcüklü, menü olmayan en alttaki blok alınır. Satırların yeri bilinmiyorsa
+    /// okuma olduğu gibi kalır. <paramref name="area"/>, okunan alanın karedeki yeridir (Mac: Reading.subtitleBlock).
+    /// </summary>
+    public Reading SubtitleBlock(TextBox area)
+    {
+        if (Lines.Count == 0 || Lines.Any(line => line.Box is null)) return this;
+        var blocks = new List<List<TextLine>>();
+        foreach (var line in Lines.OrderBy(line => line.Box!.Value.Top))
+        {
+            var box = line.Box!.Value.PlacedIn(area);
+            var index = blocks.FindLastIndex(block => Belongs(box, block, area));
+            if (index >= 0) blocks[index].Add(line);
+            else blocks.Add([line]);
+        }
+        var candidates = blocks.Select(block => new Reading(block)).Where(reading => !reading.IsMenu).ToList();
+        var centered = candidates.Where(reading =>
+        {
+            var box = reading.Box!.Value.PlacedIn(area);
+            return Math.Abs(((box.Left + box.Right) / 2) - 0.5) <= 0.12;
+        }).ToList();
+        if (centered.Count > 0) return centered.MaxBy(reading => reading.Box!.Value.Bottom)!;
+        return candidates.Where(reading => WordCount(reading.Text) >= 3).MaxBy(reading => reading.Box!.Value.Bottom) ?? Empty;
+    }
+
+    /// <summary>Bloğun son satırının hemen altında ve yatayda onunla üst üste binen satır o bloğa aittir.</summary>
+    private static bool Belongs(TextBox box, List<TextLine> block, TextBox area)
+    {
+        var last = block[^1].Box!.Value.PlacedIn(area);
+        var height = Math.Max(box.Bottom - box.Top, last.Bottom - last.Top);
+        if (box.Top - last.Bottom >= height * 0.8 || box.Top < last.Top) return false;
+        var overlap = Math.Min(box.Right, last.Right) - Math.Max(box.Left, last.Left);
+        var narrower = Math.Min(box.Right - box.Left, last.Right - last.Left);
+        return overlap > 0 && overlap >= narrower * 0.5;
+    }
+
+    /// <summary>Alt alta kısa ve noktalamasız satırlar ("MAP", "HELP", "SOCIAL CLUB") menüdür, konuşma değil.</summary>
+    internal bool IsMenu => Lines.Count >= 3 &&
+        Lines.All(line => WordCount(line.Text) <= 3 && !SubtitleStabilizer.EndsSentence(line.Text));
+
+    private static int WordCount(string text) => text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+
     /// <summary>Satır kutularını <paramref name="area"/> içindeki oranlardan dış çerçevenin oranlarına taşır.</summary>
     public Reading PlacedIn(TextBox area) => new(Lines.Select(line => line with { Box = line.Box?.PlacedIn(area) }));
 }
@@ -97,6 +142,8 @@ public static class ButtonPrompts
 
         // "R2 Swing", "△ Pick up", "L1 R1 Spartan Rage"
         if (Buttons.Contains(first)) return words <= 5;
+        // "PHOTO MODE L1 + R1": düğme sonda, önünde kısa ve noktalamasız bir eylem adı.
+        if (Buttons.Contains(tokens[^1]) && words <= 4 && !SubtitleStabilizer.EndsSentence(line)) return true;
         // "X Interact", "O Back": ardından kısa, büyük harfle başlayan, noktalamasız bir eylem gelir.
         if (Lookalikes.Contains(first) && tokens.Count is >= 2 and <= 4 && char.IsUpper(tokens[1][0]) &&
             !SubtitleStabilizer.EndsSentence(line))

@@ -65,7 +65,9 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         });
         // Kumanda ipuçları ("R2 Swing") altyazı değildir; çevrilmez, yeri de altyazının yerine katılmaz.
         // Yazı tanımanın uydurduğu sözcük çöpleri ("ou$3e") de çevirmene gitmez.
-        var reading = raw.WithoutButtonPrompts().WithoutOcrNoise();
+        // Alandaki menü ve köşe göstergeleri de altyazı değildir; yalnız altyazı bloğu çevrilir ve kutusu ona göre olur.
+        var area = new TextBox(region.Left, region.Top, region.Right, region.Bottom);
+        var reading = raw.WithoutButtonPrompts().WithoutOcrNoise().SubtitleBlock(area);
 
         lock (gate)
         {
@@ -82,7 +84,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     lineOnScreen = number;
                     // Çevirmen burada, istek sırasıyla çağrılır (ayrı görevle başlatılsa sıra karışabilirdi).
                     // Çeviri hemen bittiyse kendini zaten listeden çıkarmıştır; yeniden eklenmez.
-                    var box = reading.Box?.PlacedIn(new TextBox(region.Left, region.Top, region.Right, region.Bottom));
+                    var box = reading.Box?.PlacedIn(area);
                     var task = TranslateAndForget(action.Text!, box, number, current);
                     if (!task.IsCompleted) translations[number] = task;
                     break;

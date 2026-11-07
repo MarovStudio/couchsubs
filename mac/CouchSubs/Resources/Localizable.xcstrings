@@ -3632,6 +3632,38 @@
           }
         }
       }
+    },
+    "Without it Windows reads the subtitles with your system language and the translation turns into nonsense. Install it once; Windows asks for permission.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without it Windows reads the subtitles with your system language and the translation turns into nonsense. Install it once; Windows asks for permission."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu olmadan Windows altyazıyı sistem dilinizle okur ve çeviri anlamsızlaşır. Bir kez kurun; Windows izin ister."
+          }
+        }
+      }
+    },
+    "Install text recognition": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install text recognition"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yazı tanımayı kur"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -73,6 +73,50 @@ public struct Reading: Equatable, Sendable {
         Reading(lines: lines.map { TextLine(OcrNoise.clean($0.text), box: $0.box) })
     }
 
+    /// Alandaki altyazı bloğu. Seçilen alanda altyazının yanında menü ("MAP / HELP / SETTINGS" alt alta), köşedeki
+    /// gösterge ("9", "PHOTO MODE") da okunuyordu; hepsi tek cümle gibi çevrilip TV'de bütün alanı kaplayan kutuyla
+    /// gösteriliyordu. Satırlar yerlerine göre bloklara ayrılır; ortalanmış ve menü olmayan en alttaki blok altyazıdır.
+    /// Ortalanmış blok yoksa en az üç sözcüklü, menü olmayan en alttaki blok alınır. Satırların yeri bilinmiyorsa
+    /// okuma olduğu gibi kalır. `area`, okunan alanın karedeki yeridir (ortalanmışlık karenin ortasına göre ölçülür).
+    public func subtitleBlock(in area: TextBox) -> Reading {
+        guard !lines.isEmpty, lines.allSatisfy({ $0.box != nil }) else { return self }
+        var blocks: [[TextLine]] = []
+        for line in lines.sorted(by: { $0.box!.top < $1.box!.top }) {
+            let box = line.box!.placed(in: area)
+            if let index = blocks.lastIndex(where: { Self.belongs(box, to: $0, in: area) }) {
+                blocks[index].append(line)
+            } else {
+                blocks.append([line])
+            }
+        }
+        let candidates = blocks.map { Reading(lines: $0) }.filter { !$0.isMenu }
+        let centered = candidates.filter { reading in
+            guard let box = reading.box?.placed(in: area) else { return false }
+            return abs((box.left + box.right) / 2 - 0.5) <= 0.12
+        }
+        if let block = centered.max(by: { $0.box!.bottom < $1.box!.bottom }) { return block }
+        return candidates.filter { $0.text.split(whereSeparator: \.isWhitespace).count >= 3 }
+            .max(by: { $0.box!.bottom < $1.box!.bottom }) ?? .empty
+    }
+
+    /// Bloğun son satırının hemen altında (arada bir satır yüksekliğinden az) ve yatayda onunla üst üste binen satır
+    /// o bloğa aittir.
+    private static func belongs(_ box: TextBox, to block: [TextLine], in area: TextBox) -> Bool {
+        let last = block.last!.box!.placed(in: area)
+        let height = max(box.bottom - box.top, last.bottom - last.top)
+        guard box.top - last.bottom < height * 0.8, box.top >= last.top else { return false }
+        let overlap = min(box.right, last.right) - max(box.left, last.left)
+        let narrower = min(box.right - box.left, last.right - last.left)
+        return overlap > 0 && overlap >= narrower * 0.5
+    }
+
+    /// Alt alta kısa ve noktalamasız satırlar ("MAP", "HELP", "SOCIAL CLUB") menüdür, konuşma değil.
+    var isMenu: Bool {
+        lines.count >= 3 && lines.allSatisfy { line in
+            line.text.split(whereSeparator: \.isWhitespace).count <= 3 && !SubtitleStabilizer.endsSentence(line.text)
+        }
+    }
+
     /// Satır kutularını `area` içindeki oranlardan dış çerçevenin oranlarına taşır.
     public func placed(in area: TextBox) -> Reading {
         Reading(lines: lines.map { TextLine($0.text, box: $0.box?.placed(in: area)) })
@@ -104,6 +148,8 @@ public enum ButtonPrompts {
 
         // "R2 Swing", "△ Pick up", "L1 R1 Spartan Rage"
         if isButton(first) { return words.count <= 5 }
+        // "PHOTO MODE L1 + R1": düğme sonda, önünde kısa ve noktalamasız bir eylem adı.
+        if let last = tokens.last, isButton(last), words.count <= 4, !SubtitleStabilizer.endsSentence(line) { return true }
         // "X Interact", "O Back": ardından kısa, büyük harfle başlayan, noktalamasız bir eylem gelir.
         if lookalikes.contains(first), tokens.count >= 2, tokens.count <= 4,
            tokens[1].first?.isUppercase == true, !SubtitleStabilizer.endsSentence(line) {

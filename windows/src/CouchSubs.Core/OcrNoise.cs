@@ -28,8 +28,14 @@ public static partial class OcrNoise
                 // Atılan çöpün ardındaki noktalama cümleye aittir ("ou$3e," → virgül kalır).
                 kept[^1] += trail;
         }
+        // Altyazının yanındaki göstergenin sayısı satırın başına yapışıyor ("9? We'll lose", "100. Mac and John").
+        // Mesafe işareti de öyle ("23m CESARE: Here!"). Tek başına sayı ve ardından büyük harfle başlayan cümle: sayı atılır.
+        if (kept.Count >= 3 && LeadingNumber().IsMatch(kept[0]) && char.IsUpper(kept[1][0])) kept.RemoveAt(0);
         return string.Join(' ', kept);
     }
+
+    [GeneratedRegex(@"^\d+(?:m|km|ft|yd)?[.?!:;]?$")]
+    private static partial Regex LeadingNumber();
 
     /// <summary>
     /// Bir okumanın ne kadar sözcük gibi göründüğü: düzgün sözcüklerin harfleri artı, çöp ve karışık büyük-küçük

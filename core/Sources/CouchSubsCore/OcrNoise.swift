@@ -23,6 +23,12 @@ public enum OcrNoise {
                 kept.append(last + trail)
             }
         }
+        // Altyazının yanındaki göstergenin sayısı satırın başına yapışıyor ("9? We'll lose", "100. Mac and John").
+        // Mesafe işareti de öyle ("23m CESARE: Here!"). Tek başına sayı ve ardından büyük harfle başlayan cümle: sayı atılır.
+        if kept.count >= 3, kept[0].range(of: "^\\d+(?:m|km|ft|yd)?[.?!:;]?$", options: .regularExpression) != nil,
+           kept[1].first?.isUppercase == true {
+            kept.removeFirst()
+        }
         return kept.joined(separator: " ")
     }
 

@@ -257,6 +257,7 @@ public sealed class LiveServices : IAppServices
     }
 
     public ITextReader? MakeReader(string language) => WindowsOcrReader.Create(language);
+    public bool HasOcrLanguage(string language) => WindowsOcrReader.HasLanguage(language);
 
     /// <summary>Denetlenemeyen TV'ler için: TV uygulaması kendisi bağlanır.</summary>
     private sealed class IdleKeeper : IKeeper

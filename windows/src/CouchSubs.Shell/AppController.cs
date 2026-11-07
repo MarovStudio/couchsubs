@@ -730,7 +730,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         ActiveSourceLanguage = settings.SourceLanguage;
         var reader = services.MakeReader(settings.SourceLanguage);
         activeReader = reader;
-        OcrMissing = reader is null;
+        OcrMissing = reader is null || !services.HasOcrLanguage(settings.SourceLanguage);
         if (reader is null) return;
         var built = new SubtitlePipeline(reader, MakeTranslator(), server, new ReadScheduler());
         built.PairShown += (source, translation) =>
