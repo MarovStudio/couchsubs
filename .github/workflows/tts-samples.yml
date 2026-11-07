@@ -1,5 +1,6 @@
-# Türkçe dublaj denemesi: Kyutai'nin pocket-tts programıyla (MIT) Pocket TTS Turkish modelinin (CC-BY-4.0) altı
-# sesini oyun replikleriyle seslendirir, Mac (Apple Silicon) ve Windows'ta hızını ölçer. Elle çalıştırılır.
+# Türkçe dublaj denemesi: CouchSubs'ın dublaj kodu (CouchSubsCore) gerçek pocket-tts (Kyutai, MIT) ve Pocket TTS Turkish
+# (wite-tech, CC-BY-4.0) ile altı sesi seslendirir; ham ve "akıcı" (duraklamaları kısaltılmış) sesleri ve süreleri yazar.
+# Elle çalıştırılır.
 name: tts-samples
 
 on:
@@ -9,46 +10,37 @@ permissions:
   contents: read
 
 jobs:
-  samples:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-26
-            asset: pocket-tts-3.3.0-aarch64-apple-darwin.tar.gz
-            sha256: ee9ca6c7c000ee72c5846e3a8ba01d08f56636d94a614d2259c3f12b8fd69afa
-          - os: windows-latest
-            asset: pocket-tts-3.3.0-x86_64-pc-windows-msvc.zip
-            sha256: 98753041f2e65744b989776f87bccb93f1f574a08afe1890c5427ec94cd6309c
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
+  mac:
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
       - name: pocket-tts programı
-        run: |
-          mkdir -p tts && cd tts
-          curl -sfL -o "${{ matrix.asset }}" "https://github.com/kyutai-labs/pocket-tts/releases/download/v4.0.1/${{ matrix.asset }}"
-          echo "${{ matrix.sha256 }}  ${{ matrix.asset }}" | sha256sum -c - 2>/dev/null || echo "${{ matrix.sha256 }}  ${{ matrix.asset }}" | shasum -a 256 -c -
-          case "${{ matrix.asset }}" in *.zip) unzip -q "${{ matrix.asset }}" ;; *) tar xzf "${{ matrix.asset }}" ;; esac
-          find . -type f -name 'pocket-tts*' ! -name '*.tar.gz' ! -name '*.zip'
+        run: ./scripts/fetch-pocket-tts.sh mac
 
-      - name: Model ayarı ve sesler
+      - name: Model
         run: |
-          cd tts
-          curl -sfL -o tr.yaml https://huggingface.co/wite-tech/pocket-tts-turkish/resolve/main/config.yaml
-          # Türkçe modeli küçük harfle başlayan cümlelerle eğitilmiş: ilk harf büyütülmez.
-          printf '\ncapitalize_first_letter: false\n' >> tr.yaml
-          for v in female_1 female_2 female_3 male_1 male_2 male_3; do
-            curl -sfL -o "$v.wav" "https://huggingface.co/wite-tech/pocket-tts-turkish/resolve/main/voices/$v.wav"
-          done
+          python3 - <<'EOF'
+          import re, subprocess
+          src = open('core/Sources/CouchSubsCore/Dubbing/DubbingModel.swift').read()
+          rev = re.search(r'revision = "([0-9a-f]+)"', src).group(1)
+          for name, sha in re.findall(r'File\(name: "([^"]+)", bytes: [\d_]+, sha256: "([0-9a-f]+)"\)', src):
+              url = f'https://huggingface.co/wite-tech/pocket-tts-turkish/resolve/{rev}/{name}'
+              subprocess.run(['curl', '-sfL', '--create-dirs', '-o', f'model/{name}', url], check=True)
+              out = subprocess.run(['shasum', '-a', '256', f'model/{name}'], capture_output=True, text=True, check=True).stdout
+              assert out.split()[0] == sha, name
+          print('model hazır')
+          EOF
 
       - name: Seslendir
-        run: scripts/tts-samples.sh "$(find tts -type f \( -name pocket-tts -o -name pocket-tts.exe \) | head -1)" tts out
+        working-directory: core
+        env:
+          COUCHSUBS_TTS_BIN: ${{ github.workspace }}/dist/tts/pocket-tts
+          COUCHSUBS_TTS_MODEL: ${{ github.workspace }}/model
+          COUCHSUBS_TTS_OUT: ${{ github.workspace }}/out
+        run: swift test --filter PocketTTSIntegrationTests
 
       - uses: actions/upload-artifact@v4
         with:
-          name: tts-samples-${{ runner.os }}
+          name: tts-samples
           path: out

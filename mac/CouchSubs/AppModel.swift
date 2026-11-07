@@ -25,6 +25,20 @@ struct UserSettings: Codable, Equatable {
     var style = SubtitleStyle()
     var sourceLanguage = "en"
     var targetLanguage = "tr"
+    var dubbing = DubbingSettings()
+
+    init() {}
+
+    /// Yeni eklenen ayarlar eski kayıtta yoktur; varsayılanla açılır, eski ayarlar kaybolmaz.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = UserSettings()
+        region = try values.decodeIfPresent(CropRegion.self, forKey: .region) ?? defaults.region
+        style = try values.decodeIfPresent(SubtitleStyle.self, forKey: .style) ?? defaults.style
+        sourceLanguage = try values.decodeIfPresent(String.self, forKey: .sourceLanguage) ?? defaults.sourceLanguage
+        targetLanguage = try values.decodeIfPresent(String.self, forKey: .targetLanguage) ?? defaults.targetLanguage
+        dubbing = (try? values.decodeIfPresent(DubbingSettings.self, forKey: .dubbing)) ?? defaults.dubbing
+    }
 }
 
 protocol AppStore: AnyObject {
@@ -334,6 +348,7 @@ final class AppModel {
             // Sıradan tercih; her kaydırıcı hareketinde Anahtarlık'a yazılmasın.
             if let data = try? JSONEncoder().encode(settings) { defaults.set(data, forKey: StoreKey.settings) }
             server.sendStyle(settings.style)
+            if settings.dubbing != oldValue.dubbing { dubbingSettingsChanged(from: oldValue.dubbing) }
             if isRunning, settings.sourceLanguage != oldValue.sourceLanguage || settings.targetLanguage != oldValue.targetLanguage {
                 Task { await refreshTranslatorStatus() }
                 makePipeline()
@@ -372,6 +387,13 @@ final class AppModel {
     private var lastSubtitleBox: TextBox?
     private var processing = false
     private var wakeObserver: NSObjectProtocol?
+
+    // Dublaj
+    private var dubber: Dubber?
+    /// Model indiriliyorsa ilerleme (0…1).
+    var dubbingDownload: Double?
+    var dubbingError: String?
+    var dubbingModelReady = DubbingModelStore.isReady
 
     init(services: AppServices = LiveServices(), store: AppStore = KeychainStore(), defaults: UserDefaults = .standard) {
         self.services = services
@@ -667,6 +689,7 @@ final class AppModel {
         server.sendStyle(settings.style)
 
         makePipeline()
+        if settings.dubbing.enabled, dubbingModelReady { makeDubber().prepare() }
 
         let session = services.makeStream(console: console, accountId: accountId)
         session.onState = { [weak self] state in Task { @MainActor in self?.sessionStateChanged(state) } }
@@ -714,6 +737,7 @@ final class AppModel {
         pipeline.onTranslationResult = { [weak self] error in
             self?.translatorStatus = Self.translatorStatus(after: error)
         }
+        pipeline.onSpeech = { [weak self] lines in self?.speak(lines) }
         pipeline.warmUp()
         self.pipeline = pipeline
         activeLanguages = (settings.sourceLanguage, settings.targetLanguage)
@@ -731,6 +755,10 @@ final class AppModel {
         pipeline?.reset()
         pipeline = nil
         activeLanguages = nil
+        if let dubber {
+            self.dubber = nil
+            Task { await dubber.shutdown() }
+        }
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
         wakeObserver = nil
         if let sleepActivity { ProcessInfo.processInfo.endActivity(sleepActivity) }
@@ -745,6 +773,7 @@ final class AppModel {
         if case .disconnected = state {
             pipeline?.reset()
             server.clear()
+            dubber?.stop()
         }
     }
 
@@ -826,5 +855,79 @@ final class AppModel {
             fallback = fallback ?? text
         }
         return fallback
+    }
+}
+
+// MARK: - Dublaj
+
+extension AppModel {
+    @discardableResult
+    private func makeDubber() -> Dubber {
+        if let dubber {
+            dubber.update(serverPort: serverPort)
+            return dubber
+        }
+        let dubber = Dubber(server: server, serverPort: serverPort, settings: settings.dubbing)
+        dubber.onCastChanged = { [weak self] cast in self?.settings.dubbing.cast = cast }
+        dubber.onError = { [weak self] message in self?.dubbingError = message }
+        self.dubber = dubber
+        return dubber
+    }
+
+    private func speak(_ lines: [SpokenLine]) {
+        guard settings.dubbing.enabled, dubbingModelReady else { return }
+        makeDubber().speak(lines)
+    }
+
+    private func dubbingSettingsChanged(from old: DubbingSettings) {
+        guard let dubber else {
+            if settings.dubbing.enabled, !old.enabled, isRunning, dubbingModelReady { makeDubber().prepare() }
+            return
+        }
+        dubber.cast = settings.dubbing.cast
+        if dubber.output != settings.dubbing.output {
+            dubber.stop()
+            dubber.output = settings.dubbing.output
+        }
+        if !settings.dubbing.enabled {
+            self.dubber = nil
+            Task { await dubber.shutdown() }
+        }
+    }
+
+    /// Ses modelini indirir (ilk kullanımda bir kez, ~440 MB).
+    func downloadDubbingModel() async {
+        guard dubbingDownload == nil else { return }
+        dubbingDownload = 0
+        dubbingError = nil
+        do {
+            try await DubbingModelStore.download { [weak self] progress in self?.dubbingDownload = progress }
+            dubbingModelReady = true
+            if settings.dubbing.enabled, isRunning { makeDubber().prepare() }
+        } catch {
+            dubbingError = error.localizedDescription
+        }
+        dubbingDownload = nil
+    }
+
+    /// Ayarlardaki "Dinle": sesi seçilen çıkıştan çalar.
+    func previewVoice(_ voice: DubbingVoice) async {
+        guard dubbingModelReady else { return }
+        dubbingError = nil
+        try? await startServer()
+        makeDubber().preview(voice)
+    }
+
+    func assignVoice(_ voice: DubbingVoice, to name: String) {
+        settings.dubbing.cast.assign(voice, to: name)
+    }
+
+    func removeDubbingModel() {
+        if let dubber {
+            self.dubber = nil
+            Task { await dubber.shutdown() }
+        }
+        DubbingModelStore.remove()
+        dubbingModelReady = false
     }
 }

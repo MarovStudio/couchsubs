@@ -40,6 +40,12 @@ targets:
         buildPhase:
           copyFiles:
             destination: executables
+      # Türkçe dublajın ses motoru (scripts/fetch-pocket-tts.sh indirir, package-mac.sh imzalar).
+      - path: ../dist/tts/pocket-tts
+        optional: true
+        buildPhase:
+          copyFiles:
+            destination: executables
     dependencies:
       - package: CouchSubsCore
       - package: RemotePlay

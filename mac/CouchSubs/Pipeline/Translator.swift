@@ -6,6 +6,12 @@ import Translation
 
 protocol TextTranslator {
     func translate(_ text: String) async throws -> String
+    /// Son çevrilen altyazının seslendirilecek cümleleri (konuşmacısıyla); dublaj için.
+    func spokenLines(for text: String) -> [SpokenLine]
+}
+
+extension TextTranslator {
+    func spokenLines(for text: String) -> [SpokenLine] { [] }
 }
 
 enum TranslatorError: Error, Equatable {
@@ -25,6 +31,7 @@ final class Translator: TextTranslator {
     private let target: Locale.Language
     private var session: TranslationSession?
     private var cache: [String: String] = [:]
+    private var speech: [String: [SpokenLine]] = [:]
     private let names = SpeakerNames()
 
     init(source: String = "en", target: String = "tr") {
@@ -45,11 +52,20 @@ final class Translator: TextTranslator {
         let pieces = SubtitleSegmenter.split(text)
         names.learn(from: pieces)
         var result = ""
+        var translations: [String?] = []
         for piece in pieces {
-            result += piece.translate ? try await translateSentence(piece.text) : piece.text
+            let translated = piece.translate ? try await translateSentence(piece.text) : nil
+            translations.append(translated)
+            result += translated ?? piece.text
         }
+        if speech.count >= 512 { speech.removeAll() }
+        speech[text] = SpeechScript.lines(pieces: pieces, translations: translations)
         remember(text, result)
         return result
+    }
+
+    func spokenLines(for text: String) -> [SpokenLine] {
+        speech[text] ?? [SpokenLine(english: text, turkish: cache[text] ?? "")].filter { !$0.turkish.isEmpty }
     }
 
     /// Önbellek sınırsız büyümesin; dolunca boşaltmak bir oturum için yeterli.

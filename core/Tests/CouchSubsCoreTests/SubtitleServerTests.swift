@@ -42,6 +42,38 @@ final class SubtitleServerTests: XCTestCase {
             && $0.contains("\"box\":{\"bottom\":0.875,\"left\":0.25,\"right\":0.75,\"top\":0.8}") })
     }
 
+    func testSpeechIsAnnouncedAndServed() async throws {
+        let server = SubtitleServer(port: 0)
+        let port = try await server.start()
+        defer { server.stop() }
+
+        let (bytes, _) = try await URLSession.shared.bytes(from: URL(string: "http://127.0.0.1:\(port)/events")!)
+        try await waitUntil { server.connectedClients == 1 }
+        let wav = SpeechAudio(samples: [0, 0.5], sampleRate: 24000).wav
+        server.sendSpeech(wav, durationMs: 1200)
+        server.clear()
+
+        let lines = try await readLines(bytes, until: "event: clear")
+        XCTAssertTrue(lines.contains("event: speech"))
+        XCTAssertTrue(lines.contains(#"data: {"duration":1200,"url":"\/speech\/1.wav"}"#) || lines.contains(#"data: {"duration":1200,"url":"/speech/1.wav"}"#), "\(lines)")
+
+        let (data, response) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/speech/1.wav")!)
+        let http = try XCTUnwrap(response as? HTTPURLResponse)
+        XCTAssertEqual(http.statusCode, 200)
+        XCTAssertEqual(http.value(forHTTPHeaderField: "Content-Type"), "audio/wav")
+        XCTAssertEqual(data, wav)
+    }
+
+    func testPublishedFileIsServed() async throws {
+        let server = SubtitleServer(port: 0)
+        let port = try await server.start()
+        defer { server.stop() }
+        server.publish(Data([1, 2, 3]), at: "/voices/male_1.wav")
+        try await waitUntil { true }
+        let (data, _) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/voices/male_1.wav")!)
+        XCTAssertEqual(data, Data([1, 2, 3]))
+    }
+
     func testNewClientReceivesLastStyle() async throws {
         let server = SubtitleServer(port: 0)
         let port = try await server.start()

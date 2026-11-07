@@ -60,6 +60,8 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        // Türkçe dublaj: bilgisayardan gelen ses kumandaya basılmadan çalabilsin.
+        settings.setMediaPlaybackRequiresUserGesture(false);
         webView.addJavascriptInterface(new Bridge(), "AndroidTV");
         root.addView(webView);
         setContentView(root);

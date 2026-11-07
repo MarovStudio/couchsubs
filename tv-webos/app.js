@@ -262,6 +262,31 @@
     onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration, data.box); });
     onEvent('clear', hideSubtitle);
     onEvent('style', applyStyle);
+    onEvent('speech', function (data) { if (data.url) playSpeech(server + data.url); });
+    onEvent('speech-stop', stopSpeech);
+  }
+
+  // --- Türkçe dublaj ---
+  // Bilgisayar her cümleyi seslendirip adresini gönderir; TV oyunun sesiyle birlikte çalar. Bilgisayar sıradakini
+  // bu ses bitince gönderir; yine de üst üste gelirse eskisi kesilir.
+
+  var speech = null;
+
+  function playSpeech(url) {
+    stopSpeech();
+    try {
+      speech = new Audio(url);
+      var played = speech.play();
+      if (played && played.catch) played.catch(function () { speech = null; });
+    } catch (e) {
+      speech = null;
+    }
+  }
+
+  function stopSpeech() {
+    if (!speech) return;
+    try { speech.pause(); } catch (e) { /* yok */ }
+    speech = null;
   }
 
   // --- Bilgisayarı ağda bulma ---

@@ -65,6 +65,10 @@ public final class SubtitleServer: @unchecked Sendable {
     private var clients: [ObjectIdentifier: NWConnection] = [:]
     private var lastStyle: SubtitleStyle?
     private var pingTimer: DispatchSourceTimer?
+    /// `GET` ile verilen dosyalar: dublaj sesleri ve seslendirme modelinin ses örnekleri.
+    private var files: [String: (data: Data, type: String)] = [:]
+    private var speechPaths: [String] = []
+    private var speechNumber = 0
 
     public var onClientsChanged: ((Int) -> Void)?
 
@@ -143,6 +147,29 @@ public final class SubtitleServer: @unchecked Sendable {
         broadcast(event: "clear", json: [:])
     }
 
+    /// Dosyayı `path` adresinden verir ("/voices/male_1.wav").
+    public func publish(_ data: Data, at path: String, type: String = "audio/wav") {
+        queue.async { self.files[path] = (data, type) }
+    }
+
+    /// Dublaj sesini TV'ye gönderir: ses `/speech/<n>.wav` adresinden verilir, `speech` olayı adresi bildirir.
+    /// Son 16 ses tutulur; TV kopup bağlanınca eskisini istemez.
+    public func sendSpeech(_ wav: Data, durationMs: Int) {
+        queue.async {
+            self.speechNumber += 1
+            let path = "/speech/\(self.speechNumber).wav"
+            self.files[path] = (wav, "audio/wav")
+            self.speechPaths.append(path)
+            while self.speechPaths.count > 16 { self.files[self.speechPaths.removeFirst()] = nil }
+            self.sendToAll(Data(Self.frame(event: "speech", json: ["url": path, "duration": durationMs]).utf8))
+        }
+    }
+
+    /// TV'de çalan dublajı durdurur (yeni sahne, oturum sonu).
+    public func stopSpeech() {
+        broadcast(event: "speech-stop", json: [:])
+    }
+
     public func sendStyle(_ style: SubtitleStyle) {
         queue.async { self.lastStyle = style }
         broadcast(event: "style", json: style.json)
@@ -183,14 +210,22 @@ public final class SubtitleServer: @unchecked Sendable {
         } else if method == "GET" && path == "/hello" {
             // TV uygulaması ağdaki bilgisayarı bu yanıtla tanır.
             respondAndClose(connection, status: "200 OK", body: #"{"app":"couchsubs"}"#)
+        } else if method == "GET", let file = files[path] {
+            respondAndClose(connection, status: "200 OK", data: file.data, type: file.type)
         } else {
             respondAndClose(connection, status: "404 Not Found")
         }
     }
 
     private func respondAndClose(_ connection: NWConnection, status: String, body: String = "") {
-        let head = "HTTP/1.1 \(status)\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
-        connection.send(content: Data(head.utf8), completion: .contentProcessed { _ in connection.cancel() })
+        respondAndClose(connection, status: status, data: Data(body.utf8), type: nil)
+    }
+
+    private func respondAndClose(_ connection: NWConnection, status: String, data: Data, type: String?) {
+        var head = "HTTP/1.1 \(status)\r\nAccess-Control-Allow-Origin: *\r\n"
+        if let type { head += "Content-Type: \(type)\r\nCache-Control: no-cache\r\n" }
+        head += "Content-Length: \(data.count)\r\nConnection: close\r\n\r\n"
+        connection.send(content: Data(head.utf8) + data, completion: .contentProcessed { _ in connection.cancel() })
     }
 
     private func openStream(_ connection: NWConnection) {

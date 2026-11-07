@@ -20,6 +20,7 @@ produce the bundled libraries, is available at https://github.com/yorulmazsinan/
 | TizenSdb.Core (Samsung TV connection and package signing) | MIT, Copyright (c) Patrick Stel | https://github.com/PatrickSt1991/tizen-sdb |
 | Apps2Samsung (Samsung sign-in and certificate request flow, adapted) | MIT, Copyright (c) 2025 Patrick Stel | https://github.com/Jellyfin2Samsung/Samsung-Jellyfin-Installer |
 | .NET runtime (Mac TV install helper, Native AOT) | MIT | https://github.com/dotnet/runtime |
+| pocket-tts (Turkish dubbing voice engine, unmodified release binary; includes xn-ptts, Apache-2.0, and SentencePiece, Apache-2.0) | MIT, Copyright (c) Kyutai | https://github.com/kyutai-labs/pocket-tts |
 
 Samsung developer CA certificates (`vd_tizen_dev_author_ca`, `author_ca`, `vd_tizen_dev_public2`, `public2`) are
 redistributed unmodified from Tizen Studio, solely so that the TV app can be signed for the user's own Samsung TV. They
@@ -60,6 +61,15 @@ FFmpeg is built from the unmodified upstream release with the configuration in
 | OPUS-MT English→Turkish translation model (`opus-mt-tc-big-en-tr`, ONNX export) | CC BY 4.0 | Language Technology Research Group, University of Helsinki — https://huggingface.co/Helsinki-NLP/opus-mt-tc-big-en-tr, ONNX conversion https://huggingface.co/onnx-community/opus-mt-tc-big-en-tr |
 
 The model is used unmodified (int8 quantised ONNX files as published by onnx-community).
+
+## Downloaded on first use of Turkish dubbing (Mac)
+
+| Component | License | Source |
+|---|---|---|
+| Pocket TTS Turkish (model weights, tokenizer and six synthetic voices) | CC BY 4.0, by wite-tech, based on Kyutai's Pocket TTS (CC BY 4.0) | https://huggingface.co/wite-tech/pocket-tts-turkish |
+
+The model and voices are used unmodified. CouchSubs shortens long pauses in the generated audio. The voices are
+synthetic and are not recordings of real people.
 
 ## Mac app
 

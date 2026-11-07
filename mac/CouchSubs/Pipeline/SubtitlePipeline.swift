@@ -39,6 +39,8 @@ final class SubtitlePipeline {
     private(set) var lastBox: TextBox?
     private(set) var lastError: TranslatorError?
     var onPair: ((String, String) -> Void)?
+    /// TV'ye giden her yeni altyazının seslendirilecek cümleleri (dublaj).
+    var onSpeech: (([SpokenLine]) -> Void)?
     /// Her çeviri denemesinden sonra çağrılır (başarılıysa nil).
     var onTranslationResult: ((TranslatorError?) -> Void)?
 
@@ -113,6 +115,7 @@ final class SubtitlePipeline {
             lastPair = (source, translated)
             lastBox = box
             onPair?(source, translated)
+            if let onSpeech { onSpeech(translator.spokenLines(for: source)) }
         } catch {
             guard current == session else { return }
             // Dil paketi eksikse ya da geçici bir hata olduysa satır ekranda kaldıkça yeniden denenir.

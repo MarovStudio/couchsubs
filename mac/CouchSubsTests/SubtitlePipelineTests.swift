@@ -34,6 +34,11 @@ private final class FakeTranslator: TextTranslator {
     }
 }
 
+private final class SpeakingTranslator: TextTranslator {
+    func translate(_ text: String) async throws -> String { "TR: " + text }
+    func spokenLines(for text: String) -> [SpokenLine] { [SpokenLine(english: text, turkish: "TR: " + text)] }
+}
+
 /// Çevirileri test kapıyı açana kadar bekletir; kapı açıldıktan sonra gelenler beklemez.
 private final class GatedTranslator: TextTranslator {
     private(set) var requested: [String] = []
@@ -84,6 +89,22 @@ final class SubtitlePipelineTests: XCTestCase {
         for _ in 0..<3 { await pipeline.process(frame, region: CropRegion()); await pipeline.waitForTranslations() }
         XCTAssertEqual(sender.sent, ["TR: Hold the gate"])
         XCTAssertEqual(pipeline.lastPair?.source, "Hold the gate")
+    }
+
+    func testEachSentLineIsHandedToDubbingOnce() async {
+        let sender = FakeSender()
+        let translator = SpeakingTranslator()
+        let pipeline = SubtitlePipeline(reader: FakeReader(["Hold the gate", "Hold the gate", "Hold the gate"]),
+                                        translator: translator, server: sender)
+        var spoken: [[SpokenLine]] = []
+        pipeline.onSpeech = { spoken.append($0) }
+        for _ in 0..<3 { await pipeline.process(frame, region: CropRegion()); await pipeline.waitForTranslations() }
+        XCTAssertEqual(spoken, [[SpokenLine(english: "Hold the gate", turkish: "TR: Hold the gate")]])
+    }
+
+    func testTtsFormEncodesSpecialCharacters() {
+        XCTAssertEqual(PocketTTSServer.form(["text": "[kızgın] dur & bekle = 1+1", "voice_url": "http://127.0.0.1:8787/voices/male_1.wav"]),
+                       "text=%5Bk%C4%B1zg%C4%B1n%5D%20dur%20%26%20bekle%20%3D%201%2B1&voice_url=http%3A%2F%2F127.0.0.1%3A8787%2Fvoices%2Fmale_1.wav")
     }
 
     func testButtonPromptsAreNotTranslated() async {

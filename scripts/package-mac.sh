@@ -16,6 +16,7 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 # Android TV APK'sı verilirse (CI: tv-android iş akışının çıktısı) uygulamaya gömülür.
 [[ -n "$ANDROID_APK" ]] && ./scripts/bundle-android-apk.sh "$ANDROID_APK"
 [[ -x dist/tv-helper/couchsubs-tv-helper ]] || ./scripts/build-tv-helper.sh
+[[ -x dist/tts/pocket-tts ]] || ./scripts/fetch-pocket-tts.sh mac
 
 BUILD="$PWD/build/mac"
 rm -rf "$BUILD"
@@ -30,12 +31,14 @@ if [[ -n "$DEVELOPER_ID" ]]; then
              OTHER_CODE_SIGN_FLAGS="--timestamp" CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO)
 fi
 
-# Yardımcı uygulamaya kopyalanmadan önce kendi başına imzalanır (Apple onayı sıkılaştırılmış çalışma ister).
-if [[ -n "$DEVELOPER_ID" ]]; then
-  codesign --force --options runtime --timestamp -s "$DEVELOPER_ID" dist/tv-helper/couchsubs-tv-helper
-else
-  codesign --force -s - dist/tv-helper/couchsubs-tv-helper
-fi
+# Yardımcılar uygulamaya kopyalanmadan önce kendi başına imzalanır (Apple onayı sıkılaştırılmış çalışma ister).
+for HELPER in dist/tv-helper/couchsubs-tv-helper dist/tts/pocket-tts; do
+  if [[ -n "$DEVELOPER_ID" ]]; then
+    codesign --force --options runtime --timestamp -s "$DEVELOPER_ID" "$HELPER"
+  else
+    codesign --force -s - "$HELPER"
+  fi
+done
 
 # XCODE_JOBS: bilgisayar yüklüyken derlemeyi hafifletmek için (verilmezse Xcode kendi seçer).
 JOB_ARGS=()
@@ -51,6 +54,7 @@ if [[ -n "$DEVELOPER_ID" ]]; then
   codesign --verify --deep --strict "$APP" || { echo "İmza doğrulanamadı."; exit 1; }
 fi
 [[ -x "$APP/Contents/MacOS/couchsubs-tv-helper" ]] || { echo "TV kurulum yardımcısı pakette yok."; exit 1; }
+[[ -x "$APP/Contents/MacOS/pocket-tts" ]] || { echo "Dublaj ses motoru (pocket-tts) pakette yok."; exit 1; }
 # package-tv.sh dist/tv-app'i baştan kurar; APK yalnız ANDROID_APK verilince geri eklenir. Yerel deneme derlemesi için
 # ALLOW_NO_APK=1 ile atlanır.
 APKS=("$APP"/Contents/Resources/tv-app/*.apk(N))

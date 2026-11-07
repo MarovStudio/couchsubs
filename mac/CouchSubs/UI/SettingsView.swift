@@ -64,6 +64,7 @@ struct SettingsView: View {
                         Toggle("Bold text", isOn: $model.settings.style.bold)
                         Button("Send test subtitle") { model.sendTestSubtitle() }.buttonStyle(.secondary)
                     }
+                    DubbingCard()
                     Card(title: "Language") {
                         Picker("Game language", selection: $model.settings.sourceLanguage) {
                             Text("English").tag("en")

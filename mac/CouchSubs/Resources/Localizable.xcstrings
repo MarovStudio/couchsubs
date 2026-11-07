@@ -1,6 +1,22 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ was damaged while downloading. Try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ was damaged while downloading. Try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ indirilirken bozuldu. Yeniden deneyin."
+          }
+        }
+      }
+    },
     "1. Create a free account at webostv.developer.lge.com.": {
       "localizations": {
         "en": {
@@ -417,6 +433,22 @@
         }
       }
     },
+    "Characters": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Characters"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karakterler"
+          }
+        }
+      }
+    },
     "Checking the TV app…": {
       "localizations": {
         "en": {
@@ -673,6 +705,22 @@
         }
       }
     },
+    "Could not download %@. Check the internet connection and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not download %@. Check the internet connection and try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ indirilemedi. İnternet bağlantısını denetleyip yeniden deneyin."
+          }
+        }
+      }
+    },
     "Create a free account at playstation.com with a different email address.": {
       "localizations": {
         "en": {
@@ -813,6 +861,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Çeviri modelini indirin"
+          }
+        }
+      }
+    },
+    "Download voices": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download voices"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesleri indir"
+          }
+        }
+      }
+    },
+    "Downloading voices… %lld%%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading voices… %lld%%"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesler indiriliyor… %%%lld"
           }
         }
       }
@@ -1009,6 +1089,22 @@
         }
       }
     },
+    "In the game's audio settings, turn the dialogue (voice) volume down; keep music and effects. If the game can show speaker names in subtitles, turn them on: every character then speaks with its own voice.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the game's audio settings, turn the dialogue (voice) volume down; keep music and effects. If the game can show speaker names in subtitles, turn them on: every character then speaks with its own voice."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oyunun ses ayarlarından konuşma (diyalog) sesini kısın; müzik ve efektler kalsın. Oyun altyazıda konuşmacı adını gösterebiliyorsa bunu açın: her karakter kendi sesiyle konuşur."
+          }
+        }
+      }
+    },
     "Install on the TV": {
       "localizations": {
         "en": {
@@ -1201,6 +1297,22 @@
         }
       }
     },
+    "Listen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listen"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinle"
+          }
+        }
+      }
+    },
     "Look at the TV: it asks whether to allow debugging from this computer.": {
       "localizations": {
         "en": {
@@ -1233,6 +1345,54 @@
         }
       }
     },
+    "Man 1 (calm, deep)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Man 1 (calm, deep)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkek 1 (sakin, kalın)"
+          }
+        }
+      }
+    },
+    "Man 2 (energetic)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Man 2 (energetic)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkek 2 (enerjik)"
+          }
+        }
+      }
+    },
+    "Man 3 (crisp)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Man 3 (crisp)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkek 3 (net)"
+          }
+        }
+      }
+    },
     "Medium": {
       "localizations": {
         "en": {
@@ -1261,6 +1421,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Menü adları markaya göre biraz değişir. Uygulama TV'de zaten kuruluysa bu adımı geçebilirsiniz."
+          }
+        }
+      }
+    },
+    "Narrator and unnamed lines": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Narrator and unnamed lines"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anlatıcı ve adı yazmayan satırlar"
           }
         }
       }
@@ -1569,6 +1745,22 @@
         }
       }
     },
+    "Play the voice on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play the voice on"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses nereden çalsın"
+          }
+        }
+      }
+    },
     "PlayStation Network": {
       "localizations": {
         "en": {
@@ -1741,6 +1933,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yeniden ara"
+          }
+        }
+      }
+    },
+    "Second speaker in dialogue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Second speaker in dialogue"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karşılıklı konuşmada ikinci kişi"
           }
         }
       }
@@ -2513,6 +2721,70 @@
         }
       }
     },
+    "The voice engine did not start.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The voice engine did not start."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses motoru başlatılamadı."
+          }
+        }
+      }
+    },
+    "The voice engine is missing from the app. Download CouchSubs again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The voice engine is missing from the app. Download CouchSubs again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses motoru uygulamada yok. CouchSubs'ı yeniden indirin."
+          }
+        }
+      }
+    },
+    "The voices are downloaded once (440 MB).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The voices are downloaded once (440 MB)."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesler bir kez indirilir (440 MB)."
+          }
+        }
+      }
+    },
+    "This Mac": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Mac"
+          }
+        }
+      }
+    },
     "This Samsung TV is too old for the CouchSubs TV app (2019 models and later are supported).": {
       "localizations": {
         "en": {
@@ -2641,6 +2913,22 @@
         }
       }
     },
+    "Turkish dubbing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turkish dubbing"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Türkçe dublaj"
+          }
+        }
+      }
+    },
     "Turn on the PS5. As the second user, open Settings › System › Remote Play › Pair Device and enter the 8-digit code shown there.": {
       "localizations": {
         "en": {
@@ -2701,6 +2989,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Android TV kullanan Vestel, Arçelik, Beko, Grundig, Philips ve diğer TV'ler."
+          }
+        }
+      }
+    },
+    "Voice the translation in Turkish": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice the translation in Turkish"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çeviriyi Türkçe seslendir"
+          }
+        }
+      }
+    },
+    "Voices: Pocket TTS Turkish (wite-tech, CC BY 4.0) with Kyutai's pocket-tts. The voices are synthetic, not real people.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voices: Pocket TTS Turkish (wite-tech, CC BY 4.0) with Kyutai's pocket-tts. The voices are synthetic, not real people."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesler: Pocket TTS Turkish (wite-tech, CC BY 4.0) ve Kyutai'nin pocket-tts programı. Sesler yapaydır, gerçek kişilere ait değildir."
           }
         }
       }
@@ -2781,6 +3101,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Windows'un OpenSSH istemcisi eksik. Ayarlar › Sistem › İsteğe bağlı özellikler bölümünden ekleyip tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Woman 1 (bright)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woman 1 (bright)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kadın 1 (canlı)"
+          }
+        }
+      }
+    },
+    "Woman 2 (warm)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woman 2 (warm)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kadın 2 (sıcak)"
+          }
+        }
+      }
+    },
+    "Woman 3 (confident)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woman 3 (confident)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kadın 3 (kendinden emin)"
           }
         }
       }
