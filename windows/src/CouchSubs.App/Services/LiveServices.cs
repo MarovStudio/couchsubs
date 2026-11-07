@@ -198,7 +198,7 @@ public sealed class LiveServices : IAppServices
                 SamsungInstallError.CertificateFailed => DevModeError.CertificateFailed,
                 SamsungInstallError.TooOld => DevModeError.TooOld,
                 _ => DevModeError.InstallFailed,
-            });
+            }, error.Message);
         }
         catch (Exception error) when (error is not DevModeException)
         {
@@ -230,7 +230,7 @@ public sealed class LiveServices : IAppServices
                 AndroidInstallError.Unreachable => DevModeError.Unreachable,
                 AndroidInstallError.NotApproved => DevModeError.NotApproved,
                 _ => DevModeError.InstallFailed,
-            });
+            }, error.Message);
         }
         catch (Exception error) when (error is not DevModeException)
         {

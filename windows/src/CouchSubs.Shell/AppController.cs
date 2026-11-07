@@ -291,6 +291,11 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         await InstallTvAppAsync(target, devKey, bundled);
     }
 
+    /// <summary>Kurulum hatasında TV'nin verdiği sebep de gösterilir; genel mesaj tek başına sorunu bulmaya yetmiyordu.</summary>
+    private static TvAppState FailedState(DevModeException error) =>
+        new(TvAppKind.Failed, Error: error.Error,
+            Reason: error.Error == DevModeError.InstallFailed && !string.IsNullOrWhiteSpace(error.Detail) ? error.Detail.Trim() : null);
+
     /// <summary>Samsung: geliştirici modu açıksa uygulamayı imzalayıp kurar. Sertifika yoksa Samsung girişi istenir.</summary>
     private async Task RefreshSamsungAppAsync(LgTv target)
     {
@@ -315,7 +320,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         }
         catch (DevModeException error)
         {
-            TvApp = new TvAppState(TvAppKind.Failed, Error: error.Error);
+            TvApp = FailedState(error);
         }
     }
 
@@ -353,7 +358,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         }
         catch (DevModeException error)
         {
-            TvApp = new TvAppState(TvAppKind.Failed, Error: error.Error);
+            TvApp = FailedState(error);
         }
     }
 
@@ -419,7 +424,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         }
         catch (DevModeException error)
         {
-            TvApp = new TvAppState(TvAppKind.Failed, Error: error.Error);
+            TvApp = FailedState(error);
         }
     }
 

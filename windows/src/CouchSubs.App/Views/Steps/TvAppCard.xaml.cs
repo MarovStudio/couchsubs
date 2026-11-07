@@ -87,7 +87,9 @@ public partial class TvAppCard : UserControl
             _ => "",
         };
         Detail.Visibility = Visible(Detail.Text.Length > 0);
-        Problem.Text = state.Error is { } error ? Message(error, brand) : "";
+        Problem.Text = state.Error is { } error
+            ? Message(error, brand) + (state.Reason is { } reason ? $"\n\n{Localizer.Current["TV says:"]} {reason}" : "")
+            : "";
         if (devModeOff) devModeWatch.Start();
         else devModeWatch.Stop();
     }
@@ -105,7 +107,7 @@ public partial class TvAppCard : UserControl
         DevModeError.SignInFailed => "Samsung sign-in did not complete. Try again and finish signing in on the page that opens.",
         DevModeError.CertificateFailed => "Samsung did not issue the signing certificate. Try again in a few minutes.",
         DevModeError.NotApproved => "Debugging was not allowed on the TV. Try again and choose Allow on the TV.",
-        _ => "The TV app could not be installed. Check the TV's free space and try again.",
+        _ => "The TV app could not be installed. Try again; if it fails again, send us the reason below.",
     }];
 
     private async void OnInstall(object sender, RoutedEventArgs e)

@@ -126,7 +126,7 @@ public sealed record TvInstallEvent(TvInstallEventKind Kind, Uri? Url = null);
 public enum TvAppKind { Unknown, Working, UpToDate, DevModeOff, NeedsPassphrase, Failed, SignIn, ApproveOnTv }
 
 /// <summary>TV uygulamasının kurulum durumu.</summary>
-public sealed record TvAppState(TvAppKind Kind, string? Version = null, DevModeError? Error = null, Uri? Url = null)
+public sealed record TvAppState(TvAppKind Kind, string? Version = null, DevModeError? Error = null, Uri? Url = null, string? Reason = null)
 {
     public static readonly TvAppState Unknown = new(TvAppKind.Unknown);
 }

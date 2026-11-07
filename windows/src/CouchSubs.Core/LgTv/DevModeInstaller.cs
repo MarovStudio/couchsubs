@@ -34,6 +34,9 @@ public sealed class DevModeException(DevModeError error, string? detail = null)
     : Exception(detail is null ? error.ToString() : $"{error}: {detail}")
 {
     public DevModeError Error { get; } = error;
+
+    /// <summary>TV'nin ya da aracın verdiği asıl sebep (ör. Samsung'un "install failed[118]" çıktısı).</summary>
+    public string? Detail { get; } = detail;
 }
 
 /// <summary>Key Server'dan gelen anahtarın parolasını çözen ssh-keygen'in yeri.</summary>

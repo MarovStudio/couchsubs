@@ -2385,6 +2385,22 @@
         }
       }
     },
+    "TV says:": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV says:"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV'nin yanıtı:"
+          }
+        }
+      }
+    },
     "Text recognition for the game language is not installed on this computer.": {
       "localizations": {
         "en": {
@@ -2493,6 +2509,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "TV uygulaması kurulamadı. TV'deki boş alanı kontrol edip tekrar deneyin."
+          }
+        }
+      }
+    },
+    "The TV app could not be installed. Try again; if it fails again, send us the reason below.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV app could not be installed. Try again; if it fails again, send us the reason below."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV uygulaması kurulamadı. Tekrar deneyin; yine olmazsa aşağıdaki sebebi bize gönderin."
           }
         }
       }
