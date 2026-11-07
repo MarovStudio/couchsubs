@@ -2801,6 +2801,22 @@
         }
       }
     },
+    "This computer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This computer"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu bilgisayar"
+          }
+        }
+      }
+    },
     "This is a test subtitle. Can you see it on top of the game?": {
       "localizations": {
         "en": {

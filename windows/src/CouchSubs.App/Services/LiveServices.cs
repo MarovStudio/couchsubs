@@ -17,6 +17,8 @@ namespace CouchSubs.App.Services;
 public sealed class LiveServices : IAppServices
 {
     public ITranslationModel Translation { get; } = new MarianModel();
+    public IDubbingModel? Dubbing { get; } = PocketDubbingModel.EngineBundled ? new PocketDubbingModel() : null;
+    public IAudioOutput? Audio { get; } = new WindowsAudioOutput();
 
     public Task<IReadOnlyList<ConsoleInfo>> DiscoverConsolesAsync() => ConsoleDiscovery.DiscoverAsync();
 

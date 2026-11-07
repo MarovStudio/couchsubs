@@ -32,6 +32,7 @@ public partial class SettingsWindow : Window
         LanguageCard.Visibility = GameLanguage.Items.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
         Region.Region = settings.Region;
         Region.Frame = controller.LastFrame;
+        Dubbing.Attach(controller);
         loading = false;
     }
 

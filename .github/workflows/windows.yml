@@ -169,10 +169,16 @@ jobs:
       - name: Yayınla
         run: dotnet publish windows/src/CouchSubs.App -c Release -r win-x64 --self-contained -o publish/CouchSubs
 
+      # Türkçe dublajın ses motoru (Kyutai pocket-tts, MIT): sabit sürüm, özeti denetlenir.
+      - name: Dublaj ses motoru
+        shell: bash
+        run: ./scripts/fetch-pocket-tts.sh windows publish/CouchSubs/tts
+
       - name: Yerel DLL yayın klasöründe mi
         shell: pwsh
         run: |
           if (-not (Test-Path publish/CouchSubs/couchsubs_native.dll)) { throw "couchsubs_native.dll yayın klasöründe yok" }
+          if (-not (Test-Path publish/CouchSubs/tts/pocket-tts.exe)) { throw "pocket-tts.exe yayın klasöründe yok" }
 
       - uses: actions/upload-artifact@v4
         with:

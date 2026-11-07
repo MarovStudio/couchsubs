@@ -105,6 +105,8 @@ public sealed class ModelStore
     {
         var finalPath = PathOf(file.Name);
         var partPath = finalPath + PartSuffix;
+        // Dosya adı alt klasör içerebilir ("voices/male_1.wav").
+        Directory.CreateDirectory(Path.GetDirectoryName(finalPath)!);
         var existing = File.Exists(partPath) ? new FileInfo(partPath).Length : 0;
         if (existing > file.Size)
         {

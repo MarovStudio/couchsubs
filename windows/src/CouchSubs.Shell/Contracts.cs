@@ -26,6 +26,7 @@ public sealed record UserSettings
     public SubtitleStyle Style { get; init; } = new();
     public string SourceLanguage { get; init; } = "en";
     public string TargetLanguage { get; init; } = "tr";
+    public DubbingSettings Dubbing { get; init; } = new();
 }
 
 /// <summary>Hesap kimliği, PS5 ve TV anahtarları (gerçekte DPAPI ile şifreli dosya).</summary>
@@ -98,6 +99,10 @@ public interface IAppServices
     /// <summary>Oyun dili için yazı tanıyıcı; bilgisayarda hiç OCR dili yoksa null.</summary>
     ITextReader? MakeReader(string language);
     ITranslationModel Translation { get; }
+    /// <summary>Türkçe dublaj modeli; bu derlemede yoksa null.</summary>
+    IDubbingModel? Dubbing => null;
+    /// <summary>Bilgisayardan ses çalma (dublaj).</summary>
+    IAudioOutput? Audio => null;
 }
 
 /// <param name="Launched">false ise TV uygulaması açılamadı; büyük olasılıkla TV'de kurulu değil.</param>

@@ -5,6 +5,7 @@
         xmlns:c="clr-namespace:CouchSubs.App.Controls"
         xmlns:s="clr-namespace:CouchSubs.App.Views.Steps"
         xmlns:t="clr-namespace:CouchSubs.App.Theme"
+        xmlns:local="clr-namespace:CouchSubs.App.Views"
         Title="{t:T 'Settings'}" Width="600" Height="720" ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource backgroundBrush}" Foreground="{DynamicResource textPrimaryBrush}">
     <DockPanel>
@@ -68,6 +69,8 @@
                         <Button Content="{t:T 'Send test subtitle'}" Click="OnTest" />
                     </StackPanel>
                 </c:Card>
+
+                <local:DubbingCard x:Name="Dubbing" Margin="0,16,0,0" />
 
                 <c:Card x:Name="LanguageCard" Title="{t:T 'Language'}" Margin="0,16,0,0">
                     <StackPanel Orientation="Horizontal">

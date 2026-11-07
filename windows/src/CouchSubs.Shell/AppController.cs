@@ -6,6 +6,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using CouchSubs.Core;
+using CouchSubs.Core.Dubbing;
 using CouchSubs.Core.LgTv;
 using CouchSubs.RemotePlay;
 
@@ -61,6 +62,10 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     /// <summary>Oyundaki altyazının son görüldüğü yer; deneme altyazısı TV'de oraya yerleşir.</summary>
     private TextBox? lastSubtitleBox;
     private int processing;
+    private Dubber? dubber;
+    private bool dubbingDownloading;
+    private double dubbingProgress;
+    private string? dubbingError;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -124,6 +129,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             if (!Set(ref settings, value)) return;
             settingsStore.Save(value);
             server.SendStyle(value.Style);
+            if (old.Dubbing != value.Dubbing) DubbingSettingsChanged(old.Dubbing);
             if (isRunning && (old.SourceLanguage != value.SourceLanguage || old.TargetLanguage != value.TargetLanguage))
             {
                 RefreshTranslatorStatus();
@@ -518,6 +524,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             try { await StartServerAsync(); } catch { /* port açılamadıysa TV durumu "bekleniyor" kalır */ }
             server.SendStyle(settings.Style);
             MakePipeline();
+            if (settings.Dubbing.Enabled && DubbingInstalled) MakeDubber()?.Prepare();
 
             var stream = services.MakeStream(console, accountId);
             stream.StateChanged += state => post(() => SessionStateChanged(state));
@@ -551,6 +558,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         pipeline?.Reset();
         pipeline = null;
         ActiveSourceLanguage = null;
+        StopDubber();
         if (isRunning) sleep.End();
         IsRunning = false;
         SessionState = SessionState.Disconnected(DisconnectKind.Stopped);
@@ -619,6 +627,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         };
         // Model bu arada inmiş olabilir; her çeviri sonucu durumu günceller.
         built.TranslationResult += error => post(() => TranslatorStatus = error ?? TranslatorStatus.Ready);
+        built.SpeechReady += lines => post(() => Speak(lines));
         pipeline = built;
     }
 
@@ -646,6 +655,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         {
             pipeline?.Reset();
             server.Clear();
+            dubber?.Stop();
         }
     }
 
@@ -710,6 +720,101 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             }
         }
         return fallback;
+    }
+
+    // --- Türkçe dublaj ---
+
+    /// <summary>Bu derlemede dublaj var mı (ses motoru uygulamayla geliyor mu).</summary>
+    public bool DubbingAvailable => services.Dubbing is not null;
+    public bool DubbingInstalled => services.Dubbing?.IsInstalled == true;
+    public long DubbingDownloadBytes => services.Dubbing?.DownloadBytes ?? 0;
+    public bool DubbingDownloading { get => dubbingDownloading; private set => Set(ref dubbingDownloading, value); }
+    public double DubbingProgress { get => dubbingProgress; private set => Set(ref dubbingProgress, value); }
+    public string? DubbingError { get => dubbingError; private set => Set(ref dubbingError, value); }
+
+    /// <summary>Ses modelini indirir (ilk kullanımda bir kez, ~440 MB).</summary>
+    public async Task DownloadDubbingAsync()
+    {
+        if (services.Dubbing is not { } model || dubbingDownloading || model.IsInstalled) return;
+        DubbingDownloading = true;
+        DubbingError = null;
+        try
+        {
+            await Task.Run(() => model.DownloadAsync(new ImmediateProgress(value => post(() => DubbingProgress = value)), CancellationToken.None));
+            if (settings.Dubbing.Enabled && isRunning) MakeDubber()?.Prepare();
+        }
+        catch (Exception error) when (error is HttpRequestException or IOException or InvalidDataException or TaskCanceledException
+                                          or UnauthorizedAccessException)
+        {
+            DubbingError = error.Message;
+        }
+        finally
+        {
+            DubbingDownloading = false;
+            Changed(nameof(DubbingInstalled));
+        }
+    }
+
+    /// <summary>Ayarlardaki "Dinle": sesi bilgisayardan çalar.</summary>
+    public async Task PreviewVoiceAsync(DubbingVoice voice)
+    {
+        if (!DubbingInstalled) return;
+        DubbingError = null;
+        try { await StartServerAsync(); } catch (SocketException) { return; }
+        MakeDubber()?.Preview(voice);
+    }
+
+    public void AssignVoice(DubbingVoice voice, string name)
+    {
+        var cast = settings.Dubbing.Cast.Copy();
+        cast.Assign(voice, name);
+        Settings = settings with { Dubbing = settings.Dubbing with { Cast = cast } };
+    }
+
+    private Dubber? MakeDubber()
+    {
+        if (dubber is not null) return dubber;
+        if (services.Dubbing is not { } model || services.Audio is not { } audio) return null;
+        var made = new Dubber(model, audio, () => server, () => ServerPort, post)
+        {
+            Cast = settings.Dubbing.Cast.Copy(),
+            Output = settings.Dubbing.Output,
+        };
+        made.CastChanged += cast => Settings = settings with { Dubbing = settings.Dubbing with { Cast = cast } };
+        made.Failed += message => DubbingError = message;
+        dubber = made;
+        return made;
+    }
+
+    private void Speak(IReadOnlyList<SpokenLine> lines)
+    {
+        if (!settings.Dubbing.Enabled || !DubbingInstalled) return;
+        MakeDubber()?.Speak(lines);
+    }
+
+    private void DubbingSettingsChanged(DubbingSettings old)
+    {
+        var now = settings.Dubbing;
+        if (dubber is null)
+        {
+            if (now.Enabled && !old.Enabled && isRunning && DubbingInstalled) MakeDubber()?.Prepare();
+            return;
+        }
+        // Dublajın kendi atadığı ses (CastChanged) zaten dublajda; kullanıcının seçimi kopyalanır.
+        if (!ReferenceEquals(now.Cast, old.Cast)) dubber.Cast = now.Cast.Copy();
+        if (now.Output != old.Output)
+        {
+            dubber.Stop();
+            dubber.Output = now.Output;
+        }
+        if (!now.Enabled) StopDubber();
+    }
+
+    private void StopDubber()
+    {
+        if (dubber is not { } stopping) return;
+        dubber = null;
+        _ = stopping.DisposeAsync().AsTask();
     }
 
     private AppException Error(AppError error) => new(error, AppException.Describe(error, text));
