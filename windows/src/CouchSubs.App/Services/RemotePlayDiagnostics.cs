@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 using System.Collections.Concurrent;
+using System.IO;
 using CouchSubs.RemotePlay;
 
 namespace CouchSubs.App.Services;
