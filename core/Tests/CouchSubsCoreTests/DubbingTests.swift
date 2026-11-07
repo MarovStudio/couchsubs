@@ -40,7 +40,8 @@ final class SpeechTextTests: XCTestCase {
 
     func testTextStartsLowercaseWithTheTagFirst() {
         XCTAssertEqual(SpeechText.prepare("Geri çekil!", emotion: .angry), "[kızgın] geri çekil!")
-        XCTAssertEqual(SpeechText.prepare("İleri gidelim.  Hemen…"), "ileri gidelim. Hemen...")
+        XCTAssertEqual(SpeechText.prepare("İleri gidelim.  Hemen…"), "ileri gidelim. hemen...")
+        XCTAssertEqual(SpeechText.prepare("Ne?! Kapı açıldı!!"), "ne? kapı açıldı!")
         XCTAssertEqual(SpeechText.prepare("Işığı kapat."), "ışığı kapat.")
     }
 

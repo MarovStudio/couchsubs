@@ -57,17 +57,29 @@ public enum SpeechText {
             .replacingOccurrences(of: "’", with: "'")
         text = TurkishNumbers.spellOut(in: text)
         text = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        text = lowercasingFirstLetter(text)
+        // "?!" ve "!!!" gibi yığılmış işaretler modeli erken susturabiliyor; tek işarete iner.
+        text = text.replacingOccurrences(of: #"[?!]*\?[?!]*"#, with: "?", options: .regularExpression)
+            .replacingOccurrences(of: #"!{2,}"#, with: "!", options: .regularExpression)
+        text = lowercasingSentenceStarts(text)
         guard let emotion else { return text }
         return "[\(emotion.rawValue)] " + text
     }
 
-    /// İlk harfi Türkçe kurala göre küçültür (I → ı, İ → i); baştaki tırnak ve tireler atlanır.
-    static func lowercasingFirstLetter(_ text: String) -> String {
-        guard let index = text.firstIndex(where: \.isLetter) else { return text }
-        let letter = String(text[index])
-        let lower = letter == "I" ? "ı" : letter == "İ" ? "i" : letter.lowercased(with: Locale(identifier: "tr_TR"))
-        return text.replacingCharacters(in: index...index, with: lower)
+    /// Her cümlenin ilk harfini Türkçe kurala göre küçültür (I → ı, İ → i); model böyle eğitilmiş.
+    static func lowercasingSentenceStarts(_ text: String) -> String {
+        var output = ""
+        var atStart = true
+        for character in text {
+            if atStart, character.isLetter {
+                let letter = String(character)
+                output += letter == "I" ? "ı" : letter == "İ" ? "i" : letter.lowercased(with: Locale(identifier: "tr_TR"))
+                atStart = false
+            } else {
+                output.append(character)
+                if ".!?".contains(character) { atStart = true }
+            }
+        }
+        return output
     }
 }
 
