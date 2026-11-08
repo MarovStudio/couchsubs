@@ -4176,6 +4176,134 @@
           }
         }
       }
+    },
+    "Allow CouchSubs through Windows Firewall": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow CouchSubs through Windows Firewall"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs'a Windows Güvenlik Duvarı'nda izin ver"
+          }
+        }
+      }
+    },
+    "Windows Firewall now allows CouchSubs.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows Firewall now allows CouchSubs."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows Güvenlik Duvarı artık CouchSubs'a izin veriyor."
+          }
+        }
+      }
+    },
+    "Windows Firewall may be blocking the connection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows Firewall may be blocking the connection."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlantıyı Windows Güvenlik Duvarı engelliyor olabilir."
+          }
+        }
+      }
+    },
+    "Waiting for Windows…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for Windows…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows bekleniyor…"
+          }
+        }
+      }
+    },
+    "The firewall rule was not added. Try again and choose Yes when Windows asks.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The firewall rule was not added. Try again and choose Yes when Windows asks."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik duvarı kuralı eklenmedi. Yeniden deneyin ve Windows sorduğunda Evet'i seçin."
+          }
+        }
+      }
+    },
+    "Open Pair Device again on the PS5 and enter the new code.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Pair Device again on the PS5 and enter the new code."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PS5'te Cihazı Eşleştir'i yeniden açın ve yeni kodu girin."
+          }
+        }
+      }
+    },
+    "CouchSubs needs incoming connections from the PS5 and the TV. Windows asks for permission once.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs needs incoming connections from the PS5 and the TV. Windows asks for permission once."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs'ın PS5'ten ve TV'den gelen bağlantıları alabilmesi gerekiyor. Windows bir kez izin ister."
+          }
+        }
+      }
+    },
+    "Allow CouchSubs, then open Pair Device again on the PS5 and enter the new code.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow CouchSubs, then open Pair Device again on the PS5 and enter the new code."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CouchSubs'a izin verin, sonra PS5'te Cihazı Eşleştir'i yeniden açın ve yeni kodu girin."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

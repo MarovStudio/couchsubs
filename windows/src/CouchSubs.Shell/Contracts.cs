@@ -160,6 +160,8 @@ public interface IAppServices
     IAudioOutput? Audio => null;
     /// <summary>Uygulama güncellemesi; geliştirici derlemesinde null.</summary>
     IUpdater? Updater => null;
+    /// <summary>Windows Güvenlik Duvarı izni; Windows dışında ve testlerde null (hiçbir şey önerilmez).</summary>
+    IFirewall? Firewall => null;
 }
 
 /// <param name="Launched">false ise TV uygulaması açılamadı; büyük olasılıkla TV'de kurulu değil.</param>

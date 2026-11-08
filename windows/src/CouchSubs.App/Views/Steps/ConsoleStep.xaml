@@ -3,7 +3,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:CouchSubs.App.Controls"
-             xmlns:t="clr-namespace:CouchSubs.App.Theme">
+             xmlns:t="clr-namespace:CouchSubs.App.Theme"
+             xmlns:v="clr-namespace:CouchSubs.App.Views">
     <c:StepLayout Glyph="{x:Static c:Glyphs.Controller}" Title="{t:T 'Connect your PS5'}"
                   Message="{t:T 'Turn on the PS5. As the second user, open Settings › System › Remote Play › Pair Device and enter the 8-digit code shown there.'}">
         <StackPanel>
@@ -26,6 +27,8 @@
             <Button x:Name="Connect" Content="{t:T 'Connect'}" Style="{StaticResource PrimaryButton}" Margin="0,16,0,0"
                     IsEnabled="False" Click="OnConnect" />
             <TextBlock x:Name="Error" Style="{StaticResource ErrorText}" Margin="0,12,0,0" />
+            <!-- Eşleştirme başarısızsa ve güvenlik duvarında izin yoksa -->
+            <v:FirewallCard Margin="0,12,0,0" />
         </StackPanel>
     </c:StepLayout>
 </UserControl>

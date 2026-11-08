@@ -96,7 +96,15 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
 
     // --- Durum ---
 
-    public OnboardingStep Step { get => step; set => Set(ref step, value, [nameof(CanAdvance), nameof(StepNumber)]); }
+    public OnboardingStep Step
+    {
+        get => step;
+        set
+        {
+            // Eşleştirme adımındaki güvenlik duvarı önerisi başka adıma taşınmaz.
+            if (Set(ref step, value, [nameof(CanAdvance), nameof(StepNumber)])) ClearFirewallPrompt();
+        }
+    }
     public static int StepCount => (int)OnboardingStep.Done;
     public int StepNumber => Math.Min((int)step + 1, StepCount);
     public bool HasAccount => accountId is not null;
@@ -194,10 +202,22 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         {
             registered = await services.RegisterAsync(host, accountId, value);
         }
-        catch (RegistrationException error)
+        catch (RegistrationException error) when (error.Failure == RegistrationFailure.WrongAccount)
         {
-            throw Error(error.Failure == RegistrationFailure.WrongAccount ? AppError.WrongAccount : AppError.RegistrationFailed);
+            throw Error(AppError.WrongAccount);
         }
+        catch (RegistrationException)
+        {
+            // PS5 "lütfen bekleyin" deyip menüye dönüyorsa yanıtı çoğunlukla güvenlik duvarı engellemiştir.
+            await OfferFirewallAsync();
+            throw Error(AppError.RegistrationFailed);
+        }
+        catch (Exception error) when (error is not AppException)
+        {
+            await OfferFirewallAsync();
+            throw;
+        }
+        ClearFirewallPrompt();
         console = registered;
         store.Save(StoreKeys.Console, registered);
         Changed(nameof(Console), nameof(CanAdvance));
@@ -732,6 +752,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
 
             sleep.Begin();
             IsRunning = true;
+            UpdateTroubleClocks();
         }
         finally
         {
@@ -759,6 +780,9 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         if (isRunning) sleep.End();
         IsRunning = false;
         SessionState = SessionState.Disconnected(DisconnectKind.Stopped);
+        UpdateTroubleClocks();
+        firewallRuleSeen = false;
+        ClearFirewallPrompt();
     }
 
     /// <summary>Bilgisayar uykudan uyanınca bağlantıları hemen yenile.</summary>
@@ -894,6 +918,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private void SessionStateChanged(SessionState state)
     {
         SessionState = state;
+        UpdateTroubleClocks();
         // Bağlantı koptuysa TV'de eski altyazı kalmasın.
         if (state.Phase == SessionPhase.Disconnected)
         {
@@ -943,7 +968,11 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         serverStarted = true;
     }
 
-    private void OnClientsChanged(int count) => post(() => TvClients = count);
+    private void OnClientsChanged(int count) => post(() =>
+    {
+        TvClients = count;
+        UpdateTroubleClocks();
+    });
 
     /// <summary>TV ile aynı ağdaki bilgisayar adresi.</summary>
     private string ServerAddress(LgTv target) => $"http://{LocalAddress(target.Host) ?? "127.0.0.1"}:{ServerPort}";
@@ -966,6 +995,110 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             }
         }
         return fallback;
+    }
+
+    // --- Windows Güvenlik Duvarı ---
+
+    /// <summary>PS5 bu kadar süre "Yeniden bağlanıyor…" kalırsa güvenlik duvarı kuralına bakılır.</summary>
+    public static readonly TimeSpan Ps5TroubleDelay = TimeSpan.FromSeconds(20);
+    /// <summary>TV uygulaması bu kadar süre bağlanmazsa güvenlik duvarı kuralına bakılır.</summary>
+    public static readonly TimeSpan TvWaitDelay = TimeSpan.FromSeconds(60);
+
+    private FirewallPrompt firewallPrompt;
+    /// <summary>Bu çeviri oturumunda kural bulundu; her denetimde kurallar yeniden taranmaz.</summary>
+    private bool firewallRuleSeen;
+    private bool checkingFirewall;
+    private DateTime? ps5TroubleSince;
+    private DateTime? tvWaitingSince;
+
+    /// <summary>Güvenlik duvarı kartı ya da eşleştirme adımındaki düğme; yalnız kural eksikken önerilir.</summary>
+    public FirewallPrompt FirewallPrompt { get => firewallPrompt; private set => Set(ref firewallPrompt, value); }
+
+    /// <summary>Zaman (testlerde ileri sarılır).</summary>
+    public Func<DateTime> Clock { get; set; } = () => DateTime.UtcNow;
+
+    /// <summary>
+    /// Ana ekran birkaç saniyede bir çağırır: PS5 20 saniyedir yeniden bağlanıyorsa ya da TV 60 saniyedir bağlanmadıysa ve
+    /// güvenlik duvarında CouchSubs'a izin yoksa kart önerilir. İkisi de bağlanınca kart kalkar.
+    /// </summary>
+    public async Task CheckConnectionsAsync()
+    {
+        UpdateTroubleClocks();
+        if (!isRunning || services.Firewall is not { } firewall) return;
+        if (ps5TroubleSince is null && tvWaitingSince is null)
+        {
+            ClearFirewallPrompt();
+            return;
+        }
+        var now = Clock();
+        var stuck = now - ps5TroubleSince >= Ps5TroubleDelay || now - tvWaitingSince >= TvWaitDelay;
+        if (!stuck || firewallPrompt != FirewallPrompt.None || firewallRuleSeen || checkingFirewall) return;
+        checkingFirewall = true;
+        try
+        {
+            var hasRule = await HasFirewallRuleAsync(firewall);
+            if (!isRunning) return;
+            if (hasRule) firewallRuleSeen = true;
+            else FirewallPrompt = FirewallPrompt.Offer;
+        }
+        finally
+        {
+            checkingFirewall = false;
+        }
+    }
+
+    /// <summary>
+    /// Kuralı yönetici izniyle ekler. Çeviri sürüyorsa PS5 ve TV hemen yeniden denenir; eşleştirmede kullanıcı yeni
+    /// kodla yeniden bağlanır.
+    /// </summary>
+    public async Task<bool> AllowThroughFirewallAsync()
+    {
+        if (services.Firewall is not { } firewall || firewallPrompt == FirewallPrompt.Working) return false;
+        FirewallPrompt = FirewallPrompt.Working;
+        bool added;
+        try { added = await firewall.AddRuleAsync(); }
+        catch (Exception) { added = false; }
+        FirewallPrompt = added ? FirewallPrompt.Allowed : FirewallPrompt.Failed;
+        if (!added) return false;
+        firewallRuleSeen = true;
+        if (isRunning)
+        {
+            session?.ReconnectNow();
+            keeper?.Reconnect();
+        }
+        return true;
+    }
+
+    /// <summary>Eşleştirme başarısız oldu: kural eksikse düğme önerilir.</summary>
+    private async Task OfferFirewallAsync()
+    {
+        if (services.Firewall is not { } firewall || firewallPrompt == FirewallPrompt.Working) return;
+        FirewallPrompt = await HasFirewallRuleAsync(firewall) ? FirewallPrompt.None : FirewallPrompt.Offer;
+    }
+
+    /// <summary>Kurallar arka planda taranır; okunamazsa kural var sayılır (yersiz öneri yapılmaz).</summary>
+    private static async Task<bool> HasFirewallRuleAsync(IFirewall firewall)
+    {
+        try { return await Task.Run(firewall.HasRule); }
+        catch (Exception) { return true; }
+    }
+
+    private void ClearFirewallPrompt()
+    {
+        if (firewallPrompt != FirewallPrompt.Working) FirewallPrompt = FirewallPrompt.None;
+    }
+
+    /// <summary>
+    /// PS5'in ve TV'nin ne zamandan beri bağlanamadığı. PS5 uykudaysa, başka cihazdaysa ya da bağlantıyı reddettiyse
+    /// sorun güvenlik duvarı değildir; sayılmaz.
+    /// </summary>
+    private void UpdateTroubleClocks()
+    {
+        var now = Clock();
+        var ps5Trouble = isRunning && sessionState.Phase != SessionPhase.Streaming && sessionState.Reason?.Kind is not
+            (DisconnectKind.ConsoleAsleep or DisconnectKind.InUse or DisconnectKind.Refused or DisconnectKind.LoginPasscode);
+        ps5TroubleSince = ps5Trouble ? ps5TroubleSince ?? now : null;
+        tvWaitingSince = isRunning && tvClients == 0 ? tvWaitingSince ?? now : null;
     }
 
     // --- Uygulama güncellemesi ---

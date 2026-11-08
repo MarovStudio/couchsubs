@@ -37,7 +37,8 @@ internal sealed class FakeStream : IStreamSession
     public bool Started { get; private set; }
     public void Start() => Started = true;
     public void Stop() => Started = false;
-    public void ReconnectNow() { }
+    public int Reconnects { get; private set; }
+    public void ReconnectNow() => Reconnects++;
     public void Dispose() { }
     public void Emit(SessionState state) => StateChanged?.Invoke(state);
     public void Emit(Frame frame) => FrameReceived?.Invoke(frame);
@@ -48,7 +49,8 @@ internal sealed class FakeKeeper : IKeeper
     public bool Running { get; private set; }
     public void Start(TimeSpan interval) => Running = true;
     public void Stop() => Running = false;
-    public void Reconnect() { }
+    public int Reconnects { get; private set; }
+    public void Reconnect() => Reconnects++;
 }
 
 internal sealed class FakeTranslation : ITranslationModel
@@ -98,6 +100,7 @@ internal sealed class FakeServices : IAppServices
     public IDubbingModel? Dubbing { get; set; }
     public IDubbingModel? FastDubbing { get; set; }
     public FakeTranslation Translation { get; } = new();
+    public IFirewall? Firewall { get; set; }
     ITranslationModel IAppServices.Translation => Translation;
     public OnlineKeyCheck KeyCheck { get; set; } = new(OnlineKeyState.Valid, 10, 500_000);
     public List<string> CheckedKeys { get; } = [];
