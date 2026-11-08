@@ -39,6 +39,33 @@ html, body {
 }
 #subtitle-cover.hidden { display: none; }
 
+/* "Ekranı çevir": her çeviri kendi İngilizce yazısının üstünde, onu örterek ve aynı boyda; altyazının altında kalır. */
+#screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 8;
+}
+#screen.hidden { display: none; }
+#screen .item {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 2px 6px;
+  border-radius: 6px;
+  /* Altındaki İngilizce yazı seçilmesin diye altyazı örtüsü kadar koyu. */
+  background: rgba(0, 0, 0, 0.97);
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
+  word-wrap: break-word;
+  overflow: hidden;
+}
+#screen .item.paragraphs { text-align: left; white-space: pre-line; }
+
 /* Hızlı konuşmada önceki satır kısa süre yeni satırın üstünde, daha soluk durur. */
 #subtitle-prev { margin-bottom: 10px; opacity: 0.7; }
 #subtitle-prev.hidden { display: none; }

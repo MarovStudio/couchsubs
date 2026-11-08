@@ -4,12 +4,13 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bu sürümde yeni**
 
-- **Daha doğru çeviri.** Windows'taki çeviri modeli artık her cümle için birkaç çeviriyi birlikte dener ve en iyisini seçer ("Bu yer hakkında bir şeyler yanlış" yerine "Bu yerde bir terslik var").
-- **Oyun ifadeleri doğru çevriliyor.** "They're friendlies", "I've got your six", "Heads up", "Lock and load", "Took you long enough" gibi kelime kelime çevrilince saçmalayan ifadeler artık anlamıyla çevrilir ("Onlar dost canlısı" değil "Onlar müttefik"; "Altını aldım" değil "Arkanı kollarım"). Mac'te de geçerli.
-- **İsteğe bağlı DeepL çevirisi (Mac ve Windows).** Ayarlar › **Çevrimiçi çeviri (DeepL)** kartına kendi ücretsiz DeepL anahtarınızı girerseniz çeviriler DeepL'le yapılır. Ücretsiz anahtar ayda 500.000 karakter verir, uzun bir oyuna yeter. Önceki altyazı bağlam olarak gider, oyun dili "siz" değil "sen"dir. DeepL'e ulaşılamazsa ya da sınır dolarsa bilgisayardaki model kaldığı yerden devam eder. Açmazsanız hiçbir şey internete gitmez.
-- **Windows'ta hızlı Türkçe ses.** Dublaj ayarında **Ses: Doğal / Hızlı** seçimi var. Hızlı ses Windows'un kendi Türkçe sesini kullanır: indirme gerekmez, cümle anında okunur ve altyazıyla birlikte gelir. Doğal ses daha insansıdır ama daha geç başlar. Karakterlere göre ses tonu yine ayrılır.
+- **Ekranı çevir (Mac ve Windows).** Oynarken Windows'ta **Num 9**'a, Mac'te **⌥⌘T**'ye basın. Ekrandaki bütün yazılar bir kez okunur: menüler, görev paneli, bilgi kutuları, eşya açıklamaları. TV'de her çeviri kendi İngilizce yazısının üstünde ve o yazının boyutunda çıkar. Çeviriler hazırlandıkça TV'de belirir. Çevirileri kaldırmak için tuşa yeniden basın. Sayılar, kumanda ipuçları ve çevirisi aynı kalan adlar atlanır. Menüde ya da duraklatılmış oyunda kullanmak en iyisidir; sürekli çalışmaz, yalnız tuşa basınca çevirir.
+- **TV uygulaması 0.9.5.** Ekran çevirilerini gösterebilmesi için TV uygulaması güncellenir. Bilgisayardaki CouchSubs çeviriyi başlatınca güncellemeyi kendisi kurar.
+- **Windows'ta aynı hizadaki uzak yazılar ayrılıyor.** Sol köşedeki menü ile sağ köşedeki gösterge aynı satırdaysa artık tek cümle gibi okunmuyor.
 
-**beta.14'te gelenler:** Windows'ta İngilizce yazı tanıma paketi uyarısı ve tek düğmeyle kurulumu, menü/gösterge/kumanda ipuçlarının altyazıya karışmaması, yeni altyazı gelince eski dublaj cümlesinin kesilmesi, fareyle çizilen alan ve Num 1/2/3 ek bölgeler (katkı: [sadumqn](https://github.com/sadumqn)), Samsung'da eski kurulumun yeni sürümü engellememesi, TV uygulaması 0.9.4.
+**beta.15'te gelenler:** birkaç çeviriyi deneyip en iyisini seçen Windows çevirisi, oyun ifadelerinin ("friendlies", "got your six") anlamıyla çevrilmesi, isteğe bağlı DeepL çevirisi (Mac ve Windows), Windows'ta indirmesiz hızlı Türkçe ses.
+
+**beta.14'te gelenler:** Windows'ta İngilizce yazı tanıma paketi uyarısı ve tek düğmeyle kurulumu, menü/gösterge/kumanda ipuçlarının altyazıya karışmaması, yeni altyazı gelince eski dublaj cümlesinin kesilmesi, fareyle çizilen alan ve Num 1/2/3 ek bölgeler (katkı: [sadumqn](https://github.com/sadumqn)), Samsung'da eski kurulumun yeni sürümü engellememesi.
 
 **İndirme**
 
@@ -35,4 +36,4 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 ---
 
-New beta. Better translations: the Windows model now weighs several candidate translations per sentence (beam search), common game phrases ("friendlies", "got your six", "heads up", "lock and load") are translated by meaning on Mac and Windows, and you can optionally use your own free DeepL API key for online translation (falls back to the local model when DeepL is unreachable; nothing is sent unless you turn it on). Windows dubbing gets a fast voice option: Windows' own Turkish voice, no download, speaks instantly. Also includes everything from beta.14. Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
+New beta. Translate the screen: press Num 9 on Windows or ⌥⌘T on Mac while playing and every text on the screen (menus, quest panel, item descriptions) is read once, translated, and shown on the TV over its own English text at the same size; press again to remove it. Requires TV app 0.9.5, which CouchSubs installs automatically. Also includes everything from beta.15 (better local translation, game phrases, optional DeepL, fast Windows voice). Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).

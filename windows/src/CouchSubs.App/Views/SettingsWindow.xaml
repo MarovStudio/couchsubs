@@ -136,6 +136,11 @@
                     </StackPanel>
                 </c:Card>
 
+                <c:Card Title="{t:T 'Translate the screen (Num 9)'}" Margin="0,16,0,0">
+                    <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap"
+                               Text="{t:T 'Press Num 9 while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations.'}" />
+                </c:Card>
+
                 <c:Card Title="{t:T 'Free area (Num 5)'}" Margin="0,16,0,0">
                     <StackPanel>
                         <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,0,0,12"

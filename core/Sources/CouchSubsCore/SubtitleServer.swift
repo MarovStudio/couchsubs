@@ -147,6 +147,23 @@ public final class SubtitleServer: @unchecked Sendable {
         broadcast(event: "clear", json: [:])
     }
 
+    /// "Ekranı çevir" sonuçları: `screen` olayı her çeviriyi yazının yeri (`box`), tipik satır yüksekliği (`line`,
+    /// ekrana oranla) ve çok parçalıysa `paragraphs` ile taşır. TV öncekinin yerine bunları koyar.
+    public func sendScreen(_ items: [ScreenTranslation.Item], durationMs: Int) {
+        let round = { (value: Double) in Decimal(Int((max(0, min(1, value)) * 10000).rounded())) / 10000 }
+        let list: [[String: Any]] = items.map { item in
+            var json: [String: Any] = ["box": Self.json(item.box), "line": round(item.lineHeight), "text": item.translation]
+            if item.paragraphs { json["paragraphs"] = true }
+            return json
+        }
+        broadcast(event: "screen", json: ["duration": durationMs, "items": list])
+    }
+
+    /// TV'deki "ekranı çevir" çevirilerini kaldırır (altyazıya dokunmaz).
+    public func clearScreen() {
+        broadcast(event: "screen-clear", json: [:])
+    }
+
     /// Dosyayı `path` adresinden verir ("/voices/male_1.wav").
     public func publish(_ data: Data, at path: String, type: String = "audio/wav") {
         queue.async { self.files[path] = (data, type) }

@@ -42,6 +42,25 @@ final class SubtitleServerTests: XCTestCase {
             && $0.contains("\"box\":{\"bottom\":0.875,\"left\":0.25,\"right\":0.75,\"top\":0.8}") })
     }
 
+    func testStreamsScreenTranslationsAndTheirClear() async throws {
+        let server = SubtitleServer(port: 0)
+        let port = try await server.start()
+        defer { server.stop() }
+        let (bytes, _) = try await URLSession.shared.bytes(from: URL(string: "http://127.0.0.1:\(port)/events")!)
+        try await waitUntil { server.connectedClients == 1 }
+        server.sendScreen([
+            .init(source: "Map\nSettings", translation: "Harita\nAyarlar", box: TextBox(left: 0.05, top: 0.3, right: 0.2, bottom: 0.4), lineHeight: 0.03),
+            .init(source: "Open the door.", translation: "Kapıyı aç.", box: TextBox(left: 0.4, top: 0.8, right: 0.6, bottom: 0.84), lineHeight: 0.04),
+        ], durationMs: 12000)
+        server.clearScreen()
+
+        let lines = try await readLines(bytes, until: "event: screen-clear")
+        XCTAssertTrue(lines.contains("event: screen"))
+        XCTAssertTrue(lines.contains { $0.hasPrefix("data:") && $0.contains("\"duration\":12000")
+            && $0.contains("{\"box\":{\"bottom\":0.4,\"left\":0.05,\"right\":0.2,\"top\":0.3},\"line\":0.03,\"paragraphs\":true,\"text\":\"Harita\\nAyarlar\"}")
+            && $0.contains("\"line\":0.04,\"text\":\"Kapıyı aç.\"}") })
+    }
+
     func testSpeechIsAnnouncedAndServed() async throws {
         let server = SubtitleServer(port: 0)
         let port = try await server.start()

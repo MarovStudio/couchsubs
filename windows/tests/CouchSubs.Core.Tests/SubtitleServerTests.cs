@@ -53,6 +53,27 @@ public class SubtitleServerTests
     }
 
     [Fact]
+    public async Task StreamsScreenTranslationsAndTheirClear()
+    {
+        using var server = new SubtitleServer(0);
+        var port = await server.StartAsync();
+        using var response = await Http.GetAsync($"http://127.0.0.1:{port}/events", HttpCompletionOption.ResponseHeadersRead);
+        await WaitUntil(() => server.ConnectedClients == 1);
+        server.SendScreen([
+            new("Map\nSettings", "Harita\nAyarlar", new TextBox(0.05, 0.3, 0.2, 0.4), 0.03),
+            new("Open the door.", "Kapıyı aç.", new TextBox(0.4, 0.8, 0.6, 0.84), 0.04),
+        ], 12000);
+        server.ClearScreen();
+
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
+        var lines = await ReadLines(reader, "event: screen-clear");
+        Assert.Contains("event: screen", lines);
+        Assert.Contains(lines, l => l.StartsWith("data:") && l.Contains("\"duration\":12000") &&
+            l.Contains("{\"box\":{\"bottom\":0.4,\"left\":0.05,\"right\":0.2,\"top\":0.3},\"line\":0.03,\"paragraphs\":true,\"text\":\"Harita\\nAyarlar\"}") &&
+            l.Contains("{\"box\":{\"bottom\":0.84,\"left\":0.4,\"right\":0.6,\"top\":0.8},\"line\":0.04,\"text\":\"Kapıyı aç.\"}"));
+    }
+
+    [Fact]
     public async Task TurkishTextIsSentAsUtf8()
     {
         using var server = new SubtitleServer(0);

@@ -20,10 +20,12 @@ public enum HotkeyAction
     Snapshot,
     /// <summary>Num 0: canlı altyazı çevirisini duraklat / sürdür.</summary>
     PauseSubtitles,
+    /// <summary>Num 9: ekranın tamamını bir kez çevir; yeniden basınca çeviriler kalkar.</summary>
+    Screen,
 }
 
 /// <summary>
-/// Genel kısayollar (Num 0, 1, 2, 3, 5, 8): kullanıcı kumandayla oynarken bilgisayardaki pencere arka planda olsa da çalışır.
+/// Genel kısayollar (Num 0, 1, 2, 3, 5, 8, 9): kullanıcı kumandayla oynarken bilgisayardaki pencere arka planda olsa da çalışır.
 /// Kısayollar yalnız <see cref="Enabled"/> iken tutulur; böylece çeviri kapalıyken sayı tuşları diğer uygulamalarda
 /// (Excel gibi) normal çalışır. Tuş başka bir uygulamada kullanılıyorsa sessizce atlanır.
 /// </summary>
@@ -33,7 +35,7 @@ public sealed partial class GlobalHotkeys : IDisposable
     private const uint ModNoRepeat = 0x4000;
     private const int FirstId = 0x4353;
 
-    /// <summary>Num 0, 1, 2, 3, 5, 8 (NumLock açıkken).</summary>
+    /// <summary>Num 0, 1, 2, 3, 5, 8, 9 (NumLock açıkken).</summary>
     private static readonly (HotkeyAction Action, uint VirtualKey)[] Keys =
     [
         (HotkeyAction.ExtraRegion1, 0x61),
@@ -42,6 +44,7 @@ public sealed partial class GlobalHotkeys : IDisposable
         (HotkeyAction.FreeArea, 0x65),
         (HotkeyAction.Snapshot, 0x68),
         (HotkeyAction.PauseSubtitles, 0x60),
+        (HotkeyAction.Screen, 0x69),
     ];
 
     [LibraryImport("user32.dll", SetLastError = true)]

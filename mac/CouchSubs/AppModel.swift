@@ -734,6 +734,65 @@ final class AppModel {
         sleepActivity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled],
                                                               reason: "Translating game subtitles")
         isRunning = true
+        if screenHotkey == nil { screenHotkey = ScreenHotkey { [weak self] in self?.translateScreen() } }
+        screenHotkey?.enabled = true
+    }
+
+    // MARK: - Ekranı çevir
+
+    /// ⌥⌘T yalnız çeviri sürerken tutulur.
+    @ObservationIgnored private var screenHotkey: ScreenHotkey?
+    /// Süren "ekranı çevir" işi; yeniden basılınca iptal edilir.
+    @ObservationIgnored private var screenTask: Task<Void, Never>?
+    /// TV'deki ekran çevirilerinin kalkacağı an; bu andan önce yeniden basmak onları kaldırır.
+    @ObservationIgnored private var screenShownUntil = Date.distantPast
+
+    /// ⌥⌘T: oyunun şu anki karesinin tamamını bir kez okur, her yazı grubunu ayrı çevirip TV'de kendi yerine koyar.
+    /// Çeviriler hazırlandıkça TV'ye gider. Çeviri sürerken ya da çeviriler TV'deyken yeniden basmak onları kaldırır.
+    func translateScreen() {
+        guard isRunning, let frame = lastFrame else { return }
+        if let task = screenTask {
+            task.cancel()
+            screenTask = nil
+            hideScreen()
+            return
+        }
+        if Date() < screenShownUntil {
+            hideScreen()
+            return
+        }
+        server.sendStyle(settings.style)
+        server.sendSubtitle(String(localized: "Translating the screen…"), durationMs: 2500)
+        let reader = VisionReader(language: settings.sourceLanguage)
+        let translator = makeTranslator()
+        let server = self.server
+        screenTask = Task { [weak self] in
+            do {
+                let reading = try await Task.detached(priority: .userInitiated) { try reader.readLines(frame, deep: false) }.value
+                let items = try await ScreenTranslation.translate(reading, using: { try await translator.translate($0) }) { shown in
+                    guard !Task.isCancelled else { return }
+                    let milliseconds = ScreenTranslation.displayMilliseconds(shown)
+                    server.sendScreen(shown, durationMs: milliseconds)
+                    self?.screenShownUntil = Date().addingTimeInterval(Double(milliseconds) / 1000)
+                }
+                server.clear()
+                if items.isEmpty { server.sendSubtitle(String(localized: "No text found on the screen."), durationMs: 2500) }
+            } catch is CancellationError {
+                return
+            } catch let error as TranslatorError {
+                server.clear()
+                self?.translatorStatus = Self.translatorStatus(after: error)
+            } catch {
+                server.clear()
+            }
+            if !Task.isCancelled { self?.screenTask = nil }
+        }
+    }
+
+    private func hideScreen() {
+        screenShownUntil = .distantPast
+        server.clearScreen()
+        server.clear()
     }
 
     func tvMoved(to moved: LGTV) {
@@ -824,6 +883,11 @@ final class AppModel {
         pipeline?.reset()
         pipeline = nil
         activeLanguages = nil
+        screenHotkey?.enabled = false
+        screenTask?.cancel()
+        screenTask = nil
+        if Date() < screenShownUntil { server.clearScreen() }
+        screenShownUntil = .distantPast
         if let dubber {
             self.dubber = nil
             Task { await dubber.shutdown() }

@@ -611,6 +611,81 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         }
     }
 
+    /// <summary>Süren "ekranı çevir" işi; yeniden basılınca iptal edilir.</summary>
+    private CancellationTokenSource? screenWork;
+    /// <summary>TV'deki ekran çevirilerinin kalkacağı an; bu andan önce yeniden basmak onları kaldırır.</summary>
+    private DateTime screenShownUntil;
+
+    /// <summary>
+    /// Num 9: oyunun şu anki karesinin tamamını bir kez okur, her yazı grubunu ayrı çevirip TV'de kendi yerine koyar.
+    /// Çeviriler hazırlandıkça TV'ye gider. Çeviri sürerken ya da çeviriler TV'deyken yeniden basmak onları kaldırır.
+    /// </summary>
+    public async Task<ScreenOutcome> TranslateScreenAsync()
+    {
+        var reader = activeReader;
+        if (!isRunning || reader is null || lastFrame is not { } frame) return ScreenOutcome.NotRunning;
+        if (screenWork is { } running)
+        {
+            running.Cancel();
+            screenWork = null;
+            HideScreen();
+            return ScreenOutcome.Cleared;
+        }
+        if (DateTime.UtcNow < screenShownUntil)
+        {
+            HideScreen();
+            return ScreenOutcome.Cleared;
+        }
+
+        using var work = new CancellationTokenSource();
+        screenWork = work;
+        server.SendStyle(settings.Style);
+        server.SendSubtitle(text["Translating the screen…"], 2500);
+        try
+        {
+            var translator = MakeTranslator();
+            var items = await ScreenTranslation.TranslateAsync(frame, reader, translator, shown =>
+            {
+                if (work.IsCancellationRequested) return;
+                server.SendScreen(shown, ScreenTranslation.DisplayMilliseconds(shown));
+                screenShownUntil = DateTime.UtcNow.AddMilliseconds(ScreenTranslation.DisplayMilliseconds(shown));
+            }, work.Token);
+            server.Clear();
+            if (items.Count == 0)
+            {
+                server.SendSubtitle(text["No text found on the screen."], 2500);
+                return ScreenOutcome.NoText;
+            }
+            return ScreenOutcome.Shown;
+        }
+        catch (OperationCanceledException)
+        {
+            return ScreenOutcome.Cleared;
+        }
+        catch (TranslatorException error)
+        {
+            server.Clear();
+            post(() => TranslatorStatus = error.Status);
+            return ScreenOutcome.TranslatorUnavailable;
+        }
+        catch
+        {
+            server.Clear();
+            return ScreenOutcome.Failed;
+        }
+        finally
+        {
+            if (screenWork == work) screenWork = null;
+        }
+    }
+
+    private void HideScreen()
+    {
+        screenShownUntil = default;
+        server.ClearScreen();
+        server.Clear();
+    }
+
     /// <summary>Kurulumu baştan başlatır (kayıtlı her şeyi siler).</summary>
     public void ResetSetup()
     {
@@ -674,6 +749,10 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         pipeline?.Reset();
         pipeline = null;
         activeReader = null;
+        screenWork?.Cancel();
+        screenWork = null;
+        if (DateTime.UtcNow < screenShownUntil) server.ClearScreen();
+        screenShownUntil = default;
         SubtitlesPaused = false;
         ActiveSourceLanguage = null;
         StopDubber();
@@ -1072,3 +1151,6 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
 
 /// <summary>Ek bölgenin tek seferlik çevirisinin sonucu.</summary>
 public enum ExtraRegionOutcome { Shown, NoText, NotConfigured, NotRunning, Busy, TranslatorUnavailable, Failed }
+
+/// <summary>"Ekranı çevir"in sonucu; <see cref="Cleared"/>: TV'deki çeviriler kaldırıldı ya da süren iş iptal edildi.</summary>
+public enum ScreenOutcome { Shown, NoText, Cleared, NotRunning, TranslatorUnavailable, Failed }

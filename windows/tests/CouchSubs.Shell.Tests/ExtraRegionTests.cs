@@ -143,3 +143,47 @@ public class ExtraRegionTests
         controller.Stop();
     }
 }
+
+public class ScreenTranslationControllerTests
+{
+    private static (AppController Controller, FakeServices Services) Ready()
+    {
+        var services = new FakeServices();
+        var store = new MemoryStore();
+        store.Save(StoreKeys.AccountId, Enumerable.Repeat((byte)1, 8).ToArray());
+        store.Save(StoreKeys.Console, new RegisteredConsole("192.168.1.253", "PS5", Enumerable.Repeat((byte)0x31, 16).ToArray(), Enumerable.Repeat((byte)2, 16).ToArray()));
+        store.Save(StoreKeys.Tv, new LgTv("LG TV", "127.0.0.1"));
+        store.Save(StoreKeys.TvKey, "tv-key");
+        return (AppControllerTests.Make(services, store), services);
+    }
+
+    [Fact]
+    public async Task DoesNothingWhileTranslationIsStopped()
+    {
+        var (controller, _) = Ready();
+        Assert.Equal(ScreenOutcome.NotRunning, await controller.TranslateScreenAsync());
+    }
+
+    [Fact]
+    public async Task EmptyScreenReportsNoText()
+    {
+        var (controller, services) = Ready();
+        await controller.StartAsync();
+        services.Streams[0].Emit(Frame.Blank(64, 64));
+        Assert.Equal(ScreenOutcome.NoText, await controller.TranslateScreenAsync());
+        controller.Stop();
+    }
+
+    [Fact]
+    public async Task SecondPressRemovesTheTranslations()
+    {
+        var (controller, services) = Ready();
+        services.ReaderLines = new Reading([new TextLine("Open the door.", new TextBox(0.4, 0.8, 0.6, 0.84))]);
+        await controller.StartAsync();
+        services.Streams[0].Emit(Frame.Blank(64, 64));
+        Assert.Equal(ScreenOutcome.Shown, await controller.TranslateScreenAsync());
+        Assert.Equal(ScreenOutcome.Cleared, await controller.TranslateScreenAsync());
+        Assert.Equal(ScreenOutcome.Shown, await controller.TranslateScreenAsync());
+        controller.Stop();
+    }
+}

@@ -3920,6 +3920,102 @@
           }
         }
       }
+    },
+    "Translate the screen (Num 9)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate the screen (Num 9)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekranı çevir (Num 9)"
+          }
+        }
+      }
+    },
+    "Press Num 9 while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press Num 9 while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynarken Num 9'a basın: ekrandaki bütün yazılar bir kez çevrilir ve TV'de her biri kendi yerinde gösterilir. Çevirileri kaldırmak için yeniden basın."
+          }
+        }
+      }
+    },
+    "Translate the screen (⌥⌘T)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate the screen (⌥⌘T)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekranı çevir (⌥⌘T)"
+          }
+        }
+      }
+    },
+    "Press ⌥⌘T while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press ⌥⌘T while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynarken ⌥⌘T'ye basın: ekrandaki bütün yazılar bir kez çevrilir ve TV'de her biri kendi yerinde gösterilir. Çevirileri kaldırmak için yeniden basın."
+          }
+        }
+      }
+    },
+    "Translating the screen…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translating the screen…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekran çevriliyor…"
+          }
+        }
+      }
+    },
+    "No text found on the screen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No text found on the screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekranda yazı bulunamadı."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

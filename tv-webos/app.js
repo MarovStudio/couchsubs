@@ -145,6 +145,55 @@
     $('subtitle-prev').className = 'hidden';
   }
 
+  // --- Ekranı çevir ---
+  // Bilgisayar ekranın tamamını okuyup her yazı grubunun çevirisini yeriyle gönderir. Her çeviri kendi İngilizce
+  // yazısını örter; yazı boyu o yazının satır yüksekliğinden seçilir, Türkçe uzun gelirse sığana kadar küçülür.
+
+  var screenTimer = null;
+  var SCREEN_PAD = 0.004;
+  var SCREEN_MIN_FONT = 14;
+
+  function showScreen(items, duration) {
+    var host = $('screen');
+    host.innerHTML = '';
+    host.className = '';
+    var width = window.innerWidth || 1920;
+    var height = window.innerHeight || 1080;
+    for (var i = 0; i < (items || []).length; i++) {
+      var item = items[i];
+      var box = validBox(item && item.box);
+      if (!box || !item.text) continue;
+      var el = document.createElement('div');
+      el.className = item.paragraphs === true ? 'item paragraphs' : 'item';
+      el.textContent = item.text;
+      var left = Math.max(0, box.left - SCREEN_PAD);
+      var top = Math.max(0, box.top - SCREEN_PAD);
+      var boxHeight = (box.bottom - box.top + 2 * SCREEN_PAD) * height;
+      el.style.left = (left * 100) + '%';
+      el.style.top = (top * 100) + '%';
+      el.style.width = Math.max(80, (Math.min(1, box.right + SCREEN_PAD) - left) * width) + 'px';
+      el.style.minHeight = Math.round(boxHeight) + 'px';
+      var line = typeof item.line === 'number' && item.line > 0 ? item.line * height : box.bottom * height - box.top * height;
+      var size = Math.max(SCREEN_MIN_FONT, Math.min(96, Math.round(line * 0.95)));
+      el.style.fontSize = size + 'px';
+      host.appendChild(el);
+      // Türkçe çoğu zaman İngilizceden uzundur: kutu biraz uzayabilir, daha fazlası için yazı küçülür.
+      var limit = Math.max(boxHeight * 1.5, line * 2.6);
+      while (el.scrollHeight > limit && size > SCREEN_MIN_FONT) {
+        size -= 2;
+        el.style.fontSize = size + 'px';
+      }
+    }
+    clearTimeout(screenTimer);
+    screenTimer = setTimeout(hideScreen, duration || 20000);
+  }
+
+  function hideScreen() {
+    clearTimeout(screenTimer);
+    $('screen').className = 'hidden';
+    $('screen').innerHTML = '';
+  }
+
   // Konum hem CouchSubs uygulamasından hem kumandanın oklarıyla ayarlanır. Kumandayla
   // seçilen konum, uygulamadaki ayar değişene kadar korunur (son değiştiren geçerlidir).
   function setBottom(percent) {
@@ -257,12 +306,15 @@
     eventSource.onerror = function () {
       // Uygulamayla bağlantı koptuysa eski altyazı ekranda asılı kalmasın.
       hideSubtitle();
+      hideScreen();
       setStatus('st-conn', t('reconnecting'), 'bad');
       // Bilgisayarın adresi değişmiş olabilir.
       scheduleScan();
     };
     onEvent('subtitle', function (data) { if (data.text) showSubtitle(data.text, data.duration, data.box, data.paragraphs === true); });
     onEvent('clear', hideSubtitle);
+    onEvent('screen', function (data) { showScreen(data.items, data.duration); });
+    onEvent('screen-clear', hideScreen);
     onEvent('style', applyStyle);
     onEvent('speech', function (data) { if (data.url) playSpeech(server + data.url); });
     onEvent('speech-stop', stopSpeech);

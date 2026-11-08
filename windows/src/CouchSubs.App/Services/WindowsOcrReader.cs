@@ -57,19 +57,39 @@ public sealed class WindowsOcrReader : ITextReader
         var result = engine.RecognizeAsync(bitmap).AsTask().GetAwaiter().GetResult();
         double width = image.Width, height = image.Height;
         var lines = result.Lines
-            .Select(line =>
-            {
-                // Satırın kutusu sözcük kutularının birleşimidir; görüntünün kenarlarına oranla verilir.
-                TextBox? box = null;
-                foreach (var word in line.Words)
-                {
-                    var r = word.BoundingRect;
-                    var wordBox = new TextBox(r.X / width, r.Y / height, (r.X + r.Width) / width, (r.Y + r.Height) / height);
-                    box = box?.Union(wordBox) ?? wordBox;
-                }
-                return new TextLine(line.Text.Trim(), box);
-            })
+            .SelectMany(line => Split(line, width, height))
             .OrderBy(line => line.Box?.Top ?? 0);
         return new Reading(lines);
+    }
+
+    /// <summary>
+    /// Satırın kutusu sözcük kutularının birleşimidir; görüntünün kenarlarına oranla verilir. Windows aynı hizadaki
+    /// uzak yazıları (soldaki menü, sağdaki gösterge) bazen tek satır sayar; sözcükler arasında satır yüksekliğinin
+    /// iki katından geniş boşluk varsa satır orada ayrı satırlara bölünür.
+    /// </summary>
+    private static IEnumerable<TextLine> Split(OcrLine line, double width, double height)
+    {
+        var words = line.Words.ToList();
+        if (words.Count == 0) yield break;
+        var lineHeight = words.Max(word => word.BoundingRect.Height);
+        var start = 0;
+        for (var index = 1; index <= words.Count; index++)
+        {
+            var end = index == words.Count;
+            if (!end && words[index].BoundingRect.X - (words[index - 1].BoundingRect.X + words[index - 1].BoundingRect.Width) <= lineHeight * 2)
+                continue;
+            var part = words.GetRange(start, index - start);
+            TextBox? box = null;
+            foreach (var word in part)
+            {
+                var r = word.BoundingRect;
+                var wordBox = new TextBox(r.X / width, r.Y / height, (r.X + r.Width) / width, (r.Y + r.Height) / height);
+                box = box?.Union(wordBox) ?? wordBox;
+            }
+            // Bölünmeyen satırın metni Windows'un verdiği gibi kalır (boşluksuz yazılan dillerde sözcükler birleşik).
+            var text = start == 0 && end ? line.Text : string.Join(' ', part.Select(word => word.Text));
+            yield return new TextLine(text.Trim(), box);
+            start = index;
+        }
     }
 }

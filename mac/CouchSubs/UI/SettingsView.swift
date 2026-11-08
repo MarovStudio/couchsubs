@@ -83,6 +83,9 @@ struct SettingsView: View {
                         RegionPicker(region: $model.settings.region, frame: model.lastFrame)
                         HintText(text: "Adjust the frame so it covers where the game shows its subtitles.")
                     }
+                    Card(title: "Translate the screen (⌥⌘T)") {
+                        HintText(text: "Press ⌥⌘T while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations.")
+                    }
                     TVAppCard()
                     Card {
                         HStack(spacing: Theme.space("m")) {

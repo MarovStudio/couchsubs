@@ -120,13 +120,7 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
             ["text"] = text,
         };
         if (paragraphs) json["paragraphs"] = true;
-        if (box is { } b)
-        {
-            json["box"] = new SortedDictionary<string, object>
-            {
-                ["bottom"] = Round(b.Bottom), ["left"] = Round(b.Left), ["right"] = Round(b.Right), ["top"] = Round(b.Top),
-            };
-        }
+        if (box is { } b) json["box"] = BoxJson(b);
         Broadcast(Frame("subtitle", json));
     }
 
@@ -136,6 +130,34 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
         Math.Round((decimal)Math.Clamp(value, 0, 1), 4) / 1.000000000000000000000000000000000m;
 
     public void Clear() => Broadcast(Frame("clear", new SortedDictionary<string, object>()));
+
+    /// <summary>
+    /// "Ekranı çevir" sonuçları: <c>screen</c> olayı her çeviriyi yazının yeri (<c>box</c>), tipik satır yüksekliği
+    /// (<c>line</c>, ekrana oranla) ve çok parçalıysa <c>paragraphs</c> ile taşır. TV öncekinin yerine bunları koyar.
+    /// </summary>
+    public void SendScreen(IReadOnlyList<ScreenTranslation.Item> items, int durationMs)
+    {
+        var list = items.Select(item =>
+        {
+            var json = new SortedDictionary<string, object>
+            {
+                ["box"] = BoxJson(item.Box),
+                ["line"] = Round(item.LineHeight),
+                ["text"] = item.Translation,
+            };
+            if (item.Paragraphs) json["paragraphs"] = true;
+            return json;
+        }).ToList();
+        Broadcast(Frame("screen", new SortedDictionary<string, object> { ["duration"] = durationMs, ["items"] = list }));
+    }
+
+    /// <summary>TV'deki "ekranı çevir" çevirilerini kaldırır (altyazıya dokunmaz).</summary>
+    public void ClearScreen() => Broadcast(Frame("screen-clear", new SortedDictionary<string, object>()));
+
+    private static SortedDictionary<string, object> BoxJson(TextBox b) => new()
+    {
+        ["bottom"] = Round(b.Bottom), ["left"] = Round(b.Left), ["right"] = Round(b.Right), ["top"] = Round(b.Top),
+    };
 
     /// <summary>Dosyayı <paramref name="path"/> adresinden verir ("/voices/male_1.wav").</summary>
     public void Publish(byte[] data, string path, string type = "audio/wav")
