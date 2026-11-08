@@ -3744,6 +3744,182 @@
           }
         }
       }
+    },
+    "Online translation (DeepL)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online translation (DeepL)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çevrimiçi çeviri (DeepL)"
+          }
+        }
+      }
+    },
+    "Optional. With your own free DeepL key, translations read more naturally. Subtitle text is sent to DeepL; when DeepL cannot be reached, the translation model on this computer takes over.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. With your own free DeepL key, translations read more naturally. Subtitle text is sent to DeepL; when DeepL cannot be reached, the translation model on this computer takes over."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İsteğe bağlı. Kendi ücretsiz DeepL anahtarınızla çeviriler daha doğal olur. Altyazı metni DeepL'e gönderilir; DeepL'e ulaşılamazsa bu bilgisayardaki çeviri modeli devreye girer."
+          }
+        }
+      }
+    },
+    "Save and test": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save and test"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaydet ve dene"
+          }
+        }
+      }
+    },
+    "Get a free DeepL API key": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get a free DeepL API key"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ücretsiz DeepL API anahtarı alın"
+          }
+        }
+      }
+    },
+    "Translate with DeepL": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate with DeepL"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL ile çevir"
+          }
+        }
+      }
+    },
+    "Remove key": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove key"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anahtarı sil"
+          }
+        }
+      }
+    },
+    "DeepL API key": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL API key"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL API anahtarı"
+          }
+        }
+      }
+    },
+    "This month: %1$@ of %2$@ characters used.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This month: %1$@ of %2$@ characters used."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu ay: %2$@ karakterin %1$@ kadarı kullanıldı."
+          }
+        }
+      }
+    },
+    "This month's DeepL limit is used up. Until it renews, the translation model on this computer translates.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This month's DeepL limit is used up. Until it renews, the translation model on this computer translates."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu ayın DeepL sınırı doldu. Sınır yenilenene kadar bu bilgisayardaki çeviri modeli çevirir."
+          }
+        }
+      }
+    },
+    "DeepL did not accept this key. Copy it again from your DeepL account page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL did not accept this key. Copy it again from your DeepL account page."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL bu anahtarı kabul etmedi. Anahtarı DeepL hesap sayfanızdan yeniden kopyalayın."
+          }
+        }
+      }
+    },
+    "DeepL could not be reached. Check your internet connection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL could not be reached. Check your internet connection."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL'e ulaşılamadı. İnternet bağlantınızı kontrol edin."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

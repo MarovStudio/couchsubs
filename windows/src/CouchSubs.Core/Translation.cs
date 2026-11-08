@@ -28,3 +28,10 @@ public sealed class TranslatorException(TranslatorStatus status)
 {
     public TranslatorStatus Status { get; } = status;
 }
+
+/// <summary>Çevrimiçi çeviri anahtarı (DeepL) denendiğinde ne çıktı.</summary>
+public enum OnlineKeyState { Valid, Invalid, QuotaExceeded, Unreachable }
+
+/// <param name="Used">Bu ay kullanılan karakter (geçerli anahtarda).</param>
+/// <param name="Limit">Aylık sınır.</param>
+public sealed record OnlineKeyCheck(OnlineKeyState State, long Used = 0, long Limit = 0);

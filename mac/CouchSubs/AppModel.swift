@@ -17,6 +17,8 @@ enum StoreKey {
     /// LG geliştirici modu süresinin son uzatıldığı an.
     static let devSessionRenewed = "devSessionRenewed"
     static let settings = "settings"
+    /// Kullanıcının DeepL anahtarı (isteğe bağlı çevrimiçi çeviri).
+    static let deepLKey = "deepLKey"
 }
 
 /// Kalıcı ayarlar (Anahtarlık değil, sıradan tercihler).
@@ -26,6 +28,8 @@ struct UserSettings: Codable, Equatable {
     var sourceLanguage = "en"
     var targetLanguage = "tr"
     var dubbing = DubbingSettings()
+    /// Anahtar girildiyse çeviri DeepL'le yapılır; kapalıysa ya da DeepL'e ulaşılamazsa Apple'ın cihaz üstü çevirisi.
+    var onlineTranslation = false
 
     init() {}
 
@@ -38,6 +42,7 @@ struct UserSettings: Codable, Equatable {
         sourceLanguage = try values.decodeIfPresent(String.self, forKey: .sourceLanguage) ?? defaults.sourceLanguage
         targetLanguage = try values.decodeIfPresent(String.self, forKey: .targetLanguage) ?? defaults.targetLanguage
         dubbing = (try? values.decodeIfPresent(DubbingSettings.self, forKey: .dubbing)) ?? defaults.dubbing
+        onlineTranslation = try values.decodeIfPresent(Bool.self, forKey: .onlineTranslation) ?? defaults.onlineTranslation
     }
 }
 
@@ -62,6 +67,11 @@ final class EphemeralStore: AppStore {
 }
 
 /// Dış dünyayla (PS5, PSN, TV) konuşan her şey; testlerde sahtesi kullanılır.
+extension AppServices {
+    /// DeepL anahtarını dener (ayarlardaki "Kaydet ve dene").
+    func checkOnlineKey(_ key: String) async -> OnlineKeyCheck { await DeepLTranslator.check(key: key) }
+}
+
 protocol AppServices: AnyObject {
     func discoverConsoles() async -> [ConsoleInfo]
     func accountId(fromRedirect url: URL) async throws -> Data
@@ -353,7 +363,9 @@ final class AppModel {
             if let data = try? JSONEncoder().encode(settings) { defaults.set(data, forKey: StoreKey.settings) }
             server.sendStyle(settings.style)
             if settings.dubbing != oldValue.dubbing { dubbingSettingsChanged(from: oldValue.dubbing) }
-            if isRunning, settings.sourceLanguage != oldValue.sourceLanguage || settings.targetLanguage != oldValue.targetLanguage {
+            if settings.onlineTranslation != oldValue.onlineTranslation { Task { await refreshTranslatorStatus() } }
+            if isRunning, settings.sourceLanguage != oldValue.sourceLanguage || settings.targetLanguage != oldValue.targetLanguage
+                || settings.onlineTranslation != oldValue.onlineTranslation {
                 Task { await refreshTranslatorStatus() }
                 makePipeline()
             }
@@ -412,6 +424,7 @@ final class AppModel {
         self.tv = tv
         settings = defaults.data(forKey: StoreKey.settings).flatMap { try? JSONDecoder().decode(UserSettings.self, from: $0) } ?? UserSettings()
         step = ready ? .done : .welcome
+        deepLKeySaved = store.load(String.self, for: StoreKey.deepLKey)?.isEmpty == false
         server.onClientsChanged = { [weak self] count in self?.tvClients = count }
     }
 
@@ -732,7 +745,7 @@ final class AppModel {
     private func makePipeline() {
         pipeline?.reset()
         let pipeline = SubtitlePipeline(reader: VisionReader(language: settings.sourceLanguage),
-                                        translator: Translator(source: settings.sourceLanguage, target: settings.targetLanguage),
+                                        translator: makeTranslator(),
                                         server: server, scheduler: ReadScheduler())
         pipeline.onPair = { [weak self, weak pipeline] source, translation in
             self?.lastSource = source
@@ -750,7 +763,57 @@ final class AppModel {
     }
 
     private func refreshTranslatorStatus() async {
+        if onlineTranslationActive {
+            translatorStatus = .ready
+            return
+        }
         translatorStatus = await Translator.status(source: settings.sourceLanguage, target: settings.targetLanguage)
+    }
+
+    // MARK: - Çevrimiçi çeviri (DeepL)
+
+    private func makeTranslator() -> TextTranslator {
+        let local = Translator(source: settings.sourceLanguage, target: settings.targetLanguage)
+        guard onlineTranslationActive, let key = store.load(String.self, for: StoreKey.deepLKey) else { return local }
+        return DeepLTranslator(key: key, fallback: local)
+    }
+
+    /// DeepL yalnız İngilizce→Türkçe için açılır.
+    private var onlineTranslationActive: Bool {
+        settings.onlineTranslation && settings.sourceLanguage == "en" && settings.targetLanguage == "tr" && hasDeepLKey
+    }
+
+    /// Kayıtlı bir DeepL anahtarı var mı (anahtarın kendisi arayüze hiç dönmez).
+    var hasDeepLKey: Bool { deepLKeySaved }
+    private var deepLKeySaved = false
+
+    /// Anahtar denenir; geçerliyse (kotası bitmiş olsa da) Anahtarlık'a yazılır ve çevrimiçi çeviri açılır.
+    func setDeepLKey(_ key: String) async -> OnlineKeyCheck {
+        let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        let check = await services.checkOnlineKey(key)
+        if check.state == .valid || check.state == .quotaExceeded {
+            store.save(key, for: StoreKey.deepLKey)
+            deepLKeySaved = true
+            if settings.onlineTranslation {
+                if isRunning { makePipeline() }
+            } else {
+                settings.onlineTranslation = true
+            }
+            await refreshTranslatorStatus()
+        }
+        return check
+    }
+
+    /// Kayıtlı anahtarın bu ayki kullanımı.
+    func deepLUsage() async -> OnlineKeyCheck {
+        guard let key = store.load(String.self, for: StoreKey.deepLKey) else { return OnlineKeyCheck(state: .invalid) }
+        return await services.checkOnlineKey(key)
+    }
+
+    func removeDeepLKey() {
+        store.remove(StoreKey.deepLKey)
+        deepLKeySaved = false
+        settings.onlineTranslation = false
     }
 
     func stop() {

@@ -28,8 +28,8 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
     private ISentenceEngine? _engine;
     private bool _disposed;
 
-    public MarianTranslator(string modelDirectory, int maxOutputTokens = 128)
-        : this(() => new OnnxMarianEngine(modelDirectory, maxOutputTokens), () => IsInstalledIn(modelDirectory)) { }
+    public MarianTranslator(string modelDirectory, int maxOutputTokens = 128, int beams = OnnxMarianEngine.DefaultBeams)
+        : this(() => new OnnxMarianEngine(modelDirectory, maxOutputTokens, beams), () => IsInstalledIn(modelDirectory)) { }
 
     internal MarianTranslator(Func<ISentenceEngine> engineFactory, Func<bool> isInstalled)
     {
@@ -101,7 +101,7 @@ public sealed class MarianTranslator : ITextTranslator, IDisposable
             if (_cache.TryGetValue(sentence, out var cached)) return cached;
             var engine = _engine ??= CreateEngine();
             // Çıkarım CPU'yu saniyenin onda biri kadar tutar; çağıranın (arayüz) iş parçacığını bloklamasın.
-            var input = SubtitleSegmenter.NormalizeCase(sentence, _names.Keys.ToHashSet(StringComparer.Ordinal));
+            var input = GameEnglish.Plain(SubtitleSegmenter.NormalizeCase(sentence, _names.Keys.ToHashSet(StringComparer.Ordinal)));
             var translation = await Task.Run(() => engine.Translate(input, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
             // Sıra bırakılmadan önce önbelleğe yazılır; sırada bekleyen aynı cümle yeniden çevrilmez.

@@ -83,7 +83,7 @@ final class Translator: TextTranslator {
             default: throw TranslatorError.unsupported
             }
         }
-        let result = try await session!.translate(SubtitleSegmenter.normalizeCase(sentence, names: names.all)).targetText
+        let result = try await session!.translate(GameEnglish.plain(SubtitleSegmenter.normalizeCase(sentence, names: names.all))).targetText
         remember(sentence, result)
         return result
     }

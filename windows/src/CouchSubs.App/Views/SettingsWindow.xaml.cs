@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Navigation;
 using CouchSubs.Core;
 using CouchSubs.Shell;
 
@@ -43,8 +45,64 @@ public partial class SettingsWindow : Window
         controller.SnapshotRequested += OnSnapshot;
         Closed += (_, _) => controller.SnapshotRequested -= OnSnapshot;
         Dubbing.Attach(controller);
+        ShowDeepL();
+        if (controller.HasDeepLKey) _ = ShowDeepLUsageAsync();
         loading = false;
     }
+
+    private void ShowDeepL()
+    {
+        var saved = controller.HasDeepLKey;
+        DeepLNewKey.Visibility = saved ? Visibility.Collapsed : Visibility.Visible;
+        DeepLSaved.Visibility = saved ? Visibility.Visible : Visibility.Collapsed;
+        var wasLoading = loading;
+        loading = true;
+        DeepLOn.IsChecked = controller.Settings.OnlineTranslation;
+        loading = wasLoading;
+    }
+
+    private void ShowDeepLStatus(OnlineKeyCheck check)
+    {
+        DeepLStatus.Visibility = Visibility.Visible;
+        DeepLStatus.Text = check.State switch
+        {
+            OnlineKeyState.Valid => Localizer.Current.Format("This month: %1$@ of %2$@ characters used.",
+                check.Used.ToString("N0"), check.Limit.ToString("N0")),
+            OnlineKeyState.QuotaExceeded => Localizer.Current["This month's DeepL limit is used up. Until it renews, the translation model on this computer translates."],
+            OnlineKeyState.Invalid => Localizer.Current["DeepL did not accept this key. Copy it again from your DeepL account page."],
+            _ => Localizer.Current["DeepL could not be reached. Check your internet connection."],
+        };
+    }
+
+    private async Task ShowDeepLUsageAsync() => ShowDeepLStatus(await controller.CheckDeepLKeyAsync());
+
+    private async void OnDeepLSave(object sender, RoutedEventArgs e)
+    {
+        DeepLSave.IsEnabled = false;
+        try
+        {
+            var check = await controller.SetDeepLKeyAsync(DeepLKey.Password);
+            ShowDeepLStatus(check);
+            if (controller.HasDeepLKey) DeepLKey.Clear();
+            ShowDeepL();
+        }
+        finally
+        {
+            DeepLSave.IsEnabled = true;
+        }
+    }
+
+    private void OnDeepLToggle(object sender, RoutedEventArgs e) => Update(s => s with { OnlineTranslation = DeepLOn.IsChecked == true });
+
+    private void OnDeepLRemove(object sender, RoutedEventArgs e)
+    {
+        controller.RemoveDeepLKey();
+        DeepLStatus.Visibility = Visibility.Collapsed;
+        ShowDeepL();
+    }
+
+    private void OnLink(object sender, RequestNavigateEventArgs e) =>
+        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
 
     public static void Open(Window? owner, AppController controller) =>
         new SettingsWindow(controller) { Owner = owner }.ShowDialog();

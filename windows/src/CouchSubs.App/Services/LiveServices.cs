@@ -17,6 +17,10 @@ namespace CouchSubs.App.Services;
 public sealed class LiveServices : IAppServices
 {
     public ITranslationModel Translation { get; } = new MarianModel();
+
+    public ITextTranslator? MakeOnlineTranslator(string key, ITextTranslator? fallback) => new DeepLTranslator(key, fallback);
+
+    public Task<OnlineKeyCheck> CheckOnlineKeyAsync(string key) => DeepLTranslator.CheckAsync(key);
     public IDubbingModel? Dubbing { get; } = PocketDubbingModel.EngineBundled ? new PocketDubbingModel() : null;
     public IDubbingModel? FastDubbing { get; } = WindowsVoiceModel.Available ? new WindowsVoiceModel() : null;
     public IAudioOutput? Audio { get; } = new WindowsAudioOutput();

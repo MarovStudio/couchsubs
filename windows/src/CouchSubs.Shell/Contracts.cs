@@ -17,6 +17,8 @@ public static class StoreKeys
     public const string TvAppVersion = "tvAppVersion";
     /// <summary>LG geliştirici modu süresinin son uzatıldığı an.</summary>
     public const string DevSessionRenewed = "devSessionRenewed";
+    /// <summary>Kullanıcının DeepL anahtarı (isteğe bağlı çevrimiçi çeviri).</summary>
+    public const string DeepLKey = "deepLKey";
 }
 
 /// <summary>Kalıcı ayarlar (şifreli depo değil, sıradan ayar dosyası).</summary>
@@ -39,6 +41,8 @@ public sealed record UserSettings
     public string SourceLanguage { get; init; } = "en";
     public string TargetLanguage { get; init; } = "tr";
     public DubbingSettings Dubbing { get; init; } = new();
+    /// <summary>Anahtar girildiyse çeviri DeepL'le yapılır; kapalıysa ya da DeepL'e ulaşılamazsa cihaz üstü model.</summary>
+    public bool OnlineTranslation { get; init; }
 
     /// <summary>Ek bölgenin sayısı; <see cref="ExtraRegion"/> 1..ExtraRegionCount arasında çalışır.</summary>
     public const int ExtraRegionCount = 3;
@@ -145,6 +149,9 @@ public interface IAppServices
     /// </summary>
     bool HasOcrLanguage(string language) => true;
     ITranslationModel Translation { get; }
+    /// <summary>DeepL çevirmeni; <paramref name="fallback"/> DeepL'e ulaşılamayan satırları çevirir. Bu derlemede yoksa null.</summary>
+    ITextTranslator? MakeOnlineTranslator(string key, ITextTranslator? fallback) => null;
+    Task<OnlineKeyCheck> CheckOnlineKeyAsync(string key) => Task.FromResult(new OnlineKeyCheck(OnlineKeyState.Unreachable));
     /// <summary>Türkçe dublaj modeli; bu derlemede yoksa null.</summary>
     IDubbingModel? Dubbing => null;
     /// <summary>Hızlı dublaj: sistemin kendi Türkçe sesi (Windows'ta Microsoft Tolga); yoksa null.</summary>

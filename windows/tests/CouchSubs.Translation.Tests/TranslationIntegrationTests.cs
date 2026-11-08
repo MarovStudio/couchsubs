@@ -36,14 +36,18 @@ public sealed class TranslationIntegrationTests(LoadedTranslator loaded, ITestOu
         { "We do not have time for this, boy.", "zaman" },
         { "Wait!", "!" },
         { "Who are you?", "Kim" },
-        { "The gate will not hold much longer.", "Kapı" },
+        { "The gate will not hold much longer.", "dayan" },
         { "ATREUS: Father, look over there!", "ATREUS: Baba" },
         { "I know…", "Biliyorum" },
         { "Kratos.", "Kratos." },
         { "Boy! Focus. The draugr are still coming.", "Evlat!" },
         { "Mimir, how much farther?\nNot far now, brother.", "kardeş" },
         { "What is that? It looks like a door.", "Kapı" },
-        { "THE GATE WILL NOT HOLD MUCH LONGER.", "Kapı" },
+        { "THE GATE WILL NOT HOLD MUCH LONGER.", "dayan" },
+        // Oyun ifadeleri (GameEnglish) ve ışın araması: açgözlü çözme bunları "dost canlısı", "Altını aldım" diye çeviriyordu.
+        { "Hold your fire! They're friendlies!", "müttefik" },
+        { "I've got your six.", "Arka" },
+        { "Stay close. Something's not right about this place.", "terslik" },
     };
 
     [ModelTheory]

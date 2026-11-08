@@ -140,7 +140,8 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             settingsStore.Save(value);
             server.SendStyle(value.Style);
             if (old.Dubbing != value.Dubbing) DubbingSettingsChanged(old.Dubbing);
-            if (isRunning && (old.SourceLanguage != value.SourceLanguage || old.TargetLanguage != value.TargetLanguage))
+            if (isRunning && (old.SourceLanguage != value.SourceLanguage || old.TargetLanguage != value.TargetLanguage
+                              || old.OnlineTranslation != value.OnlineTranslation))
             {
                 RefreshTranslatorStatus();
                 MakePipeline();
@@ -751,16 +752,62 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
 
     private ITextTranslator MakeTranslator()
     {
+        var local = MakeLocalTranslator();
+        if (OnlineTranslationActive && store.Load<string>(StoreKeys.DeepLKey) is { } key &&
+            services.MakeOnlineTranslator(key, local is UnavailableTranslator ? null : local) is { } online)
+            return online;
+        return local;
+    }
+
+    private ITextTranslator MakeLocalTranslator()
+    {
         var translation = services.Translation;
         var (source, target) = (settings.SourceLanguage, settings.TargetLanguage);
         if (!translation.IsSupported(source, target)) return new UnavailableTranslator(TranslatorStatus.Unsupported);
         return translation.IsInstalled(source, target) ? translation.Create(source, target) : new UnavailableTranslator(TranslatorStatus.NeedsDownload);
     }
 
+    /// <summary>DeepL yalnız İngilizce→Türkçe için açılır (ayar ekranındaki dil seçenekleri de bunlar).</summary>
+    private bool OnlineTranslationActive =>
+        settings.OnlineTranslation && settings.SourceLanguage == "en" && settings.TargetLanguage == "tr" && HasDeepLKey;
+
+    /// <summary>Kayıtlı bir DeepL anahtarı var mı (anahtarın kendisi arayüze hiç dönmez).</summary>
+    public bool HasDeepLKey => store.Load<string>(StoreKeys.DeepLKey) is { Length: > 0 };
+
+    /// <summary>Anahtar denenir; geçerliyse (kotası bitmiş olsa da) şifreli depoya yazılır ve çevrimiçi çeviri açılır.</summary>
+    public async Task<OnlineKeyCheck> SetDeepLKeyAsync(string key)
+    {
+        key = key.Trim();
+        var check = await services.CheckOnlineKeyAsync(key);
+        if (check.State is OnlineKeyState.Valid or OnlineKeyState.QuotaExceeded)
+        {
+            store.Save(StoreKeys.DeepLKey, key);
+            Changed(nameof(HasDeepLKey));
+            if (settings.OnlineTranslation && isRunning) MakePipeline();
+            else Settings = settings with { OnlineTranslation = true };
+            RefreshTranslatorStatus();
+        }
+        return check;
+    }
+
+    /// <summary>Kayıtlı anahtarın bu ayki kullanımı.</summary>
+    public Task<OnlineKeyCheck> CheckDeepLKeyAsync() =>
+        store.Load<string>(StoreKeys.DeepLKey) is { Length: > 0 } key ? services.CheckOnlineKeyAsync(key)
+            : Task.FromResult(new OnlineKeyCheck(OnlineKeyState.Invalid));
+
+    public void RemoveDeepLKey()
+    {
+        store.Remove(StoreKeys.DeepLKey);
+        Changed(nameof(HasDeepLKey));
+        Settings = settings with { OnlineTranslation = false };
+        RefreshTranslatorStatus();
+    }
+
     private void RefreshTranslatorStatus()
     {
         var translation = services.Translation;
-        TranslatorStatus = !translation.IsSupported(settings.SourceLanguage, settings.TargetLanguage) ? TranslatorStatus.Unsupported
+        TranslatorStatus = OnlineTranslationActive ? TranslatorStatus.Ready
+            : !translation.IsSupported(settings.SourceLanguage, settings.TargetLanguage) ? TranslatorStatus.Unsupported
             : translation.IsInstalled(settings.SourceLanguage, settings.TargetLanguage) ? TranslatorStatus.Ready
             : TranslatorStatus.NeedsDownload;
     }

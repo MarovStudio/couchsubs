@@ -96,6 +96,19 @@ internal sealed class FakeServices : IAppServices
     public IDubbingModel? FastDubbing { get; set; }
     public FakeTranslation Translation { get; } = new();
     ITranslationModel IAppServices.Translation => Translation;
+    public OnlineKeyCheck KeyCheck { get; set; } = new(OnlineKeyState.Valid, 10, 500_000);
+    public List<string> CheckedKeys { get; } = [];
+    public List<(string Key, ITextTranslator? Fallback)> OnlineTranslators { get; } = [];
+    public Task<OnlineKeyCheck> CheckOnlineKeyAsync(string key)
+    {
+        CheckedKeys.Add(key);
+        return Task.FromResult(KeyCheck);
+    }
+    public ITextTranslator? MakeOnlineTranslator(string key, ITextTranslator? fallback)
+    {
+        OnlineTranslators.Add((key, fallback));
+        return fallback ?? Translation.Create("en", "tr");
+    }
 
     public Task<IReadOnlyList<ConsoleInfo>> DiscoverConsolesAsync() => Task.FromResult<IReadOnlyList<ConsoleInfo>>(Consoles);
     public Task<byte[]> AccountIdFromRedirectAsync(Uri redirect) => Task.FromResult(Enumerable.Repeat((byte)1, 8).ToArray());
@@ -425,6 +438,43 @@ public class AppControllerRunTests
         Assert.False(controller.DubbingInstalled);
         controller.Settings = controller.Settings with { Dubbing = controller.Settings.Dubbing with { Engine = DubbingEngine.Fast } };
         Assert.True(controller.DubbingInstalled);
+        controller.Dispose();
+    }
+
+    /// DeepL anahtarı yalnız denenip kabul edilirse saklanır; reddedilen anahtar ne saklanır ne çeviriyi açar.
+    [Fact]
+    public async Task RejectedDeepLKeyIsNotSaved()
+    {
+        var services = new FakeServices { KeyCheck = new OnlineKeyCheck(OnlineKeyState.Invalid) };
+        var (controller, _, _) = Ready(services);
+        var check = await controller.SetDeepLKeyAsync("  wrong  ");
+        Assert.Equal(OnlineKeyState.Invalid, check.State);
+        Assert.Equal(["wrong"], services.CheckedKeys);
+        Assert.False(controller.HasDeepLKey);
+        Assert.False(controller.Settings.OnlineTranslation);
+        controller.Dispose();
+    }
+
+    /// Geçerli anahtarla çeviri DeepL'e geçer; cihaz üstü model inmemiş olsa da çeviri hazır sayılır.
+    [Fact]
+    public async Task AcceptedDeepLKeyTurnsOnlineTranslationOn()
+    {
+        var services = new FakeServices();
+        services.Translation.Installed = false;
+        var (controller, _, _) = Ready(services);
+        await controller.SetDeepLKeyAsync("key:fx");
+        Assert.True(controller.HasDeepLKey);
+        Assert.True(controller.Settings.OnlineTranslation);
+        Assert.Equal(TranslatorStatus.Ready, controller.TranslatorStatus);
+
+        await controller.StartAsync();
+        Assert.Equal("key:fx", Assert.Single(services.OnlineTranslators).Key);
+        Assert.Null(services.OnlineTranslators[0].Fallback);
+
+        controller.RemoveDeepLKey();
+        Assert.False(controller.HasDeepLKey);
+        Assert.False(controller.Settings.OnlineTranslation);
+        Assert.Equal(TranslatorStatus.NeedsDownload, controller.TranslatorStatus);
         controller.Dispose();
     }
 

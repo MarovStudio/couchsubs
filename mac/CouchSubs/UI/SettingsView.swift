@@ -78,6 +78,7 @@ struct SettingsView: View {
                             Text("Spanish").tag("es")
                         }
                     }
+                    DeepLCard()
                     Card(title: "Subtitle area") {
                         RegionPicker(region: $model.settings.region, frame: model.lastFrame)
                         HintText(text: "Adjust the frame so it covers where the game shows its subtitles.")
@@ -113,6 +114,68 @@ struct SettingsView: View {
             }
         } message: {
             Text("The saved PS5, account and TV connection will be removed.")
+        }
+    }
+}
+
+/// İsteğe bağlı çevrimiçi çeviri: kullanıcının kendi DeepL anahtarı.
+struct DeepLCard: View {
+    @Environment(AppModel.self) private var model
+    @State private var key = ""
+    @State private var checking = false
+    @State private var status: OnlineKeyCheck?
+
+    var body: some View {
+        @Bindable var model = model
+        Card(title: "Online translation (DeepL)") {
+            HintText(text: "Optional. With your own free DeepL key, translations read more naturally. Subtitle text is sent to DeepL; when DeepL cannot be reached, the translation model on this computer takes over.")
+            if model.hasDeepLKey {
+                Toggle("Translate with DeepL", isOn: $model.settings.onlineTranslation)
+                Button("Remove key") {
+                    model.removeDeepLKey()
+                    status = nil
+                }
+                .buttonStyle(.secondary)
+            } else {
+                HStack(spacing: Theme.space("m")) {
+                    SecureField("DeepL API key", text: $key).textFieldStyle(.roundedBorder)
+                    Button("Save and test") {
+                        checking = true
+                        Task {
+                            status = await model.setDeepLKey(key)
+                            if model.hasDeepLKey { key = "" }
+                            checking = false
+                        }
+                    }
+                    .buttonStyle(.secondary)
+                    .disabled(checking || key.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                Link("Get a free DeepL API key", destination: URL(string: "https://www.deepl.com/pro-api")!)
+                    .font(.csCallout)
+            }
+            if let status {
+                Text(Self.describe(status))
+                    .font(.csCallout)
+                    .foregroundStyle(Color.csSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .task {
+            if model.hasDeepLKey { status = await model.deepLUsage() }
+        }
+    }
+
+    private static func describe(_ check: OnlineKeyCheck) -> String {
+        switch check.state {
+        case .valid:
+            String(format: String(localized: "This month: %1$@ of %2$@ characters used."),
+                   check.used.formatted(), check.limit.formatted())
+        case .quotaExceeded:
+            String(localized: "This month's DeepL limit is used up. Until it renews, the translation model on this computer translates.")
+        case .invalid:
+            String(localized: "DeepL did not accept this key. Copy it again from your DeepL account page.")
+        case .unreachable:
+            String(localized: "DeepL could not be reached. Check your internet connection.")
         }
     }
 }
