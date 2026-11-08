@@ -16,9 +16,20 @@ public enum DubbingOutput
     Computer,
 }
 
+/// <summary>Seslendirme motoru.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<DubbingEngine>))]
+public enum DubbingEngine
+{
+    /// <summary>pocket-tts: doğal sesler, bir kez indirilir; işlemciye yük, cümle başına bir iki saniye.</summary>
+    Natural,
+    /// <summary>Windows'un kendi Türkçe sesi: indirme yok, anında konuşur, daha mekanik.</summary>
+    Fast,
+}
+
 public sealed record DubbingSettings
 {
     public bool Enabled { get; init; }
+    public DubbingEngine Engine { get; init; } = DubbingEngine.Natural;
     public DubbingOutput Output { get; init; } = DubbingOutput.Tv;
     public VoiceCast Cast { get; init; } = new();
 }
@@ -210,8 +221,8 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
             {
                 return ((await engine.SynthesizeAsync(text, url)).Tightened(), preview is not null);
             }
-            catch (Exception error) when (error is PocketTtsException or HttpRequestException or TaskCanceledException
-                                              or InvalidDataException)
+            // Motor ne olursa olsun (pocket-tts, Windows sesi) bir cümlenin hatası dublajı durdurmaz.
+            catch (Exception error)
             {
                 post(() => Failed?.Invoke(error.Message));
                 return null;
@@ -242,7 +253,11 @@ public sealed class Dubber(IDubbingModel model, IAudioOutput audio, Func<Subtitl
         var current = server();
         if (ReferenceEquals(publishedOn, current) || !model.IsInstalled) return;
         foreach (var voice in DubbingVoices.All)
-            current.Publish(model.VoiceFile(voice), $"/voices/{voice.FileName()}.wav");
+        {
+            // Windows sesinin örnek dosyası yok; ses türü adresin adından anlaşılır.
+            var file = model.VoiceFile(voice);
+            if (file.Length > 0) current.Publish(file, $"/voices/{voice.FileName()}.wav");
+        }
         publishedOn = current;
     }
 }

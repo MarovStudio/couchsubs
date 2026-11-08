@@ -3664,6 +3664,86 @@
           }
         }
       }
+    },
+    "Voice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses"
+          }
+        }
+      }
+    },
+    "Natural": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Natural"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğal"
+          }
+        }
+      }
+    },
+    "Fast": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fast"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hızlı"
+          }
+        }
+      }
+    },
+    "Windows' own Turkish voice: speaks at once, nothing to download. Sounds more mechanical.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows' own Turkish voice: speaks at once, nothing to download. Sounds more mechanical."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows'un kendi Türkçe sesi: anında konuşur, indirme gerekmez. Daha mekanik duyulur."
+          }
+        }
+      }
+    },
+    "Natural voices, downloaded once. Each line takes a moment to prepare, so the voice can come a little after the subtitle.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Natural voices, downloaded once. Each line takes a moment to prepare, so the voice can come a little after the subtitle."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğal sesler, bir kez indirilir. Her cümlenin hazırlanması biraz sürdüğü için ses altyazıdan biraz sonra gelebilir."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

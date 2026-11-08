@@ -58,6 +58,13 @@ public partial class DubbingCard : UserControl
         loading = true;
         var settings = controller.Settings.Dubbing;
         Enabled.IsChecked = settings.Enabled;
+        EnginePanel.Visibility = controller.FastDubbingAvailable ? Visibility.Visible : Visibility.Collapsed;
+        var fast = controller.FastDubbingAvailable && settings.Engine == DubbingEngine.Fast;
+        (fast ? FastEngine : NaturalEngine).IsChecked = true;
+        EngineHint.Text = Localizer.Current[fast
+            ? "Windows' own Turkish voice: speaks at once, nothing to download. Sounds more mechanical."
+            : "Natural voices, downloaded once. Each line takes a moment to prepare, so the voice can come a little after the subtitle."];
+        Credits.Visibility = fast ? Visibility.Collapsed : Visibility.Visible;
         Options.Visibility = settings.Enabled ? Visibility.Visible : Visibility.Collapsed;
         DownloadPanel.Visibility = controller.DubbingInstalled ? Visibility.Collapsed : Visibility.Visible;
         ReadyPanel.Visibility = controller.DubbingInstalled ? Visibility.Visible : Visibility.Collapsed;
@@ -98,6 +105,13 @@ public partial class DubbingCard : UserControl
     private static string DisplayName(string name) =>
         string.Join(' ', name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
+
+    private void OnEngine(object sender, RoutedEventArgs e)
+    {
+        if (loading || sender is not RadioButton { Tag: string tag }) return;
+        var engine = Enum.Parse<DubbingEngine>(tag);
+        Update(s => s with { Dubbing = s.Dubbing with { Engine = engine } });
+    }
 
     private Grid VoiceRow(string title, DubbingVoice selected, Action<DubbingVoice> choose)
     {

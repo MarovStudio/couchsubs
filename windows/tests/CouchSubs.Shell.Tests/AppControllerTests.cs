@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 using CouchSubs.Core;
+using CouchSubs.Core.Dubbing;
 using CouchSubs.Core.LgTv;
 using CouchSubs.RemotePlay;
 using CouchSubs.Shell;
@@ -89,6 +90,10 @@ internal sealed class FakeServices : IAppServices
     public List<FakeKeeper> Keepers { get; } = [];
     public List<string> ReaderLanguages { get; } = [];
     public bool HasOcr { get; set; } = true;
+    public bool HasOcrPack { get; set; } = true;
+    public bool HasOcrLanguage(string language) => HasOcrPack;
+    public IDubbingModel? Dubbing { get; set; }
+    public IDubbingModel? FastDubbing { get; set; }
     public FakeTranslation Translation { get; } = new();
     ITranslationModel IAppServices.Translation => Translation;
 
@@ -400,6 +405,29 @@ public class AppControllerRunTests
         controller.Dispose();
     }
 
+    /// Oyun dilinin paketi yokken Windows sistemin diliyle okur; okuma sürse de ana ekran uyarır.
+    [Fact]
+    public async Task OcrFallingBackToSystemLanguageIsReported()
+    {
+        var (controller, _, _) = Ready(new FakeServices { HasOcrPack = false });
+        await controller.StartAsync();
+        Assert.True(controller.OcrMissing);
+        controller.Dispose();
+    }
+
+    /// Hızlı ses (Windows'un Türkçe sesi) indirme beklemez; doğal ses indirilmemişken de dublaj hazırdır.
+    [Fact]
+    public void FastVoiceNeedsNoDownload()
+    {
+        var services = new FakeServices { Dubbing = new FakeDubbingModel(installed: false), FastDubbing = new FakeDubbingModel(installed: true) };
+        var (controller, _, _) = Ready(services);
+        Assert.True(controller.DubbingAvailable);
+        Assert.False(controller.DubbingInstalled);
+        controller.Settings = controller.Settings with { Dubbing = controller.Settings.Dubbing with { Engine = DubbingEngine.Fast } };
+        Assert.True(controller.DubbingInstalled);
+        controller.Dispose();
+    }
+
     /// Windows'ta oyun dilinin OCR paketi yoksa ana ekran bunu söyler.
     [Fact]
     public async Task MissingOcrLanguageIsReported()
@@ -644,4 +672,13 @@ public class TvAppInstallTests
         Assert.Equal(moved, controller.Tv);
         Assert.Equal(moved, store.Load<LgTv>(StoreKeys.Tv));
     }
+}
+
+internal sealed class FakeDubbingModel(bool installed) : IDubbingModel
+{
+    public bool IsInstalled => installed;
+    public long DownloadBytes => 0;
+    public Task DownloadAsync(IProgress<double> progress, CancellationToken cancellationToken) => Task.CompletedTask;
+    public byte[] VoiceFile(DubbingVoice voice) => [];
+    public ISpeechSynthesizer CreateSynthesizer() => throw new NotSupportedException();
 }

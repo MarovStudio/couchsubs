@@ -147,6 +147,8 @@ public interface IAppServices
     ITranslationModel Translation { get; }
     /// <summary>Türkçe dublaj modeli; bu derlemede yoksa null.</summary>
     IDubbingModel? Dubbing => null;
+    /// <summary>Hızlı dublaj: sistemin kendi Türkçe sesi (Windows'ta Microsoft Tolga); yoksa null.</summary>
+    IDubbingModel? FastDubbing => null;
     /// <summary>Bilgisayardan ses çalma (dublaj).</summary>
     IAudioOutput? Audio => null;
     /// <summary>Uygulama güncellemesi; geliştirici derlemesinde null.</summary>

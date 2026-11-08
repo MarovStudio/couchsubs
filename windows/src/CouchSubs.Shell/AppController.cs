@@ -890,8 +890,12 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     // --- Türkçe dublaj ---
 
     /// <summary>Bu derlemede dublaj var mı (ses motoru uygulamayla geliyor mu).</summary>
-    public bool DubbingAvailable => services.Dubbing is not null;
-    public bool DubbingInstalled => services.Dubbing?.IsInstalled == true;
+    public bool DubbingAvailable => services.Dubbing is not null || services.FastDubbing is not null;
+    public bool FastDubbingAvailable => services.FastDubbing is not null;
+    /// <summary>Ayarlarda seçili motor; hızlı ses yoksa doğal sese düşer.</summary>
+    private IDubbingModel? ActiveDubbing =>
+        settings.Dubbing.Engine == DubbingEngine.Fast && services.FastDubbing is { } fast ? fast : services.Dubbing;
+    public bool DubbingInstalled => ActiveDubbing?.IsInstalled == true;
     public long DubbingDownloadBytes => services.Dubbing?.DownloadBytes ?? 0;
     public bool DubbingDownloading { get => dubbingDownloading; private set => Set(ref dubbingDownloading, value); }
     public double DubbingProgress { get => dubbingProgress; private set => Set(ref dubbingProgress, value); }
@@ -939,7 +943,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private Dubber? MakeDubber()
     {
         if (dubber is not null) return dubber;
-        if (services.Dubbing is not { } model || services.Audio is not { } audio) return null;
+        if (ActiveDubbing is not { } model || services.Audio is not { } audio) return null;
         var made = new Dubber(model, audio, () => server, () => ServerPort, post)
         {
             Cast = settings.Dubbing.Cast.Copy(),
@@ -960,6 +964,14 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private void DubbingSettingsChanged(DubbingSettings old)
     {
         var now = settings.Dubbing;
+        if (now.Engine != old.Engine)
+        {
+            // Motor değişti: eski dublaj kapanır, yenisi hazırlanır.
+            StopDubber();
+            Changed(nameof(DubbingInstalled));
+            if (now.Enabled && isRunning && DubbingInstalled) MakeDubber()?.Prepare();
+            return;
+        }
         if (dubber is null)
         {
             if (now.Enabled && !old.Enabled && isRunning && DubbingInstalled) MakeDubber()?.Prepare();
