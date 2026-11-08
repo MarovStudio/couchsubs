@@ -4,14 +4,9 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bu sürümde yeni**
 
-- **Windows'ta İngilizce yazı tanıma paketi uyarısı.** Paket yüklü değilse Windows altyazıyı Türkçe okuyordu ("T hıs", "NiÖlence") ve çeviri anlamsızlaşıyordu. CouchSubs artık bunu ana ekranda söyler; **Yazı tanımayı kur** düğmesi paketi Windows'un izniyle kurar.
-- **Menü, gösterge ve kumanda ipuçları altyazıya karışmıyor.** Durdurma menüsü ("MAP / HELP / SETTINGS"), "PHOTO MODE L1 + R1", "23m" mesafe işareti ve satır başına yapışan sayılar çevrilmez. TV'deki koyu kutu yalnız altyazının kendisini kaplar.
-- **Dublaj yazının gerisinde kalmıyor.** Yeni altyazı gelince eski cümlenin sesi kesilir, sıra hemen yeni altyazıya geçer.
-- **Windows'ta altyazı alanı fareyle çiziliyor** ve ek bölgeler (görev paneli, notlar) Num 1/2/3 ile bir kez okunup çevriliyor; Num 0 canlı altyazıyı duraklatır. Katkı: [sadumqn](https://github.com/sadumqn).
-- **Samsung'da eski kurulum yeni sürümü engellemiyor.** Başka sertifikayla kurulmuş eski uygulama kaldırılıp yeniden kurulur ("Author certificate not match").
-- TV uygulaması 0.9.4.
+- **Windows'ta hızlı Türkçe ses.** Dublaj ayarında **Ses: Doğal / Hızlı** seçimi var. Hızlı ses Windows'un kendi Türkçe sesini kullanır: indirme gerekmez, cümle anında okunur ve altyazıyla birlikte gelir. Doğal ses daha insansıdır ama daha geç başlar. Karakterlere göre ses tonu yine ayrılır.
 
-**beta.13'te gelenler:** parlak sahnede doğru okuma, üst üste binen ve boş kalan kutuların kalkması, kurulum hatasında TV'nin verdiği sebep.
+**beta.14'te gelenler:** Windows'ta İngilizce yazı tanıma paketi uyarısı ve tek düğmeyle kurulumu, menü/gösterge/kumanda ipuçlarının altyazıya karışmaması, yeni altyazı gelince eski dublaj cümlesinin kesilmesi, fareyle çizilen alan ve Num 1/2/3 ek bölgeler (katkı: [sadumqn](https://github.com/sadumqn)), Samsung'da eski kurulumun yeni sürümü engellememesi, TV uygulaması 0.9.4.
 
 **İndirme**
 
@@ -37,4 +32,4 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 ---
 
-New beta. Windows now warns when the English text recognition pack is missing (it was reading English subtitles as Turkish, which garbled translations) and installs it with one button. Menus, gauges, distance markers and button prompts no longer mix into subtitles, and the TV box covers only the subtitle. Dubbing is cut when a new subtitle arrives so it never lags behind. Windows gets mouse-drawn areas and extra regions (Num 1/2/3, Num 0 pause) contributed by sadumqn. Samsung reinstalls over an old copy signed with another certificate. TV app 0.9.4. Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
+New beta. Windows dubbing gets a fast voice option: Windows' own Turkish voice, no download, speaks instantly so it keeps up with the subtitle (the natural voice stays available). Also includes everything from beta.14: OCR pack warning and installer, menus and gauges kept out of subtitles, dubbing cut on new subtitles, mouse-drawn areas and extra regions by sadumqn, Samsung reinstall fix, TV app 0.9.4. Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
