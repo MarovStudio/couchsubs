@@ -4,8 +4,12 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bu sürümde yeni**
 
-- **OBS katmanı (Mac ve Windows).** Capture card ile yayın yapanlar için: OBS'de bir **Tarayıcı kaynağı** ekleyip adresine `http://localhost:8787/obs` yazın (genişlik 1920, yükseklik 1080). Türkçe altyazı hem sizin ekranınızda hem yayında oyunun üstünde görünür; İngilizce satırın yeri biliniyorsa onu örter. Adres ve "Kopyala" düğmesi Ayarlar › OBS katmanı'nda. Yazı boyu, konum ve zemin koyuluğu altyazı ayarlarını izler; isterseniz adrese `?size=48&bottom=8&bg=60` ekleyerek değiştirebilirsiniz.
-- **Altyazı geçmişi (Mac).** Hızlı geçen bir satırı kaçırdıysanız ana penceredeki "Altyazı geçmişi" kartında oturumdaki son 50 çeviri, İngilizceleriyle birlikte duruyor (katkı: [rumpony](https://github.com/rumpony)).
+- **Samsung ve Android TV'de görünmeyen altyazı düzeltildi.** Bazı TV'lerde altyazı ekranın dışına yerleşiyordu; artık görünür alanda değilse sabit yüksekliğe geçiyor. TV panelinde (Tamam tuşu) "Son altyazı" satırı da var: altyazının TV'ye ulaşıp ulaşmadığını oradan görebilirsiniz. TV uygulaması 0.9.6.
+- **Windows Güvenlik Duvarı izni.** PS5 eşleştirmesi başarısız olursa ya da PS5 veya TV uzun süre bağlanamazsa ve CouchSubs'ın güvenlik duvarı izni eksikse, uygulama tek tıkla izin vermeyi öneriyor (yönetici onayı ister).
+- **GTA V ve renkli zeminlerde daha düzgün çeviri (Windows).** Açık zeminde okunamayan sözcüklerin bıraktığı boşlukta satır artık bölünmüyor; parça parça, anlamsız çeviriler ve kaymış kutular azaldı.
+- **Ortalı altyazının kutusu ortada (Mac ve Windows).** Ortadaki altyazının çevirisi ortaya göre simetrik yerleşiyor, yarım okunan satırda İngilizcenin geri kalanı görünmüyor.
+
+**beta.18'de gelenler:** OBS katmanı (Mac ve Windows), altyazı geçmişi (Mac, katkı: [rumpony](https://github.com/rumpony)).
 
 **beta.17'de gelenler:** Mac uygulamasının macOS 26'da yeniden açılması, kapanıştaki Remote Play çökmesinin giderilmesi (Mac ve Windows), Mac'te disk dolu uyarısı.
 
