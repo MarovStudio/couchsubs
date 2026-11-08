@@ -40,6 +40,7 @@ public partial class SettingsWindow : Window
         LanguageCard.Visibility = GameLanguage.Items.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
         (settings.FreeAreaTarget switch { ResultTarget.Pc => FreePc, ResultTarget.Both => FreeBoth, _ => FreeTv }).IsChecked = true;
         Region.Frame = controller.LastFrame;
+        ObsAddress.Text = $"http://localhost:{controller.ServerPort}/obs";
         ShowArea(0);
         // Num 8: oyunun o anki görüntüsü önizlemeye alınır.
         controller.SnapshotRequested += OnSnapshot;
@@ -240,4 +241,14 @@ public partial class SettingsWindow : Window
     }
 
     private void OnDone(object sender, RoutedEventArgs e) => Close();
+
+    private void OnObsCopy(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Clipboard.SetText(ObsAddress.Text);
+            ObsCopy.Content = Localizer.Current["Copied"];
+        }
+        catch (System.Runtime.InteropServices.COMException) { }
+    }
 }

@@ -7,6 +7,10 @@ struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var confirmReset = false
+    @State private var obsCopied = false
+
+    /// OBS'de "Tarayıcı kaynağı" adresi; OBS çoğunlukla CouchSubs ile aynı bilgisayarda çalışır.
+    private var obsAddress: String { "http://localhost:\(model.serverPort)/obs" }
 
     var body: some View {
         @Bindable var model = model
@@ -85,6 +89,22 @@ struct SettingsView: View {
                     }
                     Card(title: "Translate the screen (⌥⌘T)") {
                         HintText(text: "Press ⌥⌘T while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations.")
+                    }
+                    Card(title: "OBS overlay") {
+                        HintText(text: "Streaming with a capture card? In OBS add a Browser source with this address (width 1920, height 1080). The Turkish subtitles appear over the game on your screen and on the stream.")
+                        HStack(spacing: Theme.space("m")) {
+                            Text(verbatim: obsAddress)
+                                .font(.csBody.monospaced())
+                                .textSelection(.enabled)
+                            Spacer()
+                            Button(obsCopied ? "Copied" : "Copy") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(obsAddress, forType: .string)
+                                obsCopied = true
+                            }
+                            .buttonStyle(.secondary)
+                        }
+                        HintText(text: "If OBS runs on another computer, use this Mac's network address instead of localhost. The overlay only shows subtitles while the translation is running.")
                     }
                     TVAppCard()
                     Card {

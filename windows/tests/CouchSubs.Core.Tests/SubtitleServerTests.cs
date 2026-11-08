@@ -74,6 +74,27 @@ public class SubtitleServerTests
     }
 
     [Fact]
+    public async Task ObsOverlayIsServedAndNotCountedAsTv()
+    {
+        using var server = new SubtitleServer(0);
+        var port = await server.StartAsync();
+
+        using var page = await Http.GetAsync($"http://127.0.0.1:{port}/obs");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.StartsWith("text/html", page.Content.Headers.ContentType?.ToString());
+        Assert.Contains("/events?viewer=obs", await page.Content.ReadAsStringAsync());
+
+        // OBS katmanı olayları alır ama "TV bağlı" sayısına katılmaz.
+        using var response = await Http.GetAsync($"http://127.0.0.1:{port}/events?viewer=obs", HttpCompletionOption.ResponseHeadersRead);
+        await Task.Delay(200);
+        Assert.Equal(0, server.ConnectedClients);
+        server.SendSubtitle("Merhaba", 4000);
+        server.Clear();
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
+        Assert.Contains("event: subtitle", await ReadLines(reader, "event: clear"));
+    }
+
+    [Fact]
     public async Task TurkishTextIsSentAsUtf8()
     {
         using var server = new SubtitleServer(0);

@@ -123,6 +123,26 @@ final class SubtitleServerTests: XCTestCase {
         try await waitUntil { server.connectedClients == 0 }
     }
 
+    func testObsOverlayIsServedAndNotCountedAsTv() async throws {
+        let server = SubtitleServer(port: 0)
+        let port = try await server.start()
+        defer { server.stop() }
+
+        let (page, response) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/obs")!)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+        XCTAssertTrue((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("text/html") == true)
+        XCTAssertTrue(String(decoding: page, as: UTF8.self).contains("/events?viewer=obs"))
+
+        // OBS katmanı olayları alır ama "TV bağlı" sayısına katılmaz.
+        let (bytes, _) = try await URLSession.shared.bytes(from: URL(string: "http://127.0.0.1:\(port)/events?viewer=obs")!)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(server.connectedClients, 0)
+        server.sendSubtitle("Merhaba", durationMs: 4000)
+        server.clear()
+        let lines = try await readLines(bytes, until: "event: clear")
+        XCTAssertTrue(lines.contains("event: subtitle"))
+    }
+
     func testHelloIdentifiesTheApp() async throws {
         let server = SubtitleServer(port: 0)
         let port = try await server.start()

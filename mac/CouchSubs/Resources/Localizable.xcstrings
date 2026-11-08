@@ -4064,6 +4064,102 @@
           }
         }
       }
+    },
+    "OBS overlay": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OBS overlay"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OBS katmanı"
+          }
+        }
+      }
+    },
+    "Streaming with a capture card? In OBS add a Browser source with this address (width 1920, height 1080). The Turkish subtitles appear over the game on your screen and on the stream.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streaming with a capture card? In OBS add a Browser source with this address (width 1920, height 1080). The Turkish subtitles appear over the game on your screen and on the stream."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture card ile yayın mı yapıyorsunuz? OBS'de bu adresle bir Tarayıcı kaynağı ekleyin (genişlik 1920, yükseklik 1080). Türkçe altyazı hem sizin ekranınızda hem yayında oyunun üstünde görünür."
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyala"
+          }
+        }
+      }
+    },
+    "Copied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyalandı"
+          }
+        }
+      }
+    },
+    "If OBS runs on another computer, use this Mac's network address instead of localhost. The overlay only shows subtitles while the translation is running.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If OBS runs on another computer, use this Mac's network address instead of localhost. The overlay only shows subtitles while the translation is running."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OBS başka bir bilgisayardaysa localhost yerine bu Mac'in ağ adresini yazın. Katman yalnızca çeviri çalışırken altyazı gösterir."
+          }
+        }
+      }
+    },
+    "If OBS runs on another computer, use this PC's network address instead of localhost. The overlay only shows subtitles while the translation is running.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If OBS runs on another computer, use this PC's network address instead of localhost. The overlay only shows subtitles while the translation is running."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OBS başka bir bilgisayardaysa localhost yerine bu bilgisayarın ağ adresini yazın. Katman yalnızca çeviri çalışırken altyazı gösterir."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

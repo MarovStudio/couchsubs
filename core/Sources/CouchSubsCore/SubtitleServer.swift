@@ -63,6 +63,8 @@ public final class SubtitleServer: @unchecked Sendable {
     private let queue = DispatchQueue(label: "couchsubs.subtitle-server")
     private var listener: NWListener?
     private var clients: [ObjectIdentifier: NWConnection] = [:]
+    /// OBS katmanı gibi TV olmayan izleyiciler: olayları alır ama "TV bağlı" sayısına katılmaz.
+    private var viewers: Set<ObjectIdentifier> = []
     private var lastStyle: SubtitleStyle?
     private var pingTimer: DispatchSourceTimer?
     /// `GET` ile verilen dosyalar: dublaj sesleri ve seslendirme modelinin ses örnekleri.
@@ -77,8 +79,15 @@ public final class SubtitleServer: @unchecked Sendable {
     }
 
     public var connectedClients: Int {
-        queue.sync { clients.count }
+        queue.sync { clients.count - viewers.count }
     }
+
+    /// OBS'de "Tarayıcı kaynağı" olarak eklenen altyazı katmanı (`GET /obs`).
+    public static let obsOverlay: Data = {
+        guard let url = Bundle.module.url(forResource: "obs-overlay", withExtension: "html"),
+              let data = try? Data(contentsOf: url) else { return Data() }
+        return data
+    }()
 
     /// Sunucuyu başlatır ve dinlenen portu döner (`port: 0` ise rastgele seçilen port).
     public func start() async throws -> UInt16 {
@@ -126,6 +135,7 @@ public final class SubtitleServer: @unchecked Sendable {
             listener = nil
             clients.values.forEach { $0.cancel() }
             clients.removeAll()
+            viewers.removeAll()
         }
     }
 
@@ -217,13 +227,16 @@ public final class SubtitleServer: @unchecked Sendable {
 
     private func route(_ connection: NWConnection, requestLine: String) {
         let parts = requestLine.split(separator: " ")
-        let path = parts.count > 1 ? String(parts[1]).components(separatedBy: "?")[0] : ""
+        let target = parts.count > 1 ? String(parts[1]) : ""
+        let path = target.components(separatedBy: "?")[0]
         let method = parts.first.map(String.init) ?? ""
 
         if method == "OPTIONS" {
             respondAndClose(connection, status: "204 No Content")
         } else if method == "GET" && path == "/events" {
-            openStream(connection)
+            openStream(connection, viewer: target.contains("viewer=obs"))
+        } else if method == "GET" && path == "/obs" {
+            respondAndClose(connection, status: "200 OK", data: Self.obsOverlay, type: "text/html; charset=utf-8")
         } else if method == "GET" && path == "/hello" {
             // TV uygulaması ağdaki bilgisayarı bu yanıtla tanır.
             respondAndClose(connection, status: "200 OK", body: #"{"app":"couchsubs"}"#)
@@ -245,7 +258,7 @@ public final class SubtitleServer: @unchecked Sendable {
         connection.send(content: Data(head.utf8) + data, completion: .contentProcessed { _ in connection.cancel() })
     }
 
-    private func openStream(_ connection: NWConnection) {
+    private func openStream(_ connection: NWConnection, viewer: Bool = false) {
         var head = "HTTP/1.1 200 OK\r\n"
         head += "Content-Type: text/event-stream; charset=utf-8\r\n"
         head += "Cache-Control: no-cache\r\n"
@@ -259,6 +272,7 @@ public final class SubtitleServer: @unchecked Sendable {
 
         let id = ObjectIdentifier(connection)
         clients[id] = connection
+        if viewer { viewers.insert(id) }
         notifyClientsChanged()
         watchForClose(connection, id: id)
     }
@@ -269,6 +283,7 @@ public final class SubtitleServer: @unchecked Sendable {
             guard let self else { return }
             if isComplete || error != nil {
                 connection.cancel()
+                self.viewers.remove(id)
                 if self.clients.removeValue(forKey: id) != nil { self.notifyClientsChanged() }
             } else {
                 self.watchForClose(connection, id: id)
@@ -277,7 +292,7 @@ public final class SubtitleServer: @unchecked Sendable {
     }
 
     private func notifyClientsChanged() {
-        let count = clients.count
+        let count = clients.count - viewers.count
         if let handler = onClientsChanged { DispatchQueue.main.async { handler(count) } }
     }
 
@@ -292,6 +307,7 @@ public final class SubtitleServer: @unchecked Sendable {
             connection.send(content: data, completion: .contentProcessed { [weak self] error in
                 guard let self, error != nil else { return }
                 connection.cancel()
+                self.viewers.remove(id)
                 if self.clients.removeValue(forKey: id) != nil { self.notifyClientsChanged() }
             })
         }

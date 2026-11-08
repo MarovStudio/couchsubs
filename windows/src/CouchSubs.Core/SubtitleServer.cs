@@ -48,9 +48,11 @@ public interface ISubtitleSender
 /// </summary>
 public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposable
 {
-    private sealed class Client(TcpClient tcp)
+    private sealed class Client(TcpClient tcp, bool viewer = false)
     {
         public TcpClient Tcp { get; } = tcp;
+        /// <summary>OBS katmanı gibi TV olmayan izleyici: olayları alır ama "TV bağlı" sayısına katılmaz.</summary>
+        public bool Viewer { get; } = viewer;
         public Stream Stream { get; } = tcp.GetStream();
         /// <summary>Aynı bağlantıya iki yazma iç içe geçmesin.</summary>
         public SemaphoreSlim WriteLock { get; } = new(1, 1);
@@ -77,7 +79,21 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
 
     public int ConnectedClients
     {
-        get { lock (gate) return clients.Count; }
+        get { lock (gate) return TvCount(); }
+    }
+
+    private int TvCount() => clients.Count(c => !c.Viewer);
+
+    /// <summary>OBS'de "Tarayıcı kaynağı" olarak eklenen altyazı katmanı (<c>GET /obs</c>; Mac ile aynı dosya).</summary>
+    public static byte[] ObsOverlay { get; } = LoadObsOverlay();
+
+    private static byte[] LoadObsOverlay()
+    {
+        using var stream = typeof(SubtitleServer).Assembly.GetManifestResourceStream("obs-overlay.html");
+        if (stream is null) return [];
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
     }
 
     /// <summary>Sunucuyu başlatır ve dinlenen portu döner (<c>port: 0</c> ise rastgele seçilen port).</summary>
@@ -213,10 +229,12 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
             var requestLine = await ReadRequestLine(stream);
             var parts = requestLine?.Split(' ') ?? [];
             var method = parts.Length > 0 ? parts[0] : "";
-            var path = parts.Length > 1 ? parts[1].Split('?')[0] : "";
+            var target = parts.Length > 1 ? parts[1] : "";
+            var path = target.Split('?')[0];
 
             if (method == "OPTIONS") await RespondAndClose(tcp, "204 No Content");
-            else if (method == "GET" && path == "/events") await OpenStream(tcp);
+            else if (method == "GET" && path == "/events") await OpenStream(tcp, target.Contains("viewer=obs", StringComparison.Ordinal));
+            else if (method == "GET" && path == "/obs") await RespondAndClose(tcp, ObsOverlay, "text/html; charset=utf-8");
             // TV uygulaması ağdaki bilgisayarı bu yanıtla tanır.
             else if (method == "GET" && path == "/hello") await RespondAndClose(tcp, "200 OK", "{\"app\":\"couchsubs\"}");
             else if (method == "GET" && FindFile(path) is { } file) await RespondAndClose(tcp, file.Data, file.Type);
@@ -267,7 +285,7 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
         tcp.Dispose();
     }
 
-    private async Task OpenStream(TcpClient tcp)
+    private async Task OpenStream(TcpClient tcp, bool viewer = false)
     {
         var head = new StringBuilder()
             .Append("HTTP/1.1 200 OK\r\n")
@@ -276,13 +294,13 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
             .Append("Connection: keep-alive\r\n")
             .Append("Access-Control-Allow-Origin: *\r\n\r\n")
             .Append("retry: 2000\n\n");
-        var client = new Client(tcp);
+        var client = new Client(tcp, viewer);
         int count;
         lock (gate)
         {
             if (lastStyle is { } style) head.Append(StyleFrame(style));
             clients.Add(client);
-            count = clients.Count;
+            count = TvCount();
         }
         await Write(client, head.ToString());
         ClientsChanged?.Invoke(count);
@@ -307,7 +325,7 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
         lock (gate)
         {
             if (!clients.Remove(client)) return;
-            count = clients.Count;
+            count = TvCount();
         }
         client.Tcp.Dispose();
         ClientsChanged?.Invoke(count);

@@ -141,6 +141,19 @@
                                Text="{t:T 'Press Num 9 while playing: every text on the screen is translated once and shown on the TV in its own place. Press again to remove the translations.'}" />
                 </c:Card>
 
+                <c:Card Title="{t:T 'OBS overlay'}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,0,0,12"
+                                   Text="{t:T 'Streaming with a capture card? In OBS add a Browser source with this address (width 1920, height 1080). The Turkish subtitles appear over the game on your screen and on the stream.'}" />
+                        <DockPanel>
+                            <Button x:Name="ObsCopy" DockPanel.Dock="Right" Content="{t:T 'Copy'}" Margin="12,0,0,0" Click="OnObsCopy" />
+                            <TextBox x:Name="ObsAddress" IsReadOnly="True" FontFamily="Consolas" VerticalContentAlignment="Center" />
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,12,0,0"
+                                   Text="{t:T 'If OBS runs on another computer, use this PC&apos;s network address instead of localhost. The overlay only shows subtitles while the translation is running.'}" />
+                    </StackPanel>
+                </c:Card>
+
                 <c:Card Title="{t:T 'Free area (Num 5)'}" Margin="0,16,0,0">
                     <StackPanel>
                         <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,0,0,12"
