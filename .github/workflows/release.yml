@@ -54,7 +54,7 @@ jobs:
 
       - name: Araçlar
         run: |
-          brew install cmake ninja pkg-config protobuf openssl@3 json-c libevent miniupnpc xcodegen
+          brew install cmake ninja pkg-config protobuf openssl@3 json-c xcodegen
           npm install -g @webos-tools/cli
           echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
           xcodebuild -version

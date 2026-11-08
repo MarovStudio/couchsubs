@@ -4016,6 +4016,54 @@
           }
         }
       }
+    },
+    "macOS can't read the text on the screen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS can't read the text on the screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ekrandaki yazıyı okuyamıyor."
+          }
+        }
+      }
+    },
+    "The disk is almost full (%.1f GB free). macOS needs free space to read text; free up a few GB and start the translation again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The disk is almost full (%.1f GB free). macOS needs free space to read text; free up a few GB and start the translation again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disk neredeyse dolu (%.1f GB boş). macOS'in yazıyı okuyabilmesi için boş yer gerekiyor; birkaç GB yer açıp çeviriyi yeniden başlatın."
+          }
+        }
+      }
+    },
+    "Restart the Mac and start the translation again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restart the Mac and start the translation again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac'i yeniden başlatıp çeviriyi yeniden başlatın."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

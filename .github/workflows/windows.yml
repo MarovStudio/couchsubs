@@ -38,6 +38,7 @@ jobs:
         run: |
           git submodule update --init --depth 1 third-party/chiaki-ng
           git -C third-party/chiaki-ng submodule update --init --depth 1 third-party/nanopb third-party/jerasure third-party/gf-complete third-party/curl
+          git -C third-party/chiaki-ng apply ../patches/chiaki-takion-send-after-close.patch
 
       - uses: msys2/setup-msys2@v2
         with:

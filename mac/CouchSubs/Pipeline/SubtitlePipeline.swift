@@ -41,6 +41,8 @@ final class SubtitlePipeline {
     var onPair: ((String, String) -> Void)?
     /// TV'ye giden her yeni altyazının seslendirilecek cümleleri (dublaj).
     var onSpeech: (([SpokenLine]) -> Void)?
+    /// Her yazı tanıma denemesinden sonra çağrılır (başarılıysa nil). Disk dolunca macOS okumayı hep hata ile bitirir.
+    var onReadResult: ((Error?) -> Void)?
     /// Her çeviri denemesinden sonra çağrılır (başarılıysa nil).
     var onTranslationResult: ((TranslatorError?) -> Void)?
 
@@ -64,9 +66,11 @@ final class SubtitlePipeline {
         case .reuse:
             break
         case .read(let deep):
-            lastReading = await Task.detached(priority: .userInitiated) {
-                (try? reader.readLines(area, deep: deep)) ?? .empty
+            let result = await Task.detached(priority: .userInitiated) {
+                Result { try reader.readLines(area, deep: deep) }
             }.value
+            lastReading = (try? result.get()) ?? .empty
+            onReadResult?(result.failure)
             scheduler.record(lastReading.text)
         }
         // Kumanda ipuçları ("R2 Swing") altyazı değildir; çevrilmez, yeri de altyazının yerine katılmaz.
@@ -146,5 +150,12 @@ final class SubtitlePipeline {
         lastReading = .empty
         scheduler.reset()
         if stabilizer.reset() == .clear { server.clear() }
+    }
+}
+
+private extension Result {
+    var failure: Failure? {
+        if case .failure(let error) = self { return error }
+        return nil
     }
 }

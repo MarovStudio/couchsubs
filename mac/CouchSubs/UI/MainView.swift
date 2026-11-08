@@ -67,6 +67,19 @@ struct MainView: View {
                 }
             }
 
+            if let free = model.readingFailedFreeGB {
+                Card {
+                    Label("macOS can't read the text on the screen.", systemImage: "exclamationmark.triangle")
+                        .font(.csBody.weight(.semibold))
+                        .foregroundStyle(Color.csWarning)
+                    if free < 10 {
+                        HintText(text: LocalizedStringKey(String(format: String(localized: "The disk is almost full (%.1f GB free). macOS needs free space to read text; free up a few GB and start the translation again."), free)))
+                    } else {
+                        HintText(text: "Restart the Mac and start the translation again.")
+                    }
+                }
+            }
+
             Card(title: "Last subtitle") {
                 if model.lastTranslation.isEmpty {
                     HintText(text: "Subtitles will appear here while you play.")

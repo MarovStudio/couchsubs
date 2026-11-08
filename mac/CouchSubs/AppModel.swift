@@ -382,6 +382,10 @@ final class AppModel {
     var lastSource = ""
     var lastTranslation = ""
     var translatorStatus: TranslatorStatus = .ready
+    /// Yazı tanıma art arda hata veriyor; değeri diskteki boş yer (GB). macOS, diskte yer kalmayınca okuma modelini
+    /// diske yazamaz ve her okumayı hata ile bitirir; altyazı sessizce hiç gelmez.
+    var readingFailedFreeGB: Double?
+    private var readFailures = 0
     var lastFrame: CGImage?
     var showAbout = false
     var showSettings = false
@@ -815,6 +819,7 @@ final class AppModel {
         pipeline.onTranslationResult = { [weak self] error in
             self?.translatorStatus = Self.translatorStatus(after: error)
         }
+        pipeline.onReadResult = { [weak self] error in self?.noteRead(error) }
         pipeline.onSpeech = { [weak self] lines in self?.speak(lines) }
         pipeline.warmUp()
         self.pipeline = pipeline
@@ -908,6 +913,23 @@ final class AppModel {
             server.clear()
             dubber?.stop()
         }
+    }
+
+    private func noteRead(_ error: Error?) {
+        guard error != nil else {
+            readFailures = 0
+            readingFailedFreeGB = nil
+            return
+        }
+        readFailures += 1
+        if readFailures >= 10, readingFailedFreeGB == nil { readingFailedFreeGB = Self.freeDiskGB() }
+    }
+
+    static func freeDiskGB() -> Double {
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        let bytes = (try? home.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            .volumeAvailableCapacityForImportantUsage ?? 0
+        return Double(bytes) / 1_000_000_000
     }
 
     static func translatorStatus(after error: TranslatorError?) -> TranslatorStatus {

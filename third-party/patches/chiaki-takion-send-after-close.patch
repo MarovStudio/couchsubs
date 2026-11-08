@@ -1,0 +1,59 @@
+diff --git a/lib/include/chiaki/takionsendbuffer.h b/lib/include/chiaki/takionsendbuffer.h
+index 8ddecc01..da6b41b5 100644
+--- a/lib/include/chiaki/takionsendbuffer.h
++++ b/lib/include/chiaki/takionsendbuffer.h
+@@ -30,6 +30,7 @@ typedef struct chiaki_takion_send_buffer_t
+ 	ChiakiMutex mutex;
+ 	ChiakiCond cond;
+ 	bool should_stop;
++	bool alive; // false after fini: Takion's thread can end before the stream connection sends its disconnect
+ 	ChiakiThread thread;
+ } ChiakiTakionSendBuffer;
+ 
+diff --git a/lib/src/takionsendbuffer.c b/lib/src/takionsendbuffer.c
+index 5cee13cf..cf4549f9 100644
+--- a/lib/src/takionsendbuffer.c
++++ b/lib/src/takionsendbuffer.c
+@@ -41,6 +41,7 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_takion_send_buffer_init(ChiakiTakionSendBuf
+ 	send_buffer->packets_count = 0;
+ 
+ 	send_buffer->should_stop = false;
++	send_buffer->alive = false;
+ 
+ 	ChiakiErrorCode err = chiaki_mutex_init(&send_buffer->mutex, false);
+ 	if(err != CHIAKI_ERR_SUCCESS)
+@@ -56,6 +57,7 @@ CHIAKI_EXPORT ChiakiErrorCode chiaki_takion_send_buffer_init(ChiakiTakionSendBuf
+ 
+ 	chiaki_thread_set_name(&send_buffer->thread, "Chiaki Takion Send Buffer");
+ 
++	send_buffer->alive = true;
+ 	return CHIAKI_ERR_SUCCESS;
+ error_cond:
+ 	chiaki_cond_fini(&send_buffer->cond);
+@@ -68,6 +70,7 @@ error_packets:
+ 
+ CHIAKI_EXPORT void chiaki_takion_send_buffer_fini(ChiakiTakionSendBuffer *send_buffer)
+ {
++	send_buffer->alive = false;
+ 	send_buffer->should_stop = true;
+ 	ChiakiErrorCode err = chiaki_cond_signal(&send_buffer->cond);
+ 	assert(err == CHIAKI_ERR_SUCCESS);
+@@ -80,10 +83,18 @@ CHIAKI_EXPORT void chiaki_takion_send_buffer_fini(ChiakiTakionSendBuffer *send_b
+ 	chiaki_cond_fini(&send_buffer->cond);
+ 	chiaki_mutex_fini(&send_buffer->mutex);
+ 	free(send_buffer->packets);
++	send_buffer->packets = NULL;
++	send_buffer->packets_size = 0;
++	send_buffer->packets_count = 0;
+ }
+ 
+ CHIAKI_EXPORT ChiakiErrorCode chiaki_takion_send_buffer_push(ChiakiTakionSendBuffer *send_buffer, ChiakiSeqNum32 seq_num, uint8_t *buf, size_t buf_size)
+ {
++	if(!send_buffer->alive)
++	{
++		free(buf);
++		return CHIAKI_ERR_CANCELED;
++	}
+ 	ChiakiErrorCode err = chiaki_mutex_lock(&send_buffer->mutex);
+ 	if(err != CHIAKI_ERR_SUCCESS)
+ 		return err;
