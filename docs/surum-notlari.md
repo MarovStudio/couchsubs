@@ -4,9 +4,10 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bu sürümde yeni**
 
-- **Mac uygulaması macOS 26'da yeniden açılıyor.** beta.16'nın Mac sürümü yalnız macOS 27'de açılıyordu, macOS 26'da açılmadan kapanıyordu (bildirim: [@LivaCrypto](https://x.com/LivaCrypto)). Remote Play kütüphaneleri artık macOS 26'yı hedefleyerek derleniyor.
-- **Kapanışta çökme giderildi (Mac ve Windows).** PS5 bağlantısı koparken ya da çeviri durdurulurken uygulama bazen "beklenmedik şekilde kesildi" diyerek kapanıyordu.
-- **Disk dolu uyarısı (Mac).** Diskte yer kalmayınca macOS ekrandaki yazıyı okuyamıyor ve altyazı hiç gelmiyordu. Uygulama artık bunu fark edip ana ekranda "Disk neredeyse dolu" uyarısı gösteriyor.
+- **OBS katmanı (Mac ve Windows).** Capture card ile yayın yapanlar için: OBS'de bir **Tarayıcı kaynağı** ekleyip adresine `http://localhost:8787/obs` yazın (genişlik 1920, yükseklik 1080). Türkçe altyazı hem sizin ekranınızda hem yayında oyunun üstünde görünür; İngilizce satırın yeri biliniyorsa onu örter. Adres ve "Kopyala" düğmesi Ayarlar › OBS katmanı'nda. Yazı boyu, konum ve zemin koyuluğu altyazı ayarlarını izler; isterseniz adrese `?size=48&bottom=8&bg=60` ekleyerek değiştirebilirsiniz.
+- **Altyazı geçmişi (Mac).** Hızlı geçen bir satırı kaçırdıysanız ana penceredeki "Altyazı geçmişi" kartında oturumdaki son 50 çeviri, İngilizceleriyle birlikte duruyor (katkı: [rumpony](https://github.com/rumpony)).
+
+**beta.17'de gelenler:** Mac uygulamasının macOS 26'da yeniden açılması, kapanıştaki Remote Play çökmesinin giderilmesi (Mac ve Windows), Mac'te disk dolu uyarısı.
 
 **beta.16'da gelenler:** Ekranı çevir (Windows'ta Num 9, Mac'te ⌥⌘T: menüler, görev paneli ve bilgi kutuları TV'de kendi yerinde Türkçe), TV uygulaması 0.9.5, Windows'ta aynı hizadaki uzak yazıların ayrılması.
 
@@ -38,4 +39,4 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 ---
 
-Bug-fix beta. The Mac app opens on macOS 26 again (beta.16 only launched on macOS 27), a crash when the PS5 connection closes is fixed on Mac and Windows, and the Mac app now warns when the disk is too full for macOS to read on-screen text. Also includes beta.16's Translate the screen (Num 9 on Windows, ⌥⌘T on Mac). Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
+New beta. OBS overlay: streamers using a capture card can add a Browser source at `http://localhost:8787/obs` (1920×1080) and the Turkish subtitles appear over the game on screen and on stream, covering the English line when its position is known; the address is under Settings › OBS overlay. Subtitle history on Mac (contributed by rumpony): the last 50 translations of the session with their English text. Also includes beta.17's fixes (macOS 26 launch, Remote Play crash on disconnect, disk-full warning). Download: [Mac (DMG)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-macos.dmg) · [Windows (installer)](https://github.com/yorulmazsinan/couchsubs/releases/latest/download/CouchSubs-windows-Setup.exe).
