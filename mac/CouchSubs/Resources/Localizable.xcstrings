@@ -2577,6 +2577,22 @@
         }
       }
     },
+    "Subtitle history": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitle history"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altyazı geçmişi"
+          }
+        }
+      }
+    },
     "Subtitle translation paused": {
       "localizations": {
         "en": {
