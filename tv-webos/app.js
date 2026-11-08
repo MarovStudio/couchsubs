@@ -121,6 +121,7 @@
     $('subtitle-text').style.textAlign = paragraphs ? 'left' : '';
     $('subtitle').className = '';
     layout();
+    setStatus('st-last', text.length > 40 ? text.slice(0, 40) + '…' : text);
     clearTimeout(hideTimer);
     var ms = duration || Math.min(8000, 2000 + text.length * 60);
     hideTimer = setTimeout(hideSubtitle, ms);
@@ -214,7 +215,7 @@
     // Altyazı yokken (ör. ayar değişince yeniden yerleşirken) örtü tek başına boş siyah kutu olarak kalmasın.
     if (!box || el.className === 'hidden') return;
 
-    var height = window.innerHeight || 1080;
+    var height = document.documentElement.clientHeight || window.innerHeight || 1080;
     var gap = Math.round(height * 0.012);
     var mode = placement;
     // Ekranın kenarında yer yoksa öbür yana geçilir.
@@ -243,6 +244,22 @@
       el.style.bottom = 'auto';
       el.style.top = Math.round(box.bottom * height + gap) + 'px';
     }
+    keepOnScreen(el, cover);
+  }
+
+  // Bazı TV'lerde (Samsung, Android TV) sayfanın bildirdiği yükseklik ekranla uyuşmayabiliyor; altyazı ekranın
+  // dışına düşerse hiç görünmüyordu. Yerleştirilen altyazı görünür alanda değilse sabit yüksekliğe döner.
+  function keepOnScreen(el, cover) {
+    var rect = el.getBoundingClientRect();
+    var viewHeight = document.documentElement.clientHeight || window.innerHeight || 1080;
+    var viewWidth = document.documentElement.clientWidth || window.innerWidth || 1920;
+    var visible = rect.height > 0 && rect.top >= -2 && rect.bottom <= viewHeight + 2 && rect.right > 0 && rect.left < viewWidth;
+    if (visible) return;
+    el.style.left = '8%';
+    el.style.right = '8%';
+    el.style.top = 'auto';
+    el.style.bottom = bottomPercent + '%';
+    cover.className = 'hidden';
   }
 
   function applyStyle(style) {
