@@ -49,3 +49,17 @@ final class TextMatchTests: XCTestCase {
         XCTAssertFalse(TextMatch.isSimilar("", "abc"))
     }
 }
+
+final class CenteredBoxTests: XCTestCase {
+    func testPartlyReadCenteredSubtitleIsWidenedSymmetrically() {
+        let box = TextBox(left: 0.45, top: 0.85, right: 0.75, bottom: 0.9).centeredOnScreen()
+        XCTAssertEqual(box.left, 0.25, accuracy: 0.001)
+        XCTAssertEqual(box.right, 0.75, accuracy: 0.001)
+        XCTAssertEqual(box.top, 0.85)
+    }
+
+    func testCornerTextIsLeftAlone() {
+        let box = TextBox(left: 0.02, top: 0.1, right: 0.2, bottom: 0.15)
+        XCTAssertEqual(box.centeredOnScreen(), box)
+    }
+}

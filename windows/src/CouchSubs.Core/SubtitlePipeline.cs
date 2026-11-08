@@ -84,7 +84,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     lineOnScreen = number;
                     // Çevirmen burada, istek sırasıyla çağrılır (ayrı görevle başlatılsa sıra karışabilirdi).
                     // Çeviri hemen bittiyse kendini zaten listeden çıkarmıştır; yeniden eklenmez.
-                    var box = reading.Box?.PlacedIn(area);
+                    var box = reading.Box?.PlacedIn(area).CenteredOnScreen();
                     var task = TranslateAndForget(action.Text!, box, number, current);
                     if (!task.IsCompleted) translations[number] = task;
                     break;

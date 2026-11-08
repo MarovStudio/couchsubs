@@ -26,6 +26,15 @@ public struct TextBox: Equatable, Sendable {
         return TextBox(left: area.left + left * width, top: area.top + top * height,
                        right: area.left + right * width, bottom: area.top + bottom * height)
     }
+
+    /// Ekranın ortasındaki altyazının kutusu ortaya göre simetrik genişletilir. Açık zeminde ya da renkli yazıda
+    /// yazı tanıma satırın bir ucunu okuyamayabilir; kutu yalnız okunan parçayı örterse İngilizcenin geri kalanı
+    /// yanda görünür ve çeviri ortalanmamış durur. Ortadan uzak (köşedeki) yazıya dokunulmaz (Windows: TextBox.CenteredOnScreen).
+    public func centeredOnScreen() -> TextBox {
+        let middle = (left + right) / 2
+        guard middle > 0.3, middle < 0.7 else { return self }
+        return TextBox(left: max(0, min(left, 1 - right)), top: top, right: min(1, max(right, 1 - left)), bottom: bottom)
+    }
 }
 
 /// Yazı tanımanın bulduğu bir satır.

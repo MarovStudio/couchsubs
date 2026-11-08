@@ -88,7 +88,7 @@ final class SubtitlePipeline {
             lastRequested += 1
             let number = lastRequested, current = session
             lineOnScreen = number
-            let box = reading.box?.placed(in: place)
+            let box = reading.box?.placed(in: place).centeredOnScreen()
             translations[number] = Task { [weak self] in
                 await self?.translate(source, box: box, number: number, session: current)
                 self?.translations[number] = nil

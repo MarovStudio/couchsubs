@@ -15,6 +15,18 @@ public readonly record struct TextBox(double Left, double Top, double Right, dou
         var height = area.Bottom - area.Top;
         return new(area.Left + (Left * width), area.Top + (Top * height), area.Left + (Right * width), area.Top + (Bottom * height));
     }
+
+    /// <summary>
+    /// Ekranın ortasındaki altyazının kutusu ortaya göre simetrik genişletilir. Açık zeminde ya da renkli yazıda yazı
+    /// tanıma satırın bir ucunu okuyamayabilir; kutu yalnız okunan parçayı örterse İngilizcenin geri kalanı yanda görünür
+    /// ve çeviri ortalanmamış durur. Ortadan uzak (köşedeki) yazıya dokunulmaz (Mac: TextBox.centeredOnScreen).
+    /// </summary>
+    public TextBox CenteredOnScreen()
+    {
+        var middle = (Left + Right) / 2;
+        if (middle <= 0.3 || middle >= 0.7) return this;
+        return this with { Left = Math.Max(0, Math.Min(Left, 1 - Right)), Right = Math.Min(1, Math.Max(Right, 1 - Left)) };
+    }
 }
 
 /// <summary>Yazı tanımanın bulduğu bir satır; kutu okunan alana göredir, bilinmiyorsa null.</summary>

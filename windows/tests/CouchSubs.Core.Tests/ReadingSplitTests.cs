@@ -24,3 +24,23 @@ public class ReadingSplitTests
         // Küçük yazıda satır yüksekliğinin 4 katı dar kalır; görüntünün %12'sini de geçmeli.
         Assert.False(Reading.IsSeparateText(120, 20, 1920));
 }
+
+public class CenteredBoxTests
+{
+    [Fact]
+    public void PartlyReadCenteredSubtitleIsWidenedSymmetrically()
+    {
+        // Yalnız satırın sağ yarısı okunduysa kutu ortaya göre aynalanır, solu da örtülür.
+        var box = new TextBox(0.45, 0.85, 0.75, 0.9).CenteredOnScreen();
+        Assert.Equal(0.25, box.Left, 3);
+        Assert.Equal(0.75, box.Right, 3);
+        Assert.Equal(0.85, box.Top);
+    }
+
+    [Fact]
+    public void CornerTextIsLeftAlone()
+    {
+        var box = new TextBox(0.02, 0.1, 0.2, 0.15);
+        Assert.Equal(box, box.CenteredOnScreen());
+    }
+}
