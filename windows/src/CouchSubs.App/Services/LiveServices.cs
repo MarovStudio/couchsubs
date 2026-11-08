@@ -25,6 +25,7 @@ public sealed class LiveServices : IAppServices
     public IDubbingModel? FastDubbing { get; } = WindowsVoiceModel.Available ? new WindowsVoiceModel() : null;
     public IAudioOutput? Audio { get; } = new WindowsAudioOutput();
     public IUpdater? Updater { get; } = new Updater();
+    public IFirewall? Firewall { get; } = new WindowsFirewall();
 
     public Task<IReadOnlyList<ConsoleInfo>> DiscoverConsolesAsync() => ConsoleDiscovery.DiscoverAsync();
 

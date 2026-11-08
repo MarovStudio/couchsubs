@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using CouchSubs.App.Controls;
 using CouchSubs.Core;
 using CouchSubs.Shell;
@@ -14,6 +15,8 @@ namespace CouchSubs.App.Views;
 public partial class MainView : UserControl
 {
     private readonly AppController controller;
+    // Çeviri sürerken PS5 ve TV bağlanamıyorsa güvenlik duvarı kartı önerilir.
+    private readonly DispatcherTimer connectionWatch = new() { Interval = TimeSpan.FromSeconds(5) };
 
     public MainView(AppController controller)
     {
@@ -21,7 +24,13 @@ public partial class MainView : UserControl
         DataContext = controller;
         InitializeComponent();
         controller.PropertyChanged += OnChanged;
-        Unloaded += (_, _) => controller.PropertyChanged -= OnChanged;
+        connectionWatch.Tick += async (_, _) => await controller.CheckConnectionsAsync();
+        Loaded += (_, _) => connectionWatch.Start();
+        Unloaded += (_, _) =>
+        {
+            controller.PropertyChanged -= OnChanged;
+            connectionWatch.Stop();
+        };
         Refresh();
         ShowUpdate();
         _ = controller.CheckForUpdateAsync();

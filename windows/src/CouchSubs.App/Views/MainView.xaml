@@ -3,7 +3,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:CouchSubs.App.Controls"
-             xmlns:t="clr-namespace:CouchSubs.App.Theme">
+             xmlns:t="clr-namespace:CouchSubs.App.Theme"
+             xmlns:local="clr-namespace:CouchSubs.App.Views">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="32">
             <!-- Başlık: logo, ad, ayarlar -->
@@ -49,6 +50,9 @@
                     <c:StatusRow Title="TV" Value="{Binding TvStatusText}" Tone="{Binding TvTone}" />
                 </StackPanel>
             </c:Card>
+
+            <!-- PS5 ya da TV uzun süredir bağlanamıyor ve güvenlik duvarında izin yok -->
+            <local:FirewallCard Margin="0,16,0,0" />
 
             <!-- Çeviri modeli eksik -->
             <c:Card x:Name="ModelCard" Margin="0,16,0,0" Visibility="Collapsed">
