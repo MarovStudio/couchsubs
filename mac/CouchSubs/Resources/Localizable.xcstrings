@@ -4145,12 +4145,12 @@
         }
       }
     },
-    "If OBS runs on another computer, use this PC's network address instead of localhost. The overlay only shows subtitles while the translation is running.": {
+    "If OBS runs on another computer, use the network address of this PC instead of localhost. The overlay only shows subtitles while the translation is running.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If OBS runs on another computer, use this PC's network address instead of localhost. The overlay only shows subtitles while the translation is running."
+            "value": "If OBS runs on another computer, use the network address of this PC instead of localhost. The overlay only shows subtitles while the translation is running."
           }
         },
         "tr": {
