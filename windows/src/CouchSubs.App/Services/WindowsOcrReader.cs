@@ -64,8 +64,8 @@ public sealed class WindowsOcrReader : ITextReader
 
     /// <summary>
     /// Satırın kutusu sözcük kutularının birleşimidir; görüntünün kenarlarına oranla verilir. Windows aynı hizadaki
-    /// uzak yazıları (soldaki menü, sağdaki gösterge) bazen tek satır sayar; sözcükler arasında satır yüksekliğinin
-    /// iki katından geniş boşluk varsa satır orada ayrı satırlara bölünür.
+    /// uzak yazıları (soldaki menü, sağdaki gösterge) bazen tek satır sayar; aradaki boşluk bir sözcük boşluğu olamayacak
+    /// kadar genişse satır orada ayrı satırlara bölünür (<see cref="Reading.IsSeparateText"/>).
     /// </summary>
     private static IEnumerable<TextLine> Split(OcrLine line, double width, double height)
     {
@@ -76,7 +76,7 @@ public sealed class WindowsOcrReader : ITextReader
         for (var index = 1; index <= words.Count; index++)
         {
             var end = index == words.Count;
-            if (!end && words[index].BoundingRect.X - (words[index - 1].BoundingRect.X + words[index - 1].BoundingRect.Width) <= lineHeight * 2)
+            if (!end && !Reading.IsSeparateText(words[index].BoundingRect.X - (words[index - 1].BoundingRect.X + words[index - 1].BoundingRect.Width), lineHeight, width))
                 continue;
             var part = words.GetRange(start, index - start);
             TextBox? box = null;

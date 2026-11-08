@@ -36,6 +36,15 @@ public sealed class Reading
 
     public string Text => string.Join('\n', Lines.Select(line => line.Text));
 
+    /// <summary>
+    /// Aynı satırdaki iki sözcük arasındaki boşluk (piksel) ayrı yazılara mı işaret ediyor? Yalnız hem satır yüksekliğinin
+    /// dört katından hem görüntü genişliğinin %12'sinden genişse: soldaki menü ile sağdaki gösterge böyle ayrılır.
+    /// Daha dar boşluk çoğunlukla okunamayan sözcüklerdir (açık zemindeki ince altyazıda yazı tanıma bazı sözcükleri
+    /// atlar); orada bölmek cümleyi parçalara ayırır, parçanın çevirisi anlamsızlaşır ve kutusu satırı örtmez (GTA V).
+    /// </summary>
+    public static bool IsSeparateText(double gap, double lineHeight, double imageWidth) =>
+        gap > lineHeight * 4 && gap > imageWidth * 0.12;
+
     /// <summary>Bütün satırları içine alan kutu; hiçbir satırın yeri bilinmiyorsa null.</summary>
     public TextBox? Box
     {
