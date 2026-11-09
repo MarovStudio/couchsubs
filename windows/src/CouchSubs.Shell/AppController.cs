@@ -321,7 +321,8 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     /// <summary>Kurulum hatasında TV'nin verdiği sebep de gösterilir; genel mesaj tek başına sorunu bulmaya yetmiyordu.</summary>
     private static TvAppState FailedState(DevModeException error) =>
         new(TvAppKind.Failed, Error: error.Error,
-            Reason: error.Error == DevModeError.InstallFailed && !string.IsNullOrWhiteSpace(error.Detail) ? error.Detail.Trim() : null);
+            Reason: error.Error is DevModeError.InstallFailed or DevModeError.NotEnoughSpace && !string.IsNullOrWhiteSpace(error.Detail)
+                ? error.Detail.Trim() : null);
 
     /// <summary>Samsung: geliştirici modu açıksa uygulamayı imzalayıp kurar. Sertifika yoksa Samsung girişi istenir.</summary>
     private async Task RefreshSamsungAppAsync(LgTv target)

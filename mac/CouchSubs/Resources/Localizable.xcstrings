@@ -2817,18 +2817,34 @@
         }
       }
     },
-    "The TV app could not be installed. Check the TV's free space and try again.": {
+    "The TV app could not be installed. Try again.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The TV app could not be installed. Check the TV's free space and try again."
+            "value": "The TV app could not be installed. Try again."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "TV uygulaması kurulamadı. TV'deki boş alanı kontrol edip tekrar deneyin."
+            "value": "TV uygulaması kurulamadı. Tekrar deneyin."
+          }
+        }
+      }
+    },
+    "The TV is out of free space. Remove an app you do not use from the TV and try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The TV is out of free space. Remove an app you do not use from the TV and try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV'de boş alan kalmadı. TV'den kullanmadığınız bir uygulamayı kaldırıp tekrar deneyin."
           }
         }
       }

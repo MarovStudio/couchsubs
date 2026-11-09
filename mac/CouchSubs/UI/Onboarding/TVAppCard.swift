@@ -64,9 +64,9 @@ struct TVAppCard: View {
                         Text("Waiting for the TV…").foregroundStyle(Color.csSecondary)
                     }
                 }
-            case .failed(let error):
+            case .failed(let error, let reason):
                 Card(title: "CouchSubs TV app") {
-                    ErrorText(error: Self.message(for: error, brand: brand))
+                    ErrorText(error: Self.message(for: error, brand: brand, reason: reason))
                     Button("Try again") { Task { await model.refreshTVApp() } }.buttonStyle(.secondary)
                 }
             }
@@ -123,7 +123,14 @@ struct TVAppCard: View {
         }
     }
 
-    static func message(for error: DevModeError, brand: TVBrand) -> String {
+    /// `reason`: TV'nin verdiği sebep; varsa mesajın altına eklenir.
+    static func message(for error: DevModeError, brand: TVBrand, reason: String?) -> String {
+        let text = message(for: error, brand: brand, hasReason: reason != nil)
+        guard let reason else { return text }
+        return text + "\n\n" + String(localized: "TV says:") + " " + reason
+    }
+
+    static func message(for error: DevModeError, brand: TVBrand, hasReason: Bool = false) -> String {
         switch error {
         case .keyServerOff: String(localized: "Key Server is off. Turn it on in the Developer Mode app and keep the app on screen.")
         case .wrongPassphrase: String(localized: "The passphrase is not correct. Check it on the TV screen.")
@@ -131,7 +138,11 @@ struct TVAppCard: View {
         case .unreachable where brand == .samsung:
             String(localized: "The TV did not accept this computer. In the TV's Developer Mode window, check that Host PC IP is this computer's address, then restart the TV.")
         case .unreachable: String(localized: "The TV did not respond. Make sure it is on and on the same network.")
-        case .installFailed: String(localized: "The TV app could not be installed. Check the TV's free space and try again.")
+        // Eskiden her hatada boş alan suçlanıyordu; oysa çoğu zaman sorun başkaydı (ares-install aynı TV'ye kurabiliyordu).
+        case .installFailed where hasReason:
+            String(localized: "The TV app could not be installed. Try again; if it fails again, send us the reason below.")
+        case .installFailed: String(localized: "The TV app could not be installed. Try again.")
+        case .notEnoughSpace: String(localized: "The TV is out of free space. Remove an app you do not use from the TV and try again.")
         case .tooOld: String(localized: "This Samsung TV is too old for the CouchSubs TV app (2019 models and later are supported).")
         case .signInFailed: String(localized: "Samsung sign-in did not complete. Try again and finish signing in on the page that opens.")
         case .certificateFailed: String(localized: "Samsung did not issue the signing certificate. Try again in a few minutes.")

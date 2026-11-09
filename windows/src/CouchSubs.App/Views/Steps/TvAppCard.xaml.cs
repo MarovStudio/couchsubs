@@ -107,6 +107,7 @@ public partial class TvAppCard : UserControl
         DevModeError.SignInFailed => "Samsung sign-in did not complete. Try again and finish signing in on the page that opens.",
         DevModeError.CertificateFailed => "Samsung did not issue the signing certificate. Try again in a few minutes.",
         DevModeError.NotApproved => "Debugging was not allowed on the TV. Try again and choose Allow on the TV.",
+        DevModeError.NotEnoughSpace => "The TV is out of free space. Remove an app you do not use from the TV and try again.",
         _ => "The TV app could not be installed. Try again; if it fails again, send us the reason below.",
     }];
 

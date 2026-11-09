@@ -29,6 +29,21 @@ public enum DevModeError: Error, Equatable {
     case certificateFailed
     /// Android: TV'de hata ayıklama izni verilmedi.
     case notApproved
+    /// TV kurulumda yer kalmadığını söyledi.
+    case notEnoughSpace
+}
+
+/// Kurulum hatası ve TV'nin verdiği sebep (luna yanıtındaki errorText/reason ya da komut çıktısı).
+public struct DevModeFailure: Error, Equatable, CustomStringConvertible {
+    public let error: DevModeError
+    public let detail: String
+
+    public init(_ error: DevModeError, detail: String) {
+        self.error = error
+        self.detail = detail
+    }
+
+    public var description: String { "\(error): \(detail)" }
 }
 
 /// TV uygulamasını LG'nin geliştirici modu üzerinden kurar ve günceller.
@@ -36,21 +51,30 @@ public enum DevModeError: Error, Equatable {
 public struct DevModeInstaller: Sendable {
     public static let port: UInt16 = 9922
     static let appInfoPath = "/media/developer/apps/usr/palm/applications/com.couchsubs.tv/appinfo.json"
-    static let remotePackage = "/media/developer/temp/couchsubs.ipk"
+    static let tempDir = "/media/developer/temp"
+    static let installLog = "\(tempDir)/couchsubs-install.log"
+
+    /// ares-install gibi paket TV'ye kendi adıyla yüklenir (`/media/developer/temp/com.couchsubs.tv_0.9.6_all.ipk`).
+    static func remotePackage(_ package: URL) -> String { "\(tempDir)/\(package.lastPathComponent)" }
 
     private let host: String
     private let keyFile: URL
     private let runner: CommandRunning
     private let pollInterval: Duration
     private let installTimeout: Duration
+    private let verifyTimeout: Duration?
 
+    /// - Parameters:
+    ///   - installTimeout: TV'nin kurulum sonucunu (installed ya da hata) bekleme süresi.
+    ///   - verifyTimeout: Sonuçtan sonra sürümün appinfo.json'da görünmesini bekleme süresi (nil: 30 sn, sonuç yoksa 60 sn).
     public init(host: String, keyFile: URL, runner: CommandRunning,
-                pollInterval: Duration = .seconds(2), installTimeout: Duration = .seconds(90)) {
+                pollInterval: Duration = .seconds(2), installTimeout: Duration = .seconds(180), verifyTimeout: Duration? = nil) {
         self.host = host
         self.keyFile = keyFile
         self.runner = runner
         self.pollInterval = pollInterval
         self.installTimeout = installTimeout
+        self.verifyTimeout = verifyTimeout
     }
 
     // MARK: - Sürümler
@@ -129,26 +153,129 @@ public struct DevModeInstaller: Sendable {
         return Self.version(fromAppInfo: result.output)
     }
 
-    /// Paketi TV'ye yükler, kurulumu başlatır ve TV'de istenen sürüm görünene kadar bekler.
+    /// Paketi TV'ye yükler ve ares-install'un yaptığı gibi kurar: kurulum aboneliği TV "installed" ya da hata diyene kadar
+    /// açık kalır, paket ancak bundan sonra silinir. Eskiden `luna-send -n 1` ilk yanıttan sonra çıkıyordu; abonelik
+    /// kapanınca bazı webOS sürümleri kurulumu yarıda bırakıyor, biz de sürüm görünmeyince "boş alan" hatası veriyorduk.
+    /// Hata `DevModeFailure` olarak gelir; `detail` TV'nin verdiği sebeptir.
     public func install(package: URL, version: String) async throws {
-        let upload = try await ssh("mkdir -p /media/developer/temp && cat > \(Self.remotePackage)", input: package)
-        guard upload.status == 0 else { throw DevModeError.installFailed }
+        let remote = Self.remotePackage(package)
+        // Önceki denemelerden kalan paketler TV'de yer kaplamasın.
+        let upload = try await ssh(
+            "mkdir -p \(Self.tempDir) && rm -f \(Self.tempDir)/com.couchsubs.tv_*.ipk \(Self.tempDir)/couchsubs.ipk && cat > '\(remote)'",
+            input: package)
+        guard upload.status == 0 else {
+            throw Self.failure("yükleme çıkış kodu \(upload.status): \(Self.short(upload.output))", evidence: upload.output)
+        }
 
-        let parameters = "{\"id\":\"com.ares.defaultName\",\"ipkUrl\":\"\(Self.remotePackage)\",\"subscribe\":true}"
-        // -n 1: ilk yanıttan sonra çıkar; kurulum TV'de sürer.
-        _ = try await ssh("/usr/bin/luna-send-pub -n 1 'luna://com.webos.appInstallService/dev/install' '\(parameters)'")
+        let wait = max(1, Int((Double(installTimeout.components.seconds) + Double(installTimeout.components.attoseconds) / 1e18).rounded(.up)))
+        let response = try await ssh(Self.installCommand(remotePackage: remote, waitSeconds: wait))
+        let outcome = Self.parseInstallReplies(response.output)
+        if outcome.failed {
+            _ = try? await ssh("rm -f '\(remote)'")
+            let reason = outcome.reason.flatMap { $0.isEmpty ? nil : $0 } ?? "kurulum başarısız: \(Self.short(response.output))"
+            throw Self.failure(reason, evidence: response.output)
+        }
 
-        let end = ContinuousClock.now + installTimeout
-        var installed = false
-        while ContinuousClock.now < end {
+        // TV "installed" dese de (ya da sonucu okunamadıysa) sürüm appinfo.json'dan doğrulanır.
+        let end = ContinuousClock.now + (verifyTimeout ?? .seconds(outcome.installed ? 30 : 60))
+        while true {
             if try await installedVersion() == version {
-                installed = true
-                break
+                _ = try? await ssh("rm -f '\(remote)'")
+                return
             }
+            if ContinuousClock.now >= end { break }
             try await Task.sleep(for: pollInterval)
         }
-        _ = try? await ssh("rm -f \(Self.remotePackage)")
-        guard installed else { throw DevModeError.installFailed }
+        // Sonuç gelmediyse paket silinmez: kurulum TV'de sürüyor olabilir; bir sonraki deneme onu temizler.
+        if outcome.installed { _ = try? await ssh("rm -f '\(remote)'") }
+        throw DevModeFailure(.installFailed,
+                             detail: "TV'de \(version) sürümü görünmedi; kurulum yanıtı (\(response.status)): \(Self.short(response.output))")
+    }
+
+    /// TV'de kurulumu başlatan kabuk komutu. `luna-send-pub -i` (ares-install'un kullandığı biçim) girişi açık kaldıkça
+    /// aboneliği sürdürür; giriş `sleep`'ten gelir. Yanıtlar dosyaya yazılır; TV "installed" ya da hata dediğinde,
+    /// luna-send kendiliğinden çıktığında ya da süre dolduğunda yanıtlar basılır ve luna-send kapatılır. sleep'in
+    /// çıkışları SSH kanalına bağlı değildir; oturum onu beklemez.
+    static func installCommand(remotePackage: String, waitSeconds: Int) -> String {
+        let parameters = "{\"id\":\"com.ares.defaultName\",\"ipkUrl\":\"\(remotePackage)\",\"subscribe\":true}"
+        return [
+            "rm -f \(installLog)",
+            "sleep \(waitSeconds + 30) </dev/null 2>/dev/null | /usr/bin/luna-send-pub -i 'luna://com.webos.appInstallService/dev/install' '\(parameters)' >\(installLog) 2>&1 & L=$!",
+            "i=0",
+            "while [ $i -lt \(waitSeconds) ]; do grep -q -i -e '\"state\" *: *\"installed' -e 'failed' -e '\"returnValue\" *: *false' -e '\"state\" *: *\"success' \(installLog) 2>/dev/null && break; kill -0 $L 2>/dev/null || break; sleep 1; i=$((i+1)); done",
+            "cat \(installLog)",
+            "kill $L 2>/dev/null",
+            "rm -f \(installLog)",
+        ].joined(separator: "; ")
+    }
+
+    /// luna-send yanıtlarının sonucu; `reason` TV'nin verdiği sebeptir.
+    struct InstallOutcome: Equatable {
+        var installed = false
+        var failed = false
+        var reason: String?
+    }
+
+    /// luna-send'in satır satır JSON yanıtlarını ares-install gibi okur: `returnValue: false` ya da `details.state`
+    /// içinde FAILED hata, `installed`/`SUCCESS` başarıdır.
+    static func parseInstallReplies(_ output: String) -> InstallOutcome {
+        var pending = ""
+        for line in output.split(separator: "\n", omittingEmptySubsequences: false) {
+            pending += line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if pending.isEmpty { continue }
+            guard pending.hasPrefix("{") else {
+                // luna-send'in kendi yazısı (ör. "Error: ..."); ares de JSON olmayanı atlar.
+                pending = ""
+                continue
+            }
+            guard let reply = (try? JSONSerialization.jsonObject(with: Data(pending.utf8))) as? [String: Any] else {
+                continue // Satır yarım; sonrakiyle birleşir.
+            }
+            pending = ""
+            let details = reply["details"] as? [String: Any]
+            let state = text(details?["state"]) ?? ""
+            if (reply["returnValue"] as? Bool) == false {
+                return InstallOutcome(failed: true, reason: reason(text(reply["errorText"]) ?? text(reply["errorMessage"]),
+                                                                    code: text(reply["errorCode"])))
+            }
+            if state.range(of: "failed", options: .caseInsensitive) != nil {
+                return InstallOutcome(failed: true, reason: reason(text(details?["reason"]) ?? text(details?["errorText"]) ?? state,
+                                                                    code: text(details?["errorCode"]) ?? text(reply["errorCode"])))
+            }
+            if state.range(of: "installed", options: .caseInsensitive) != nil || state.lowercased().hasPrefix("success") {
+                return InstallOutcome(installed: true)
+            }
+        }
+        return InstallOutcome()
+    }
+
+    /// TV ya da kabuk yer kalmadığını mı söylüyor?
+    static func isStorageProblem(_ text: String) -> Bool {
+        text.range(of: #"no space|not enough (free )?(space|storage)|insufficient (free )?(space|storage)|out of space|storage (is )?full|disk (is )?full|ENOSPC|lack of (space|storage)"#,
+                   options: [.regularExpression, .caseInsensitive]) != nil
+    }
+
+    private static func failure(_ detail: String, evidence: String) -> DevModeFailure {
+        DevModeFailure(isStorageProblem(evidence) || isStorageProblem(detail) ? .notEnoughSpace : .installFailed, detail: detail)
+    }
+
+    private static func reason(_ text: String?, code: String?) -> String {
+        let reason = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let code, !code.isEmpty else { return reason }
+        return "\(reason) (errorCode \(code))".trimmingCharacters(in: .whitespaces)
+    }
+
+    private static func text(_ value: Any?) -> String? {
+        switch value {
+        case let string as String: string
+        case let number as NSNumber where !(number === kCFBooleanTrue || number === kCFBooleanFalse): number.stringValue
+        default: nil
+        }
+    }
+
+    private static func short(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count <= 500 ? trimmed : String(trimmed.prefix(500)) + "…"
     }
 
     // MARK: - Süreyi uzatma

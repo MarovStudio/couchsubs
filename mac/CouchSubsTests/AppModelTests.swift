@@ -70,8 +70,10 @@ final class FakeServices: AppServices {
         if refuseKey { throw DevModeError.keyRefused }
         return appOnTV
     }
+    var lgInstallError: Error?
     func installTVApp(host: String, devKey: String) async throws {
         installs += 1
+        if let lgInstallError { throw lgInstallError }
         appOnTV = bundledTVAppVersion
     }
     var renewedHours: Int? = 999
@@ -392,6 +394,20 @@ final class TVAppInstallTests: XCTestCase {
         try await model.pair(tv)
         await model.installTVApp(passphrase: "ABC123")
         XCTAssertEqual(model.tvApp, .needsPassphrase(error: .keyServerOff))
+    }
+
+    func testFailedInstallShowsTheTVsReason() async throws {
+        let services = FakeServices()
+        services.appOnTV = nil
+        services.devMode = true
+        services.lgInstallError = DevModeFailure(.installFailed, detail: "Invalid package (errorCode -5)")
+        let model = model(services)
+        try await model.pair(tv)
+        await model.installTVApp(passphrase: "ABC123")
+        XCTAssertEqual(model.tvApp, .failed(.installFailed, reason: "Invalid package (errorCode -5)"))
+        // Boş alan yalnız TV öyle dediğinde suçlanır.
+        XCTAssertFalse(TVAppCard.message(for: .installFailed, brand: .lg, reason: "Invalid package").contains("free space"))
+        XCTAssertTrue(TVAppCard.message(for: .installFailed, brand: .lg, reason: "Invalid package").hasSuffix("Invalid package"))
     }
 
     func testOlderAppIsUpdatedWithoutAsking() async throws {

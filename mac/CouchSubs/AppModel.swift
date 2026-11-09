@@ -332,7 +332,8 @@ enum TVAppState: Equatable {
     case devModeOff
     /// Geliştirici modu açık; Key Server parolası gerekiyor. `error` son denemenin sonucu.
     case needsPassphrase(error: DevModeError?)
-    case failed(DevModeError)
+    /// `reason`: TV'nin verdiği sebep (LG kurulumunda luna yanıtındaki errorText/reason); kullanıcıya da gösterilir.
+    case failed(DevModeError, reason: String? = nil)
     /// Samsung: sertifika için tarayıcıda Samsung hesabıyla giriş bekleniyor.
     case signIn(URL)
     /// Android TV: TV ekranında hata ayıklama izni bekleniyor.
@@ -655,6 +656,10 @@ final class AppModel {
             // Geliştirici modu yeniden açılınca TV yeni anahtar üretir; eskisi işe yaramaz.
             store.remove(StoreKey.tvDevKey)
             tvApp = .needsPassphrase(error: nil)
+        } catch let failure as DevModeFailure {
+            // Genel mesaj tek başına sorunu bulmaya yetmiyordu; TV'nin verdiği sebep de gösterilir.
+            let reason = failure.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            tvApp = .failed(failure.error, reason: reason.isEmpty ? nil : reason)
         } catch {
             tvApp = .failed(error as? DevModeError ?? .installFailed)
         }

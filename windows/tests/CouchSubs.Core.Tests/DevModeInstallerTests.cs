@@ -29,7 +29,9 @@ public class DevModeInstallerTests
     }
 
     private static DevModeInstaller Installer(FakeShell shell) =>
-        new(shell, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(200));
+        new(shell, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(200));
+
+    private static bool IsInstall(string line) => line.Contains("appInstallService");
 
     [Fact]
     public void VersionIsReadFromThePackageName()
@@ -83,13 +85,96 @@ public class DevModeInstallerTests
             },
         };
         var package = Package();
+        var remote = "/media/developer/temp/" + Path.GetFileName(package);
         await Installer(shell).InstallAsync(package, "0.6.1");
         Assert.Equal(package, shell.Calls[0].Input);
-        Assert.Contains("cat > /media/developer/temp/couchsubs.ipk", shell.Calls[0].Command);
-        Assert.Contains("wc -c < /media/developer/temp/couchsubs.ipk", shell.Calls[1].Command);
+        // ares-install gibi: paket kendi adıyla yüklenir, eski CouchSubs paketleri önce silinir.
+        Assert.Contains($"cat > '{remote}'", shell.Calls[0].Command);
+        Assert.Contains("rm -f /media/developer/temp/com.couchsubs.tv_*.ipk", shell.Calls[0].Command);
+        Assert.Contains($"wc -c < '{remote}'", shell.Calls[1].Command);
         Assert.Contains("luna://com.webos.appInstallService/dev/install", shell.Calls[2].Command);
-        Assert.Contains("rm -f /media/developer/temp/couchsubs.ipk", shell.Calls[^1].Command);
+        Assert.Contains($"\"ipkUrl\":\"{remote}\"", shell.Calls[2].Command);
+        Assert.Contains($"rm -f '{remote}'", shell.Calls[^1].Command);
         Assert.All(shell.Calls.Skip(1), call => Assert.Null(call.Input));
+    }
+
+    [Fact]
+    public void InstallCommandKeepsTheSubscriptionOpenUntilTheTvAnswers()
+    {
+        var command = DevModeInstaller.InstallCommand("/media/developer/temp/com.couchsubs.tv_0.9.6_all.ipk", 180);
+        // -n 1 ilk yanıttan sonra aboneliği kapatıyordu; ares-install -i kullanır ve sonucu bekler.
+        Assert.DoesNotContain("-n 1", command);
+        Assert.Contains("/usr/bin/luna-send-pub -i 'luna://com.webos.appInstallService/dev/install'", command);
+        Assert.Contains("{\"id\":\"com.ares.defaultName\",\"ipkUrl\":\"/media/developer/temp/com.couchsubs.tv_0.9.6_all.ipk\",\"subscribe\":true}", command);
+        Assert.Contains("while [ $i -lt 180 ]", command);
+        Assert.Contains("sleep 210 </dev/null 2>/dev/null |", command);
+        Assert.Contains("kill $L", command);
+    }
+
+    [Fact]
+    public void RepliesAreReadLikeAresInstall()
+    {
+        var progress = "{\"returnValue\":true,\"subscribed\":true}\n{\"details\":{\"state\":\"installing\"},\"returnValue\":true}\n";
+        Assert.Equal(new DevModeInstaller.InstallOutcome(false, false, null), DevModeInstaller.ParseInstallReplies(progress));
+        Assert.True(DevModeInstaller.ParseInstallReplies(progress + "{\"details\":{\"state\":\"installed\"},\"returnValue\":true}").Installed);
+        Assert.True(DevModeInstaller.ParseInstallReplies("{\"details\":{\"state\":\"SUCCESS\"}}").Installed);
+
+        var failed = DevModeInstaller.ParseInstallReplies(
+            progress + "{\"details\":{\"state\":\"install failed\",\"reason\":\"Installation failure\",\"errorCode\":-5},\"returnValue\":true}");
+        Assert.True(failed.Failed);
+        Assert.Equal("Installation failure (errorCode -5)", failed.Reason);
+
+        var refused = DevModeInstaller.ParseInstallReplies("{\"returnValue\":false,\"errorCode\":-1,\"errorText\":\"Denied method call\"}");
+        Assert.Equal(new DevModeInstaller.InstallOutcome(false, true, "Denied method call (errorCode -1)"), refused);
+
+        // Birden çok satıra bölünmüş yanıt ve JSON olmayan satırlar.
+        var split = DevModeInstaller.ParseInstallReplies("Error: something\n{\"details\":\n{\"state\":\"installed\"}}\n");
+        Assert.True(split.Installed);
+    }
+
+    [Fact]
+    public async Task InstallReportsTheTvsReasonAndRemovesThePackage()
+    {
+        var shell = new FakeShell
+        {
+            Answer = line => IsInstall(line)
+                ? new CommandResult(0, "{\"returnValue\":true}\n{\"details\":{\"state\":\"FAILED_IPK_INSTALL\",\"reason\":\"Invalid package\"},\"returnValue\":true}")
+                : null,
+        };
+        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(shell).InstallAsync(Package(), "0.6.1"));
+        Assert.Equal(DevModeError.InstallFailed, error.Error);
+        Assert.Equal("Invalid package", error.Detail);
+        Assert.Contains("rm -f '/media/developer/temp/couchsubs-test-", shell.Calls[^1].Command);
+        Assert.DoesNotContain(shell.Calls, call => call.Command.Contains("appinfo.json"));
+    }
+
+    [Fact]
+    public async Task StorageErrorsFromTheTvAreReportedAsMissingSpace()
+    {
+        var shell = new FakeShell
+        {
+            Answer = line => IsInstall(line)
+                ? new CommandResult(0, "{\"details\":{\"state\":\"install failed\",\"reason\":\"Not enough space\"},\"returnValue\":true}")
+                : null,
+        };
+        var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(shell).InstallAsync(Package(), "0.6.1"));
+        Assert.Equal(DevModeError.NotEnoughSpace, error.Error);
+
+        var full = new FakeShell { Answer = line => line.Contains("cat >") ? new CommandResult(1, "cat: write error: No space left on device") : null };
+        error = await Assert.ThrowsAsync<DevModeException>(() => Installer(full).InstallAsync(Package(), "0.6.1"));
+        Assert.Equal(DevModeError.NotEnoughSpace, error.Error);
+    }
+
+    [Fact]
+    public async Task InstalledReplyIsConfirmedByTheVersion()
+    {
+        var shell = new FakeShell
+        {
+            Answer = line => IsInstall(line) ? new CommandResult(0, "{\"details\":{\"state\":\"installed\"},\"returnValue\":true}")
+                : line.Contains("appinfo.json") ? new CommandResult(0, "\"version\": \"0.6.1\"") : null,
+        };
+        await Installer(shell).InstallAsync(Package(), "0.6.1");
+        Assert.Contains("rm -f '/media/developer/temp/couchsubs-test-", shell.Calls[^1].Command);
     }
 
     [Fact]
@@ -98,6 +183,8 @@ public class DevModeInstallerTests
         var shell = new FakeShell { Answer = line => line.Contains("appinfo.json") ? new CommandResult(0, "\"version\": \"0.4.0\"") : null };
         var error = await Assert.ThrowsAsync<DevModeException>(() => Installer(shell).InstallAsync(Package(), "0.6.1"));
         Assert.Equal(DevModeError.InstallFailed, error.Error);
+        // TV sonuç vermediyse kurulum sürüyor olabilir; paket silinmez.
+        Assert.DoesNotContain(shell.Calls.Skip(1), call => call.Command.StartsWith("rm -f '"));
     }
 
     [Fact]
