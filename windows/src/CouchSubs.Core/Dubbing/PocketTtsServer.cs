@@ -42,7 +42,7 @@ public sealed class PocketTtsServer(string executable, string config, string def
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = false,
-            RedirectStandardError = false,
+            RedirectStandardError = true,
         };
         foreach (var argument in new[] { "serve", "--config", config, "--host", "127.0.0.1", "--port", port.ToString(),
                                          "--default-voice", defaultVoice })
@@ -60,6 +60,18 @@ public sealed class PocketTtsServer(string executable, string config, string def
         }
         // Seslendirme, altyazı okuma ve çeviriyle yarışıp onları geciktirmesin: işlemciyi en son o alır.
         try { process.PriorityClass = ProcessPriorityClass.BelowNormal; } catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+        // Kapanırsa sebebi hata mesajında görünsün: stderr'in son satırları saklanır.
+        var errors = new Queue<string>();
+        process.ErrorDataReceived += (_, e) =>
+        {
+            if (string.IsNullOrWhiteSpace(e.Data)) return;
+            lock (errors)
+            {
+                errors.Enqueue(e.Data.Trim());
+                while (errors.Count > 8) errors.Dequeue();
+            }
+        };
+        process.BeginErrorReadLine();
         _process = process;
         _port = port;
         ChildProcessGuard.Attach(process);
@@ -67,7 +79,11 @@ public sealed class PocketTtsServer(string executable, string config, string def
         var deadline = DateTime.UtcNow.AddSeconds(90);
         while (DateTime.UtcNow < deadline)
         {
-            if (process.HasExited) throw new PocketTtsException($"pocket-tts kapandı (çıkış kodu {process.ExitCode})");
+            if (process.HasExited)
+            {
+                process.WaitForExit(); // stderr'in kalanı da okunsun
+                throw new PocketTtsException(ExitMessage(process.ExitCode, errors));
+            }
             try
             {
                 using var response = await _http.GetAsync($"http://127.0.0.1:{port}/health", cancellationToken).ConfigureAwait(false);
@@ -78,6 +94,15 @@ public sealed class PocketTtsServer(string executable, string config, string def
         }
         Stop();
         throw new PocketTtsException("pocket-tts 90 saniyede açılmadı");
+    }
+
+    /// <summary>Kapanma iletisi: çıkış kodu ve pocket-tts'in yazdığı son anlamlı hata satırı.</summary>
+    public static string ExitMessage(int exitCode, IEnumerable<string> errorLines)
+    {
+        string? last;
+        lock (errorLines) last = errorLines.LastOrDefault(line => line.Length > 0);
+        if (last is { Length: > 300 }) last = last[..300] + "…";
+        return last is null ? $"pocket-tts kapandı (çıkış kodu {exitCode})" : $"pocket-tts kapandı (çıkış kodu {exitCode}): {last}";
     }
 
     /// <summary><paramref name="voice"/>: sesin adresi (http://…, sunucu sesi bir kez hazırlayıp saklar).</summary>

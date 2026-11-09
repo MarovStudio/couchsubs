@@ -128,3 +128,19 @@ public class DubbingModelTests
         Assert.EndsWith("capitalize_first_letter: false\n", local);
     }
 }
+
+public class PocketTtsExitTests
+{
+    [Fact]
+    public void ExitMessageShowsTheLastErrorLine()
+    {
+        var message = PocketTtsServer.ExitMessage(1, new Queue<string>(["loading model", "Error: model.safetensors not found"]));
+        Assert.Equal("pocket-tts kapandı (çıkış kodu 1): Error: model.safetensors not found", message);
+    }
+
+    [Fact]
+    public void ExitMessageWithoutOutputKeepsTheExitCode()
+    {
+        Assert.Equal("pocket-tts kapandı (çıkış kodu 3)", PocketTtsServer.ExitMessage(3, new Queue<string>()));
+    }
+}
