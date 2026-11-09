@@ -4,10 +4,9 @@ CouchSubs'ın yeni deneme sürümü. Türkçe dil desteği olmayan PS5 oyunları
 
 **Bu sürümde yeni**
 
-- **Samsung ve Android TV'de görünmeyen altyazı düzeltildi.** Bazı TV'lerde altyazı ekranın dışına yerleşiyordu; artık görünür alanda değilse sabit yüksekliğe geçiyor. TV panelinde (Tamam tuşu) "Son altyazı" satırı da var: altyazının TV'ye ulaşıp ulaşmadığını oradan görebilirsiniz. TV uygulaması 0.9.6.
-- **Windows Güvenlik Duvarı izni.** PS5 eşleştirmesi başarısız olursa ya da PS5 veya TV uzun süre bağlanamazsa ve CouchSubs'ın güvenlik duvarı izni eksikse, uygulama tek tıkla izin vermeyi öneriyor (yönetici onayı ister).
-- **GTA V ve renkli zeminlerde daha düzgün çeviri (Windows).** Açık zeminde okunamayan sözcüklerin bıraktığı boşlukta satır artık bölünmüyor; parça parça, anlamsız çeviriler ve kaymış kutular azaldı.
-- **Ortalı altyazının kutusu ortada (Mac ve Windows).** Ortadaki altyazının çevirisi ortaya göre simetrik yerleşiyor, yarım okunan satırda İngilizcenin geri kalanı görünmüyor.
+- **LG TV'de "TV uygulaması kurulamadı" hatası düzeltildi.** CouchSubs kurulumu TV'de bitmeden bağlantıyı kapatıyordu; bazı LG'lerde kurulum yarıda kalıyor ve hata yanlışlıkla boş alanı gösteriyordu. Artık LG'nin kendi aracı gibi kurulumun bitmesini bekliyor; başarısız olursa TV'nin bildirdiği sebebi gösteriyor (bildiren: [yag_ats](https://x.com/yag_ats)).
+
+**beta.19'da gelenler:** Samsung ve Android TV'de görünmeyen altyazının düzeltilmesi (TV uygulaması 0.9.6), Windows Güvenlik Duvarı izni, GTA V ve renkli zeminlerde daha düzgün çeviri (Windows), ortalı altyazının kutusunun ortada durması (Mac ve Windows).
 
 **beta.18'de gelenler:** OBS katmanı (Mac ve Windows), altyazı geçmişi (Mac, katkı: [rumpony](https://github.com/rumpony)).
 
