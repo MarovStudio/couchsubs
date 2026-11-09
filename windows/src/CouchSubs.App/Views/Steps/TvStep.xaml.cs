@@ -17,6 +17,7 @@ public partial class TvStep : UserControl
         Loaded += async (_, _) =>
         {
             ShowDone();
+            ShowPhone();
             await SearchAsync();
         };
     }
@@ -71,6 +72,20 @@ public partial class TvStep : UserControl
         }
         Waiting.Visibility = Visibility.Collapsed;
         Tvs.IsEnabled = true;
+    }
+
+    private async void OnPhone(object sender, RoutedEventArgs e)
+    {
+        await Controller.UsePhoneScreenAsync();
+        ShowPhone();
+    }
+
+    private void ShowPhone()
+    {
+        if (!Controller.PhoneScreen) return;
+        PhoneAddress.Text = Controller.PhoneAddress;
+        PhoneAddress.Visibility = Visibility.Visible;
+        PhoneHint.Visibility = Visibility.Visible;
     }
 
     private async void OnSearch(object sender, RoutedEventArgs e) => await SearchAsync();

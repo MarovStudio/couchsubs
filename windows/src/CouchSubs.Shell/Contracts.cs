@@ -19,6 +19,8 @@ public static class StoreKeys
     public const string DevSessionRenewed = "devSessionRenewed";
     /// <summary>Kullanıcının DeepL anahtarı (isteğe bağlı çevrimiçi çeviri).</summary>
     public const string DeepLKey = "deepLKey";
+    /// <summary>TV yerine altyazı telefonun tarayıcısında gösterilir (/telefon).</summary>
+    public const string PhoneScreen = "phoneScreen";
 }
 
 /// <summary>Kalıcı ayarlar (şifreli depo değil, sıradan ayar dosyası).</summary>

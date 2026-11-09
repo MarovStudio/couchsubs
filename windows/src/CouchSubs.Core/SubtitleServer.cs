@@ -85,11 +85,14 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
     private int TvCount() => clients.Count(c => !c.Viewer);
 
     /// <summary>OBS'de "Tarayıcı kaynağı" olarak eklenen altyazı katmanı (<c>GET /obs</c>; Mac ile aynı dosya).</summary>
-    public static byte[] ObsOverlay { get; } = LoadObsOverlay();
+    public static byte[] ObsOverlay { get; } = LoadResource("obs-overlay.html");
 
-    private static byte[] LoadObsOverlay()
+    /// <summary>Telefonda tam ekran altyazı sayfası (<c>GET /telefon</c>): TV olmayan kurulumlar için.</summary>
+    public static byte[] PhoneScreen { get; } = LoadResource("phone-screen.html");
+
+    private static byte[] LoadResource(string name)
     {
-        using var stream = typeof(SubtitleServer).Assembly.GetManifestResourceStream("obs-overlay.html");
+        using var stream = typeof(SubtitleServer).Assembly.GetManifestResourceStream(name);
         if (stream is null) return [];
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
@@ -234,6 +237,7 @@ public sealed class SubtitleServer(int port = 8787) : ISubtitleSender, IDisposab
 
             if (method == "OPTIONS") await RespondAndClose(tcp, "204 No Content");
             else if (method == "GET" && path == "/events") await OpenStream(tcp, target.Contains("viewer=obs", StringComparison.Ordinal));
+            else if (method == "GET" && (path == "/telefon" || path == "/phone")) await RespondAndClose(tcp, PhoneScreen, "text/html; charset=utf-8");
             else if (method == "GET" && path == "/obs") await RespondAndClose(tcp, ObsOverlay, "text/html; charset=utf-8");
             // TV uygulaması ağdaki bilgisayarı bu yanıtla tanır.
             else if (method == "GET" && path == "/hello") await RespondAndClose(tcp, "200 OK", "{\"app\":\"couchsubs\"}");

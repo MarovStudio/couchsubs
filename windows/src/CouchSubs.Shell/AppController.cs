@@ -33,6 +33,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private byte[]? accountId;
     private RegisteredConsole? console;
     private LgTv? tv;
+    private bool phoneScreen;
     private TvAppState tvApp = TvAppState.Unknown;
     /// <summary>Son eşleşmede TV uygulaması açılamadı.</summary>
     private bool tvAppMissing;
@@ -89,7 +90,8 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         console = store.Load<RegisteredConsole>(StoreKeys.Console);
         tv = store.Load<LgTv>(StoreKeys.Tv);
         settings = settingsStore.Load();
-        var ready = accountId is not null && console is not null && tv is not null && store.Load<string>(StoreKeys.TvKey) is not null;
+        phoneScreen = store.Load<bool>(StoreKeys.PhoneScreen);
+        var ready = accountId is not null && console is not null && (phoneScreen || (tv is not null && store.Load<string>(StoreKeys.TvKey) is not null));
         step = ready ? OnboardingStep.Done : OnboardingStep.Welcome;
         server.ClientsChanged += OnClientsChanged;
     }
@@ -110,6 +112,21 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public bool HasAccount => accountId is not null;
     public RegisteredConsole? Console => console;
     public LgTv? Tv => tv;
+
+    /// <summary>TV yok: altyazı telefonun tarayıcısında, http://bilgisayar:port/telefon adresinde gösterilir.</summary>
+    public bool PhoneScreen => phoneScreen;
+
+    /// <summary>Telefonda açılacak adres.</summary>
+    public string PhoneAddress => $"http://{LocalAddress("192.168.1.1") ?? "127.0.0.1"}:{ServerPort}/telefon";
+
+    /// <summary>TV adımını telefon ekranıyla geçer ve sunucuyu hemen açar (telefon sayfası sınanabilsin).</summary>
+    public async Task UsePhoneScreenAsync()
+    {
+        phoneScreen = true;
+        store.Save(StoreKeys.PhoneScreen, true);
+        try { await StartServerAsync(); } catch { /* adres yine gösterilir */ }
+        Changed(nameof(PhoneScreen), nameof(PhoneAddress), nameof(CanAdvance), nameof(TvStatusText));
+    }
     public bool IsRunning { get => isRunning; private set => Set(ref isRunning, value, [nameof(Ps5StatusText), nameof(Ps5Tone), nameof(TvTone)]); }
     public bool IsStarting { get => isStarting; private set => Set(ref isStarting, value); }
     public SessionState SessionState { get => sessionState; private set => Set(ref sessionState, value, [nameof(Ps5StatusText), nameof(Ps5Tone)]); }
@@ -117,7 +134,9 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public StatusTone Ps5Tone => Ps5ToneFor(sessionState, isRunning);
     public int TvClients { get => tvClients; private set => Set(ref tvClients, value, [nameof(TvTone), nameof(TvStatusText)]); }
     public StatusTone TvTone => TvToneFor(tvClients, isRunning);
-    public string TvStatusText => tvClients > 0 ? text["Connected"] : text["Waiting for the TV app"];
+    public string TvStatusText => phoneScreen
+        ? (tvClients > 0 ? $"Telefon qoşulub · {PhoneAddress}" : $"Telefonda aç: {PhoneAddress}")
+        : tvClients > 0 ? text["Connected"] : text["Waiting for the TV app"];
     public string LastSource { get => lastSource; private set => Set(ref lastSource, value); }
     public string LastTranslation { get => lastTranslation; private set => Set(ref lastTranslation, value); }
     public TranslatorStatus TranslatorStatus { get => translatorStatus; private set => Set(ref translatorStatus, value); }
@@ -164,7 +183,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         OnboardingStep.Welcome or OnboardingStep.SecondAccount or OnboardingStep.Test => true,
         OnboardingStep.PsnLogin => accountId is not null,
         OnboardingStep.Console => console is not null,
-        OnboardingStep.Tv => tv is not null && store.Load<string>(StoreKeys.TvKey) is not null,
+        OnboardingStep.Tv => phoneScreen || (tv is not null && store.Load<string>(StoreKeys.TvKey) is not null),
         OnboardingStep.Translation => ModelInstalled,
         _ => false,
     };
@@ -711,7 +730,8 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public void ResetSetup()
     {
         Stop();
-        foreach (var key in new[] { StoreKeys.AccountId, StoreKeys.Console, StoreKeys.Tv, StoreKeys.TvKey, StoreKeys.TvDevKey, StoreKeys.TvAppVersion }) store.Remove(key);
+        foreach (var key in new[] { StoreKeys.AccountId, StoreKeys.Console, StoreKeys.Tv, StoreKeys.TvKey, StoreKeys.TvDevKey, StoreKeys.TvAppVersion, StoreKeys.PhoneScreen }) store.Remove(key);
+        phoneScreen = false;
         accountId = null;
         console = null;
         tv = null;
@@ -726,7 +746,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     public async Task StartAsync()
     {
         // Düğmeye iki kez basılması ya da beklerken tekrar çağrılması ikinci bir oturum açmaz.
-        if (isRunning || isStarting || console is null || accountId is null || tv is null) return;
+        if (isRunning || isStarting || console is null || accountId is null || (tv is null && !phoneScreen)) return;
         IsStarting = true;
         try
         {
@@ -744,12 +764,16 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             session = stream;
 
             // TV uygulamasını başlat ve açık tut; TV kapalıysa açıldığında bağlanır.
-            var running = server;
-            var tvKeeper = services.MakeKeeper(tv, store.Load<string>(StoreKeys.TvKey), new Dictionary<string, string> { ["server"] = ServerAddress(tv) },
-                () => running.ConnectedClients > 0, moved => post(() => TvMoved(moved)));
-            tvKeeper.Start(TimeSpan.FromSeconds(5));
-            keeper = tvKeeper;
-            _ = RefreshTvAppAsync();
+            // Telefon ekranında TV yoktur; telefon sayfası sunucuya kendisi bağlanır.
+            if (tv is not null)
+            {
+                var running = server;
+                var tvKeeper = services.MakeKeeper(tv, store.Load<string>(StoreKeys.TvKey), new Dictionary<string, string> { ["server"] = ServerAddress(tv) },
+                    () => running.ConnectedClients > 0, moved => post(() => TvMoved(moved)));
+                tvKeeper.Start(TimeSpan.FromSeconds(5));
+                keeper = tvKeeper;
+                _ = RefreshTvAppAsync();
+            }
 
             sleep.Begin();
             IsRunning = true;
@@ -967,6 +991,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             ServerPort = await server.StartAsync();
         }
         serverStarted = true;
+        Changed(nameof(TvStatusText), nameof(PhoneAddress));
     }
 
     private void OnClientsChanged(int count) => post(() =>
