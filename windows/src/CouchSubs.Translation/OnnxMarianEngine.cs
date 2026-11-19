@@ -25,7 +25,7 @@ internal sealed class OnnxMarianEngine : ISentenceEngine
     /// Işın araması: her adımda en olası tek belirteç yerine dört aday cümle birlikte sürer, sonunda en iyisi seçilir.
     /// Modelin kendi ayarı da budur (num_beams 4); açgözlü çözme "dost canlısı" gibi ilk kelimede sapan çeviriler veriyordu.
     /// </summary>
-    public const int DefaultBeams = 4;
+    public const int DefaultBeams = 2;
 
     private readonly MarianTokenizer _tokenizer;
     private readonly InferenceSession _encoder;
