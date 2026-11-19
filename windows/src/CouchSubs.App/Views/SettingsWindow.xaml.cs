@@ -67,6 +67,7 @@ public partial class SettingsWindow : Window
         DeepLStatus.Visibility = Visibility.Visible;
         DeepLStatus.Text = check.State switch
         {
+            OnlineKeyState.Valid when check.Limit == 0 => "Claude açarı qəbul olundu — tərcümə Claude ilə gedir.",
             OnlineKeyState.Valid => Localizer.Current.Format("This month: %1$@ of %2$@ characters used.",
                 check.Used.ToString("N0"), check.Limit.ToString("N0")),
             OnlineKeyState.QuotaExceeded => Localizer.Current["This month's DeepL limit is used up. Until it renews, the translation model on this computer translates."],
